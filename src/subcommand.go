@@ -39,13 +39,12 @@ func CommandReadRun() {
 		}
 		_, err = os.Create(indexLog)
 		if err != nil {
-			printCmdErr(fmt.Sprintf("Failed to create semantifly index at %s: %s", indexLog, err))
+			printCmdErr(fmt.Sprintf("Failed to create semantifly index log at %s: %s", indexLog, err))
 		}
     }
-	loadIndex(index_path)
 	f, err := os.OpenFile(indexLog, os.O_APPEND|os.O_WRONLY, 0644)
 	if err != nil {
-		printCmdErr(fmt.Sprintf("Failed to create open index log at %s: %s", indexLog, err))
+		printCmdErr(fmt.Sprintf("Failed to open index log at %s: %s", indexLog, err))
 	}
 	_, err = f.WriteString(strings.Join(os.Args, " ")+"\n")
 	if err != nil {

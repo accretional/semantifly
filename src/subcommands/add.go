@@ -36,7 +36,7 @@ type AddArgs struct {
 }
 
 func Add(a AddArgs){
-	fmt.Println(fmt.Sprintf("Add is not fully implemented. dataType: %s, dataURIs: %v", a.DataType, a.DataURIs))
+	// fmt.Println(fmt.Sprintf("Add is not fully implemented. dataType: %s, dataURIs: %v", a.DataType, a.DataURIs))
 	switch a.SourceType {
 	case "file":
 		addedFilePath := path.Join(a.IndexPath, addedFile)
@@ -84,6 +84,7 @@ func Add(a AddArgs){
 				fmt.Println(fmt.Sprintf("File %s failed to commit with err: %s. Skipping.", u, err))
 				continue
 			}
+			fmt.Println(fmt.Sprintf("Added file successfully: %s", u))
 		}
 	default:
 		fmt.Println(fmt.Sprintf("Invalid 'add' SourceType subsubcommand: %s", a.SourceType))
@@ -129,7 +130,7 @@ func commitAdd(ale AddedListEntry, fp *os.File) error {
 	encoder := gob.NewEncoder(fp)
 
 	// Encode and append the new entry
-	err = encoder.Encode(ale)
+	err = encoder.Encode(&ale)
 	if err != nil {
 		return fmt.Errorf("failed to encode and append new entry: %w", err)
 	}
@@ -174,7 +175,7 @@ func copyFile(src string, dest string, ale AddedListEntry) error {
 	encoder := gob.NewEncoder(destFile)
 
 	// Encode and write the AddCacheEntry
-	err = encoder.Encode(entry)
+	err = encoder.Encode(&entry)
 	if err != nil {
 		return fmt.Errorf("failed to encode and write entry: %w", err)
 	}
