@@ -57,8 +57,13 @@ func CommandReadRun() {
 	case "add":
 		cmd := flag.NewFlagSet("add", flag.ExitOnError)
 		dataType := cmd.String("type", "text", "The type of the input data")
+		makeLocalCopy := cmd.Bool("copy", false, "Whether to copy and use the file as it is now, or dynamically access it.")
 		cmd.Parse(os.Args[2:])
-		subcommands.Add(subcommands.AddArgs{DataType: *dataType, DataURIs: cmd.Args()})
+		if len(cmd.Args()) < 2 {
+			printCmdErr("Add subcommand requires sourceType subsubcommand and at least one input arg append to index log")
+			return
+		}
+		subcommands.Add(subcommands.AddArgs{IndexPath: index_path, DataType: *dataType, SourceType: cmd.Args()[0], MakeCopy: *makeLocalCopy, DataURIs: cmd.Args()[1:]})
 	default:
 		printCmdErr("No valid subcommand provided.")
 		os.Exit(1)
