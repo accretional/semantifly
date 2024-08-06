@@ -1,0 +1,31 @@
+syntax = "proto3";
+package semantifly;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "accretional.com/semantifly/proto";
+
+message Index {
+    repeated IndexListEntry entries = 1;
+}
+
+message IndexListEntry {
+    string name = 1;
+    string URI = 2;
+    DataType dataType = 3;
+    SourceType sourceType = 4;
+    google.protobuf.Timestamp first_added_time = 5;
+    google.protobuf.Timestamp last_refreshed_time = 6;
+    // Possibly to be changed to byte or some more complex representation based on DataType
+	string content = 7;
+}
+
+// Roughly corresponding to file extension, how to parse/encode the file.
+enum DataType {
+    TEXT = 0;
+}
+
+// How to *access* the content. Eg locally as a file, remotely as a web page, etc.
+enum SourceType {
+    LOCAL_FILE = 0;
+}
