@@ -21,16 +21,6 @@ func main() {
 		},
 	}
 
-	var deleteCmd = &cobra.Command{
-		Use:   "delete",
-		Short: "Remove data",
-		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Println("Delete command called")
-		},
-	}
-
-	rootCmd.AddCommand(addCmd, deleteCmd)
-
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
