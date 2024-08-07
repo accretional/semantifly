@@ -1,8 +1,7 @@
 #!/bin/bash
 go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 
-mkdir -p ~/opt/semantifly
-cd ~/opt/semantifly
+mkdir -p ~/opt && mkdir -p ~/opt/semantifly && cd ~/opt/semantifly
 
 # Download and install protoc
 wget https://github.com/protocolbuffers/protobuf/releases/download/v27.3/protoc-27.3-linux-x86_64.zip
