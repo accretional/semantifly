@@ -9,13 +9,7 @@ wget https://github.com/protocolbuffers/protobuf/releases/download/v27.3/protoc-
 unzip protoc-27.3-linux-x86_64.zip
 rm protoc-27.3-linux-x86_64.zip
 
-cd - 
-if [ ! -f "./src/main.go" ]; then
-    echo "Error: src/main.go not found."
-    exit 1
-fi
-
-cd src
+cd -/src
 go get -d ./...
 
 # Build binary, move to PATH
