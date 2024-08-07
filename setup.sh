@@ -12,7 +12,7 @@ wget https://github.com/protocolbuffers/protobuf/releases/download/v27.3/protoc-
 unzip protoc-27.3-linux-x86_64.zip
 rm protoc-27.3-linux-x86_64.zip  # Clean up the zip file
 
-# Navigate back to the script's directory (which should be the Semantifly repo)
+# Navigate back to the script's directory (which should be the Semantifly repo root)
 cd - 
 
 # Ensure we're in the directory containing src/main.go
@@ -21,14 +21,20 @@ if [ ! -f "./src/main.go" ]; then
     exit 1
 fi
 
+# Change to the src directory where go.mod is located
+cd src
+
 # Install dependencies
 go get -d ./...
 
 # Build the binary
-go build -o semantifly ./src
+go build -o semantifly .
 
 # Move the binary to a directory in PATH
 sudo mv semantifly /usr/local/bin/
+
+# Navigate back to the root of the repository
+cd ..
 
 # Update PATH
 echo 'export PATH=$PATH:~/opt/semantifly/bin:/usr/local/bin' >> ~/.bashrc
