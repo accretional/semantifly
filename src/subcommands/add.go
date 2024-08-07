@@ -1,4 +1,5 @@
 package subcommands
+
 import (
 	"encoding/gob"
 	"errors"
@@ -10,84 +11,84 @@ import (
 	"time"
 )
 
-const addedCopiesSubDir = "add_cache";
+const addedCopiesSubDir = "add_cache"
 const addedFile = "added.list"
 
 type AddedListEntry struct {
-	Name string
-	URI string
-	DataType string
-	SourceType string
+	Name           string
+	URI            string
+	DataType       string
+	SourceType     string
 	TimeFirstAdded string
 }
 
 type AddCacheEntry struct {
 	AddedListEntry
 	TimeLastRefreshed string
-	Contents []byte
+	Contents          []byte
 }
 
 type AddArgs struct {
-	IndexPath string
-	DataType string
+	IndexPath  string
+	DataType   string
 	SourceType string
-	MakeCopy bool
-	DataURIs []string
+	MakeCopy   bool
+	DataURIs   []string
 }
 
-func Add(a AddArgs){
+func Add(a AddArgs) {
 	// fmt.Println(fmt.Sprintf("Add is not fully implemented. dataType: %s, dataURIs: %v", a.DataType, a.DataURIs))
 	switch a.SourceType {
 	case "file":
 		addedFilePath := path.Join(a.IndexPath, addedFile)
 		addedFile, err := os.OpenFile(addedFilePath, os.O_RDWR|os.O_CREATE, 0644)
 		if err != nil {
-			fmt.Println(fmt.Sprintf("Failed to create or open file tracking added data at %s: %s", addedFilePath, err))
+			fmt.Printf("Failed to create or open file tracking added data at %s: %s\n", addedFilePath, err)
 			os.Exit(1)
 		}
 		for i, u := range a.DataURIs {
 			f, err := os.Stat(u)
 			if errors.Is(err, os.ErrNotExist) {
-				fmt.Println(fmt.Sprintf("Failed to add file %s at input list index %v: file does not exist", u, i))
+				fmt.Printf("Failed to add file %s at input list index %v: file does not exist\n", u, i)
 				return
-			  }
+			}
 			if f.IsDir() {
-				fmt.Println(fmt.Sprintf("Cannot add directory %s as file. Try adding as a directory instead. Skipping.", u))
+				fmt.Printf("Cannot add directory %s as file. Try adding as a directory instead. Skipping.\n", u)
 				continue
 			}
 			if !f.Mode().IsRegular() {
-				fmt.Println(fmt.Sprintf("File %s is not a regular file and cannot be added. Skipping.", u))
+				fmt.Printf("File %s is not a regular file and cannot be added. Skipping.\n", u)
 				continue
 			}
 
 			ale := AddedListEntry{
-				Name: u,
-				URI: u,
-				DataType: a.DataType,
-				SourceType: a.SourceType,
+				Name:           u,
+				URI:            u,
+				DataType:       a.DataType,
+				SourceType:     a.SourceType,
 				TimeFirstAdded: time.Now().String(),
 			}
 			if alreadyAdded(ale, addedFile) {
-				fmt.Println(fmt.Sprintf("File %s has already been added. Skipping without refresh.", u))
+				fmt.Printf("File %s has already been added. Skipping without refresh.\n", u)
 				continue
 			}
 			if a.MakeCopy {
 				// We'd first do something type-related if we supported anything besides text.
 				err = copyFile(u, path.Join(a.IndexPath, addedCopiesSubDir, ale.Name), ale)
 				if err != nil {
-					fmt.Println(fmt.Sprintf("File %s failed to copy with err: %s. Skipping.", u, err))
+					fmt.Printf("File %s failed to copy with err: %s. Skipping.\n", u, err)
 					continue
 				}
 			}
 			err = commitAdd(ale, addedFile)
 			if err != nil {
-				fmt.Println(fmt.Sprintf("File %s failed to commit with err: %s. Skipping.", u, err))
+				fmt.Printf("File %s failed to commit with err: %s. Skipping.\n", u, err)
 				continue
 			}
-			fmt.Println(fmt.Sprintf("Added file successfully: %s", u))
+			fmt.Printf("Added file successfully: %s\n", u)
 		}
 	default:
-		fmt.Println(fmt.Sprintf("Invalid 'add' SourceType subsubcommand: %s", a.SourceType))
+		fmt.Printf("Invalid 'add' SourceType subsubcommand: %s\n", a.SourceType)
 		os.Exit(1)
 	}
 }
@@ -154,7 +155,7 @@ func copyFile(src string, dest string, ale AddedListEntry) error {
 
 	// Create the AddCacheEntry
 	entry := AddCacheEntry{
-		AddedListEntry: ale,
+		AddedListEntry:    ale,
 		TimeLastRefreshed: time.Now().UTC().Format(time.RFC3339),
 		Contents:          content,
 	}
@@ -162,8 +163,8 @@ func copyFile(src string, dest string, ale AddedListEntry) error {
 	// Create destination dir
 	dir := filepath.Dir(dest)
 	if err := os.MkdirAll(dir, 0770); err != nil {
-        return fmt.Errorf("failed to create destination dir $s: %w", dir, err)
-    }
+		return fmt.Errorf("failed to create destination dir %s: %w", dir, err)
+	}
 	// Create or open the destination file
 	destFile, err := os.Create(dest)
 	if err != nil {
