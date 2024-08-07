@@ -8,16 +8,14 @@ wget https://github.com/protocolbuffers/protobuf/releases/download/v27.3/protoc-
 unzip protoc-27.3-linux-x86_64.zip
 rm protoc-27.3-linux-x86_64.zip
 
-cd -
 cd src
 go get -d ./...
 
 # Build binary, move to PATH
 go build -o semantifly .
+sudo mv semantifly /usr/local/bin/
 
 # Update PATH
-cd ..
-echo 'export PATH=$PATH:~/opt/semantifly/bin' >> ~/.bashrc
 . ~/.bashrc
 
 echo "You can now use 'semantifly' command from anywhere"
