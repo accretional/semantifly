@@ -27,8 +27,5 @@ cd ..
 echo 'export PATH=$PATH:~/opt/semantifly/bin:/usr/local/bin' >> ~/.bashrc
 source ~/.bashrc
 
-echo "Protoc installed to ~/opt/semantifly/bin"
-echo "Semantifly binary installed to /usr/local/bin"
-echo "Please restart your terminal or run 'source ~/.bashrc' to update your PATH"
 echo "You can now use 'semantifly' command from anywhere"
 echo "For protoc, you can invoke as: 'protoc -I=src/proto --go_out=src/proto src/proto/index.proto'"
