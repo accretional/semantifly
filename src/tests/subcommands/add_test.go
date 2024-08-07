@@ -34,7 +34,7 @@ func verifyFileEntry(t *testing.T, dstFilePath string, srcFileName string, added
 		SourceType: "file",
 	}
 
-	//Verify file present in the Index
+	//Verify source list entry present in the Index
 	addedFile, err := os.Open(addedFilePath)
 	if err != nil {
 		return err
@@ -77,7 +77,7 @@ func verifyFileEntry(t *testing.T, dstFilePath string, srcFileName string, added
 	}
 	defer dstFile.Close()
 
-	// Decoding
+	// Decoding the cache entry file
 	var entry subcommands.AddCacheEntry
 	decoder = gob.NewDecoder(dstFile)
 	err = decoder.Decode(&entry)
