@@ -20,6 +20,6 @@ sudo mv semantifly /usr/local/bin/
 # Update PATH
 cd ..
 echo 'export PATH=$PATH:~/opt/semantifly/bin:/usr/local/bin' >> ~/.bashrc
-source ~/.bashrc
+. ~/.bashrc
 
 echo "You can now use 'semantifly' command from anywhere"
