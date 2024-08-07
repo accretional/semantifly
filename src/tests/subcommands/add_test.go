@@ -15,33 +15,25 @@ func createTempFile(t *testing.T, dir string, data []byte) *os.File {
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
+	defer file.Close()
 	_, err = file.Write(data)
 	if err != nil {
 		t.Fatalf("Failed to write to temp file: %v", err)
 	}
-	err = file.Close()
-	if err != nil {
-		t.Fatalf("Failed to close temp file: %v", err)
-	}
 	return file
 }
 
-func createTempDir(t *testing.T) string {
-	dir, err := os.MkdirTemp("", "testdir")
+func TestReadWrite(t *testing.T) {
+
+	// Setting up the paths
+	indexDir, err := os.MkdirTemp("", "testdir")
 	if err != nil {
 		t.Fatalf("Failed to create temp directory: %v", err)
 	}
-	return dir
-}
-
-func TestCopyFile(t *testing.T) {
-
-	// Setting up the paths
-	indexDir := createTempDir(t)
 	defer os.RemoveAll(indexDir)
 
 	cacheDir := filepath.Join(indexDir, "add_cache")
-	err := os.MkdirAll(cacheDir, 0755)
+	err = os.MkdirAll(cacheDir, 0755)
 	if err != nil {
 		t.Fatalf("Failed to create cache directory: %v", err)
 	}
