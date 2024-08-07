@@ -1,42 +1,29 @@
 #!/bin/bash
-
-# Install protoc-gen-go
 go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 
-# Create directories
 mkdir -p ~/opt/semantifly
 cd ~/opt/semantifly
 
 # Download and install protoc
 wget https://github.com/protocolbuffers/protobuf/releases/download/v27.3/protoc-27.3-linux-x86_64.zip
 unzip protoc-27.3-linux-x86_64.zip
-rm protoc-27.3-linux-x86_64.zip  # Clean up the zip file
+rm protoc-27.3-linux-x86_64.zip
 
-# Navigate back to the script's directory (which should be the Semantifly repo root)
 cd - 
-
-# Ensure we're in the directory containing src/main.go
 if [ ! -f "./src/main.go" ]; then
     echo "Error: src/main.go not found. Make sure you're running this script from the root of the Semantifly repository."
     exit 1
 fi
 
-# Change to the src directory where go.mod is located
 cd src
-
-# Install dependencies
 go get -d ./...
 
-# Build the binary
+# Build binary, move to PATH
 go build -o semantifly .
-
-# Move the binary to a directory in PATH
 sudo mv semantifly /usr/local/bin/
 
-# Navigate back to the root of the repository
-cd ..
-
 # Update PATH
+cd ..
 echo 'export PATH=$PATH:~/opt/semantifly/bin:/usr/local/bin' >> ~/.bashrc
 source ~/.bashrc
 
