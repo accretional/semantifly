@@ -11,7 +11,7 @@ rm protoc-27.3-linux-x86_64.zip
 
 cd - 
 if [ ! -f "./src/main.go" ]; then
-    echo "Error: src/main.go not found. Make sure you're running this script from the root of the Semantifly repository."
+    echo "Error: src/main.go not found."
     exit 1
 fi
 
@@ -28,4 +28,3 @@ echo 'export PATH=$PATH:~/opt/semantifly/bin:/usr/local/bin' >> ~/.bashrc
 source ~/.bashrc
 
 echo "You can now use 'semantifly' command from anywhere"
-echo "For protoc, you can invoke as: 'protoc -I=src/proto --go_out=src/proto src/proto/index.proto'"
