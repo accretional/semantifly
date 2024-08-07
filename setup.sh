@@ -8,6 +8,7 @@ wget https://github.com/protocolbuffers/protobuf/releases/download/v27.3/protoc-
 unzip protoc-27.3-linux-x86_64.zip
 rm protoc-27.3-linux-x86_64.zip
 
+cd -
 cd src
 go get -d ./...
 
