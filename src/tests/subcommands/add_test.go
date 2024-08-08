@@ -1,38 +1,31 @@
 package tests
 
 import (
-	"bytes"
-	"encoding/gob"
-	"io"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"accretional.com/semantifly/subcommands"
+
+	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
+	"google.golang.org/protobuf/proto"
 )
 
-func createTempFile(t *testing.T, dir string, data []byte) *os.File {
+func createTempFile(t *testing.T, dir string, data string) *os.File {
 	file, err := os.CreateTemp(dir, "testfile")
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
 	defer file.Close()
-	_, err = file.Write(data)
+	_, err = file.WriteString(data)
 	if err != nil {
 		t.Fatalf("Failed to write to temp file: %v", err)
 	}
 	return file
 }
 
-func verifyFileEntry(t *testing.T, dstFilePath string, srcFileName string, addedFilePath string, originalContent []byte) error {
-
-	// Creating ale for assertions
-	ale := subcommands.AddedListEntry{
-		Name:       srcFileName,
-		URI:        srcFileName,
-		DataType:   "text",
-		SourceType: "file",
-	}
+func verifyAddedFileEntry(srcFileName string, addedFilePath string) error {
 
 	//Verify source list entry present in the Index
 	addedFile, err := os.Open(addedFilePath)
@@ -41,65 +34,65 @@ func verifyFileEntry(t *testing.T, dstFilePath string, srcFileName string, added
 	}
 	defer addedFile.Close()
 
-	_, err = addedFile.Seek(0, io.SeekStart)
+	// Reading the added.list file
+	data, err := os.ReadFile(addedFilePath)
 	if err != nil {
-		t.Fatalf("Failed to decode entry: %v\n", err)
+		if os.IsNotExist(err) {
+			return fmt.Errorf("Added list file %s missing", addedFilePath)
+		}
+		return fmt.Errorf("Failed to read index file: %w", err)
 	}
 
-	decoder := gob.NewDecoder(addedFile)
-	entryFound := false
+	// Checking for srcFileName in added.list file
+	var entryFound = false
+	var index pb.Index
+	if err := proto.Unmarshal(data, &index); err != nil {
+		return fmt.Errorf("Failed to marshall index file: %w", err)
+	}
 
-	for {
-		var indexEntry subcommands.AddCacheEntry
-		err = decoder.Decode(&indexEntry)
-		if err == io.EOF {
-			// Reached end of file, entry not found
-			break
-		}
-		if err != nil {
-			t.Fatalf("Failed to decode entry: %v\n", err)
-			os.Exit(1)
-		}
-		if indexEntry.Name == ale.Name {
+	for _, entry := range index.Entries {
+		if entry.Name == srcFileName {
 			entryFound = true
-			break
 		}
 	}
-
 	if !entryFound {
-		t.Errorf("Entry %s not found in added list\n", srcFileName)
+		return fmt.Errorf("Entry %s not found in added list\n", srcFileName)
 	}
 
+	return nil
+}
+
+func verifyMakeCopy(dstFilePath string, ale *pb.IndexListEntry, content string) error {
 	// Check destination file opening
-	dstFile, err := os.Open(dstFilePath)
+	dest, err := os.ReadFile(dstFilePath)
 	if err != nil {
-		t.Fatalf("Failed to open destination file %s: %v", dstFilePath, err)
+		if os.IsNotExist(err) {
+			return fmt.Errorf("file %s missing", dstFilePath)
+		}
+		return fmt.Errorf("failed to read index file: %w", err)
 	}
-	defer dstFile.Close()
 
-	// Decoding the cache entry file
-	var entry subcommands.AddCacheEntry
-	decoder = gob.NewDecoder(dstFile)
-	err = decoder.Decode(&entry)
-	if err != nil {
-		t.Fatalf("Failed to decode destination file %s: %v", dstFilePath, err)
+	// Marshall entry file
+	var entry pb.IndexListEntry
+	if err := proto.Unmarshal(dest, &entry); err != nil {
+		return fmt.Errorf("failed to unmarshall entry file: %w", err)
 	}
 
 	// Assertions
 	if entry.Name != ale.Name {
-		t.Errorf("Error in %s: Expected Name %s, got %s", dstFilePath, ale.Name, entry.Name)
+		return fmt.Errorf("Error in %s: Expected Name %s, got %s", dstFilePath, ale.Name, entry.Name)
 	}
 	if entry.URI != ale.URI {
-		t.Errorf("Error in %s: Expected URI %s, got %s", dstFilePath, ale.URI, entry.URI)
+		return fmt.Errorf("Error in %s: Expected URI %s, got %s", dstFilePath, ale.URI, entry.URI)
 	}
 	if entry.DataType != ale.DataType {
-		t.Errorf("Error in %s: Expected DataType %s, got %s", dstFilePath, ale.DataType, entry.DataType)
+		return fmt.Errorf("Error in %s: Expected DataType %s, got %s", dstFilePath, ale.DataType, entry.DataType)
 	}
 	if entry.SourceType != ale.SourceType {
-		t.Errorf("Error in %s: Expected SourceType %s, got %s", dstFilePath, ale.SourceType, entry.SourceType)
+		return fmt.Errorf("Error in %s: Expected SourceType %s, got %s", dstFilePath, ale.SourceType, entry.SourceType)
 	}
-	if !bytes.Equal(entry.Contents, originalContent) {
-		t.Errorf("Error in %s: Expected Contents %s, got %s", dstFilePath, string(originalContent), string(entry.Contents))
+	if entry.Content != content {
+		return fmt.Errorf("Error in %s: Expected Contents %s, got %s", dstFilePath, content, string(entry.Content))
 	}
 
 	return nil
@@ -123,14 +116,14 @@ func TestReadWrite(t *testing.T) {
 	const addedFile = "added.list"
 
 	// Preparing the test data
-	originalContent := []byte("Test File Contents")
+	originalContent := "Test File Contents"
 	srcFile := createTempFile(t, indexDir, originalContent)
 
 	// Create a mock `AddArgs` structure
 	args := subcommands.AddArgs{
 		IndexPath:  indexDir,
-		DataType:   "text",
-		SourceType: "file",
+		DataType:   pb.DataType_TEXT,
+		SourceType: pb.SourceType_LOCAL_FILE,
 		MakeCopy:   true,
 		DataURIs:   []string{srcFile.Name()},
 	}
@@ -138,11 +131,26 @@ func TestReadWrite(t *testing.T) {
 	// Invoking the `Add` function
 	subcommands.Add(args)
 
-	// Verifying the file entry
-	dstFilePath := filepath.Join(cacheDir, srcFile.Name())
+	// Verifying the source file entry in added list
 	addedFilePath := filepath.Join(indexDir, addedFile)
 
-	verifyFileEntry(t, dstFilePath, srcFile.Name(), addedFilePath, originalContent)
+	if err := verifyAddedFileEntry(srcFile.Name(), addedFilePath); err != nil {
+		t.Fatalf("Failed to verify source file entry in added list: %v", err)
+	}
+
+	// Creating dstFilePath and ale for assertions
+	dstFilePath := filepath.Join(cacheDir, srcFile.Name())
+	ale := &pb.IndexListEntry{
+		Name:       srcFile.Name(),
+		URI:        srcFile.Name(),
+		DataType:   pb.DataType_TEXT,
+		SourceType: pb.SourceType_LOCAL_FILE,
+	}
+
+	// Verifying the contents of the copy of source file
+	if err := verifyMakeCopy(dstFilePath, ale, originalContent); err != nil {
+		t.Fatalf("Failed to verify copy of source file: %v", err)
+	}
 }
 
 func TestMultipleAddCommands(t *testing.T) {
@@ -159,8 +167,9 @@ func TestMultipleAddCommands(t *testing.T) {
 		t.Fatalf("Failed to create cache directory: %v", err)
 	}
 
-	srcContent1 := []byte("Test Content 1")
-	srcContent2 := []byte("Test Content 2")
+	// Setting up contents of two source files
+	srcContent1 := "Test Content 1"
+	srcContent2 := "Test Content 2"
 
 	srcFile1 := createTempFile(t, indexDir, srcContent1)
 	srcFile2 := createTempFile(t, indexDir, srcContent2)
@@ -170,8 +179,8 @@ func TestMultipleAddCommands(t *testing.T) {
 	// Create a mock `AddArgs` structure to include source file 1
 	args := subcommands.AddArgs{
 		IndexPath:  indexDir,
-		DataType:   "text",
-		SourceType: "file",
+		DataType:   pb.DataType_TEXT,
+		SourceType: pb.SourceType_LOCAL_FILE,
 		MakeCopy:   true,
 		DataURIs:   []string{srcFile1.Name()},
 	}
@@ -185,14 +194,38 @@ func TestMultipleAddCommands(t *testing.T) {
 	// Invoking the `Add` function for source file 2
 	subcommands.Add(args)
 
-	// Destination paths for the two files
-	dstFilePath1 := filepath.Join(cacheDir, srcFile1.Name())
-	dstFilePath2 := filepath.Join(cacheDir, srcFile2.Name())
-
 	// Index file path
 	addedFilePath := filepath.Join(indexDir, addedFile)
 
-	// Verifying the file entries
-	verifyFileEntry(t, dstFilePath1, srcFile1.Name(), addedFilePath, srcContent1)
-	verifyFileEntry(t, dstFilePath2, srcFile2.Name(), addedFilePath, srcContent2)
+	// Verifying the source file entries in added list
+	if err := verifyAddedFileEntry(srcFile1.Name(), addedFilePath); err != nil {
+		t.Fatalf("Failed to verify source file 1 entry in added list: %v", err)
+	}
+	if err := verifyAddedFileEntry(srcFile2.Name(), addedFilePath); err != nil {
+		t.Fatalf("Failed to verify source file 2 entry in added list: %v", err)
+	}
+
+	// Creating dstFilePath1 and ale for assertions of source file 1
+	dstFilePath1 := filepath.Join(cacheDir, srcFile1.Name())
+	ale := &pb.IndexListEntry{
+		Name:       srcFile1.Name(),
+		URI:        srcFile1.Name(),
+		DataType:   pb.DataType_TEXT,
+		SourceType: pb.SourceType_LOCAL_FILE,
+	}
+
+	// Verifying the contents of the copy of source file 1
+	if err := verifyMakeCopy(dstFilePath1, ale, srcContent1); err != nil {
+		t.Fatalf("Failed to verify copy of source file 1: %v", err)
+	}
+
+	// Creating dstFilePath2 and ale for assertions of source file 2
+	dstFilePath2 := filepath.Join(cacheDir, srcFile2.Name())
+	ale.Name = srcFile2.Name()
+	ale.URI = srcFile2.Name()
+
+	// Verifying the contents of the copy of source file 2
+	if err := verifyMakeCopy(dstFilePath2, ale, srcContent2); err != nil {
+		t.Fatalf("Failed to verify copy of source file 2: %v", err)
+	}
 }
