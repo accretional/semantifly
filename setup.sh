@@ -18,4 +18,7 @@ echo 'export PATH="$HOME/opt/semantifly:$PATH"' >> ~/.bashrc
 # Update PATH
 . ~/.bashrc
 
+cd -
+find src/proto -name "*.proto" -exec ~/opt/semantifly/bin/protoc -I=src/proto --go_out=src/proto {} \;
+
 echo "You can now use 'semantifly' command from anywhere"
