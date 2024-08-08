@@ -58,7 +58,7 @@ func CommandReadRun() {
 	case "add":
 		cmd := flag.NewFlagSet("add", flag.ExitOnError)
 		dataTypeStr := cmd.String("type", "text", "The type of the input data")
-		sourceTypeStr := cmd.String("source-type", "local-file", "How to access the content")
+		sourceTypeStr := cmd.String("source-type", "file", "How to access the content")
 		makeLocalCopy := cmd.Bool("copy", false, "Whether to copy and use the file as it is now, or dynamically access it")
 		indexPath := cmd.String("index-path", "", "Path to the index file")
 		cmd.Parse(os.Args[2:])
@@ -111,7 +111,7 @@ func parseDataType(str string) (pb.DataType, error) {
 
 func parseSourceType(str string) (pb.SourceType, error) {
 	switch str {
-	case "local-file":
+	case "file":
 		return pb.SourceType_LOCAL_FILE, nil
 	default:
 		return pb.SourceType_LOCAL_FILE, fmt.Errorf("unknown source type: %s", str)
