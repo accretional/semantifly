@@ -12,6 +12,19 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+// createTempFile creates a temporary file in the specified directory with the given data.
+// It returns a pointer to the created file. If an error occurs during file creation or writing,
+// it fails the test with a fatal error message.
+//
+// Parameters:
+//
+//	t *testing.T: The testing.T instance for reporting test failures
+//	dir string: The directory in which to create the temporary file
+//	data string: The data to be written to the temporary file
+//
+// Return:
+//
+//	*os.File: A pointer to the created temporary file
 func createTempFile(t *testing.T, dir string, data string) *os.File {
 	file, err := os.CreateTemp(dir, "testfile")
 	if err != nil {
