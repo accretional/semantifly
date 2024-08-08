@@ -25,6 +25,16 @@ func createTempFile(t *testing.T, dir string, data string) *os.File {
 	return file
 }
 
+// verifyAddedFileEntry checks if the given source file name exists in the added file list.
+// It reads the added file list, unmarshals it into a protobuf Index structure,
+// and searches for the source file name in the entries.
+//
+// Parameters:
+//   - srcFileName: The name of the source file to search for in the added list.
+//   - addedFilePath: The path to the added file list.
+//
+// Returns:
+//   - error: nil if the entry is found, otherwise an error describing the issue.
 func verifyAddedFileEntry(srcFileName string, addedFilePath string) error {
 
 	//Verify source list entry present in the Index
@@ -62,6 +72,17 @@ func verifyAddedFileEntry(srcFileName string, addedFilePath string) error {
 	return nil
 }
 
+// verifyMakeCopy verifies the content of the destination file against the provided IndexListEntry and content.
+// It reads the destination file, unmarshalls its content into an IndexListEntry, and compares its fields
+// with the provided IndexListEntry and content.
+//
+// Parameters:
+// - dstFilePath: the file path of the destination file to be verified
+// - ale: the IndexListEntry to compare with the destination file's content
+// - content: the content to compare with the destination file's content field
+//
+// Returns:
+// - error: an error indicating any issues encountered during the verification process
 func verifyMakeCopy(dstFilePath string, ale *pb.IndexListEntry, content string) error {
 	// Check destination file opening
 	dest, err := os.ReadFile(dstFilePath)
@@ -98,6 +119,7 @@ func verifyMakeCopy(dstFilePath string, ale *pb.IndexListEntry, content string) 
 	return nil
 }
 
+// TestReadWrite is a test function to verify the behavior of the ReadWrite functionality. It sets up the necessary paths and test data, invokes the `Add` function, and verifies the expected behavior by checking the added file entry and the contents of the copied file.
 func TestReadWrite(t *testing.T) {
 
 	// Setting up the paths
@@ -113,7 +135,7 @@ func TestReadWrite(t *testing.T) {
 		t.Fatalf("Failed to create cache directory: %v", err)
 	}
 
-	const addedFile = "added.list"
+	const indexFile = "index.list"
 
 	// Preparing the test data
 	originalContent := "Test File Contents"
@@ -131,16 +153,16 @@ func TestReadWrite(t *testing.T) {
 	// Invoking the `Add` function
 	subcommands.Add(args)
 
-	// Verifying the source file entry in added list
-	addedFilePath := filepath.Join(indexDir, addedFile)
+	// Verifying the source file entry in index list
+	indexFilePath := filepath.Join(indexDir, indexFile)
 
-	if err := verifyAddedFileEntry(srcFile.Name(), addedFilePath); err != nil {
+	if err := verifyAddedFileEntry(srcFile.Name(), indexFilePath); err != nil {
 		t.Fatalf("Failed to verify source file entry in added list: %v", err)
 	}
 
 	// Creating dstFilePath and ale for assertions
 	dstFilePath := filepath.Join(cacheDir, srcFile.Name())
-	ale := &pb.IndexListEntry{
+	ile := &pb.IndexListEntry{
 		Name:       srcFile.Name(),
 		URI:        srcFile.Name(),
 		DataType:   pb.DataType_TEXT,
@@ -148,11 +170,13 @@ func TestReadWrite(t *testing.T) {
 	}
 
 	// Verifying the contents of the copy of source file
-	if err := verifyMakeCopy(dstFilePath, ale, originalContent); err != nil {
+	if err := verifyMakeCopy(dstFilePath, ile, originalContent); err != nil {
 		t.Fatalf("Failed to verify copy of source file: %v", err)
 	}
 }
 
+// TestMultipleAddCommands tests the functionality of adding multiple source files to the index and verifying their entries and contents.
+// It sets up temporary directories and files, creates mock `AddArgs` structures, invokes the `Add` function for each source file, verifies the entries in the added list, and checks the contents of the copied files in the cache directory.
 func TestMultipleAddCommands(t *testing.T) {
 	// Setting up the paths
 	indexDir, err := os.MkdirTemp("", "testdir")
@@ -174,7 +198,7 @@ func TestMultipleAddCommands(t *testing.T) {
 	srcFile1 := createTempFile(t, indexDir, srcContent1)
 	srcFile2 := createTempFile(t, indexDir, srcContent2)
 
-	const addedFile = "added.list"
+	const indexFile = "index.list"
 
 	// Create a mock `AddArgs` structure to include source file 1
 	args := subcommands.AddArgs{
@@ -194,20 +218,20 @@ func TestMultipleAddCommands(t *testing.T) {
 	// Invoking the `Add` function for source file 2
 	subcommands.Add(args)
 
-	// Index file path
-	addedFilePath := filepath.Join(indexDir, addedFile)
+	// Creating the index file path
+	indexFilePath := filepath.Join(indexDir, indexFile)
 
 	// Verifying the source file entries in added list
-	if err := verifyAddedFileEntry(srcFile1.Name(), addedFilePath); err != nil {
+	if err := verifyAddedFileEntry(srcFile1.Name(), indexFilePath); err != nil {
 		t.Fatalf("Failed to verify source file 1 entry in added list: %v", err)
 	}
-	if err := verifyAddedFileEntry(srcFile2.Name(), addedFilePath); err != nil {
+	if err := verifyAddedFileEntry(srcFile2.Name(), indexFilePath); err != nil {
 		t.Fatalf("Failed to verify source file 2 entry in added list: %v", err)
 	}
 
 	// Creating dstFilePath1 and ale for assertions of source file 1
 	dstFilePath1 := filepath.Join(cacheDir, srcFile1.Name())
-	ale := &pb.IndexListEntry{
+	ile := &pb.IndexListEntry{
 		Name:       srcFile1.Name(),
 		URI:        srcFile1.Name(),
 		DataType:   pb.DataType_TEXT,
@@ -215,17 +239,17 @@ func TestMultipleAddCommands(t *testing.T) {
 	}
 
 	// Verifying the contents of the copy of source file 1
-	if err := verifyMakeCopy(dstFilePath1, ale, srcContent1); err != nil {
+	if err := verifyMakeCopy(dstFilePath1, ile, srcContent1); err != nil {
 		t.Fatalf("Failed to verify copy of source file 1: %v", err)
 	}
 
 	// Creating dstFilePath2 and ale for assertions of source file 2
 	dstFilePath2 := filepath.Join(cacheDir, srcFile2.Name())
-	ale.Name = srcFile2.Name()
-	ale.URI = srcFile2.Name()
+	ile.Name = srcFile2.Name()
+	ile.URI = srcFile2.Name()
 
 	// Verifying the contents of the copy of source file 2
-	if err := verifyMakeCopy(dstFilePath2, ale, srcContent2); err != nil {
+	if err := verifyMakeCopy(dstFilePath2, ile, srcContent2); err != nil {
 		t.Fatalf("Failed to verify copy of source file 2: %v", err)
 	}
 }
