@@ -1,41 +1,44 @@
 package subcommands
+
 import (
-	"encoding/gob"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path"
 	"path/filepath"
-	"time"
+
+	pb "accretional.com/semantifly/proto"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-const addedCopiesSubDir = "add_cache";
+const addedCopiesSubDir = "add_cache"
 const addedFile = "added.list"
 
 type AddedListEntry struct {
-	Name string
-	URI string
-	DataType string
-	SourceType string
+	Name           string
+	URI            string
+	DataType       string
+	SourceType     string
 	TimeFirstAdded string
 }
 
 type AddCacheEntry struct {
 	AddedListEntry
 	TimeLastRefreshed string
-	Contents []byte
+	Contents          []byte
 }
 
 type AddArgs struct {
-	IndexPath string
-	DataType string
+	IndexPath  string
+	DataType   string
 	SourceType string
-	MakeCopy bool
-	DataURIs []string
+	MakeCopy   bool
+	DataURIs   []string
 }
 
-func Add(a AddArgs){
+func Add(a AddArgs) {
 	// fmt.Println(fmt.Sprintf("Add is not fully implemented. dataType: %s, dataURIs: %v", a.DataType, a.DataURIs))
 	switch a.SourceType {
 	case "file":
@@ -50,7 +53,7 @@ func Add(a AddArgs){
 			if errors.Is(err, os.ErrNotExist) {
 				fmt.Println(fmt.Sprintf("Failed to add file %s at input list index %v: file does not exist", u, i))
 				return
-			  }
+			}
 			if f.IsDir() {
 				fmt.Println(fmt.Sprintf("Cannot add directory %s as file. Try adding as a directory instead. Skipping.", u))
 				continue
@@ -60,17 +63,19 @@ func Add(a AddArgs){
 				continue
 			}
 
-			ale := AddedListEntry{
-				Name: u,
-				URI: u,
-				DataType: a.DataType,
-				SourceType: a.SourceType,
-				TimeFirstAdded: time.Now().String(),
-			}
-			if alreadyAdded(ale, addedFile) {
+			if alreadyAdded(u, addedFilePath) {
 				fmt.Println(fmt.Sprintf("File %s has already been added. Skipping without refresh.", u))
 				continue
 			}
+
+			ale := &pb.IndexListEntry{
+				Name:             u,
+				URI:              u,
+				dataType:         a.DataType,
+				sourceType:       a.SourceType,
+				first_added_time: timestamppb.Now(),
+			}
+
 			if a.MakeCopy {
 				// We'd first do something type-related if we supported anything besides text.
 				err = copyFile(u, path.Join(a.IndexPath, addedCopiesSubDir, ale.Name), ale)
@@ -79,7 +84,7 @@ func Add(a AddArgs){
 					continue
 				}
 			}
-			err = commitAdd(ale, addedFile)
+			err = commitAdd(ale, addedFilePath)
 			if err != nil {
 				fmt.Println(fmt.Sprintf("File %s failed to commit with err: %s. Skipping.", u, err))
 				continue
@@ -92,53 +97,59 @@ func Add(a AddArgs){
 	}
 }
 
-func alreadyAdded(ale AddedListEntry, fp *os.File) bool {
+func alreadyAdded(name string, filepath string) bool {
 	// Seek to the beginning of the file
-	_, err := fp.Seek(0, io.SeekStart)
+	data, err := os.ReadFile(filepath)
 	if err != nil {
-		fmt.Printf("Failed to seek to beginning of file: %s\n", err)
-		os.Exit(1)
+		if os.IsNotExist(err) {
+			return false
+		}
+		fmt.Errorf("failed to read index file: %w", err)
+		return false
 	}
 
-	decoder := gob.NewDecoder(fp)
-	for {
-		var entry AddedListEntry
-		err := decoder.Decode(&entry)
-		if err == io.EOF {
-			// Reached end of file, entry not found
-			break
-		}
-		if err != nil {
-			fmt.Printf("Failed to decode entry: %s\n", err)
-			os.Exit(1)
-		}
-		if entry.Name == ale.Name {
+	var index pb.Index
+	if err := proto.Unmarshal(data, &index); err != nil {
+		fmt.Errorf("failed to marshall index file: %w", err)
+	}
+
+	for _, entry := range index.Entries {
+		if entry.Name == name {
 			return true
 		}
 	}
+
 	return false
 }
 
-func commitAdd(ale AddedListEntry, fp *os.File) error {
-	// Seek to the end of the file
-	_, err := fp.Seek(0, io.SeekEnd)
-	if err != nil {
-		return fmt.Errorf("failed to seek to end of file: %w", err)
+func commitAdd(ale pb.IndexListEntry, filepath string) error {
+
+	var index pb.Index
+	data, err := os.ReadFile(filepath)
+
+	if err == nil {
+		if err := proto.Unmarshal(data, &index); err != nil {
+			return fmt.Errorf("failed to unmarshal existing index: %w", err)
+		}
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("failed to read index file: %w", err)
 	}
 
-	// Create an encoder that will append to the file
-	encoder := gob.NewEncoder(fp)
+	index.Entries = append(index.Entries, ale)
 
-	// Encode and append the new entry
-	err = encoder.Encode(&ale)
+	updatedData, err := proto.Marshal(&index)
 	if err != nil {
-		return fmt.Errorf("failed to encode and append new entry: %w", err)
+		return fmt.Errorf("failed to marshal updated index: %w", err)
+	}
+
+	if err := os.WriteFile(filepath, updatedData, 0644); err != nil {
+		return fmt.Errorf("failed to write updated index to file: %w", err)
 	}
 
 	return nil
 }
 
-func copyFile(src string, dest string, ale AddedListEntry) error {
+func copyFile(src string, dest string, ale pb.IndexListEntry) error {
 	// Open the source file
 	srcFile, err := os.Open(src)
 	if err != nil {
@@ -152,32 +163,26 @@ func copyFile(src string, dest string, ale AddedListEntry) error {
 		return fmt.Errorf("failed to read source file: %w", err)
 	}
 
-	// Create the AddCacheEntry
-	entry := AddCacheEntry{
-		AddedListEntry: ale,
-		TimeLastRefreshed: time.Now().UTC().Format(time.RFC3339),
-		Contents:          content,
-	}
+	// Update the IndexListEntry
+	ale.Content = content
+	ale.LastRefreshedTime = timestamppb.Now()
 
 	// Create destination dir
 	dir := filepath.Dir(dest)
 	if err := os.MkdirAll(dir, 0770); err != nil {
-        return fmt.Errorf("failed to create destination dir $s: %w", dir, err)
-    }
-	// Create or open the destination file
-	destFile, err := os.Create(dest)
-	if err != nil {
-		return fmt.Errorf("failed to create destination file: %w", err)
+		return fmt.Errorf("failed to create destination dir $s: %w", dir, err)
 	}
-	defer destFile.Close()
 
-	// Create a gob encoder
-	encoder := gob.NewEncoder(destFile)
-
-	// Encode and write the AddCacheEntry
-	err = encoder.Encode(&entry)
+	// Serialize the IndexListEntry
+	data, err := proto.Marshal(&ale)
 	if err != nil {
-		return fmt.Errorf("failed to encode and write entry: %w", err)
+		return fmt.Errorf("failed to marshal IndexListEntry: %w", err)
+	}
+
+	// Write it to the destination
+	//TODO: check the path properly
+	if err := os.WriteFile(dest, data, 0644); err != nil {
+		return fmt.Errorf("failed to write to destination file: %w", err)
 	}
 
 	return nil
