@@ -13,7 +13,6 @@ go get -d ./...
 
 # Build binary, move to PATH
 go build -o ~/opt/semantifly/semantifly .
-export PATH="$HOME/opt/semantifly:$PATH"
 echo 'export PATH="$HOME/opt/semantifly:$PATH"' >> ~/.bashrc
 
 # Update PATH
