@@ -102,6 +102,9 @@ func TestGetError(t *testing.T) {
 
 	subcommands.Add(args)
 
+	// TODO: we should exit with a non-0 error code, write any error messages to stderr,
+	// then update this. Writing errors to the same place as expected output is not good
+	// for callers.
 	expectedOutput := fmt.Sprintf("file '%s' not found in the index\n", nonExistentFile)
 
 	output := captureOutput(func() {
