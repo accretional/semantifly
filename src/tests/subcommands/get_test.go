@@ -40,7 +40,7 @@ func TestGet(t *testing.T) {
 	srcContent := "Test Content 1"
 	srcFile := createTempFile(t, indexDir, srcContent)
 
-	args := subcommands.AddArgs{
+	addArgs := subcommands.AddArgs{
 		IndexPath:  indexDir,
 		DataType:   pb.DataType_TEXT,
 		SourceType: pb.SourceType_LOCAL_FILE,
@@ -48,7 +48,20 @@ func TestGet(t *testing.T) {
 		DataURIs:   []string{srcFile.Name()},
 	}
 
-	subcommands.Add(args)
+	subcommands.Add(addArgs)
+
+	srcContent2 := "Test Content 2"
+	srcFile2 := createTempFile(t, indexDir, srcContent2)
+
+	addArgs2 := subcommands.AddArgs{
+		IndexPath:  indexDir,
+		DataType:   pb.DataType_TEXT,
+		SourceType: pb.SourceType_LOCAL_FILE,
+		MakeCopy:   true,
+		DataURIs:   []string{srcFile2.Name()},
+	}
+
+	subcommands.Add(addArgs2)
 
 	getArgs := subcommands.GetArgs{
 		IndexPath: indexDir,
