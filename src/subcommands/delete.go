@@ -51,8 +51,6 @@ func Delete(d DeleteArgs) {
 			continue
 		}
 	}
-
-	fmt.Println("Delete operation completed.")
 }
 
 // isInIndex checks if a given name exists in the specified index file.
@@ -138,6 +136,7 @@ func deleteCopy(indexPath, name string) error {
 
 	if _, err := os.Stat(copiedFilePath); err != nil {
 		if os.IsNotExist(err) {
+			fmt.Printf("No copy of %s found, skipping\n", name)
 			return nil
 		}
 

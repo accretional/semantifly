@@ -50,12 +50,12 @@ func verifyDeletedFileEntry(srcFileName string, addedFilePath string) error {
 func verifyDeleteCopy(dstFilePath string) error {
 
 	_, err := os.ReadFile(dstFilePath)
-	if !os.IsNotExist(err) {
-		return fmt.Errorf("Error in deleting copy file %s: Copy file found.", dstFilePath)
-	}
-
 	if err != nil {
-		return fmt.Errorf("Error in checking for copy file %s: %v.", dstFilePath, err)
+		if !os.IsNotExist(err) {
+			return fmt.Errorf("Error in checking for copy file %s: %v.", dstFilePath, err)
+		}
+	} else {
+		return fmt.Errorf("Error in deleting copy file %s: Copy file found.", dstFilePath)
 	}
 
 	return nil
@@ -87,12 +87,28 @@ func TestDelete(t *testing.T) {
 		IndexPath:  indexDir,
 		DataType:   pb.DataType_TEXT,
 		SourceType: pb.SourceType_LOCAL_FILE,
-		MakeCopy:   true,
+		MakeCopy:   false,
 		DataURIs:   []string{srcFile.Name()},
 	}
 
 	subcommands.Add(addArgs)
 
 	// Now delete the entry
-	
+	deleteArgs := subcommands.DeleteArgs{
+		IndexPath:  indexDir,
+		DeleteCopy: true,
+		DataURIs:   []string{srcFile.Name()},
+	}
+
+	subcommands.Delete(deleteArgs)
+
+	indexFilePath := filepath.Join(indexDir, indexFile)
+	if err := verifyDeletedFileEntry(srcFile.Name(), indexFilePath); err != nil {
+		t.Fatalf("Failed to verify delete command in index list: %v", err)
+	}
+
+	dstFilePath := filepath.Join(cacheDir, srcFile.Name())
+	if err := verifyDeleteCopy(dstFilePath); err != nil {
+		t.Fatalf("Failed to verify delete copy: %v", err)
+	}
 }
