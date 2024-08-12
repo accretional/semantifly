@@ -11,7 +11,7 @@ import (
 
 type GetArgs struct {
 	IndexPath string
-	FileName  string
+	Name      string
 }
 
 func Get(g GetArgs) error {
@@ -29,14 +29,14 @@ func Get(g GetArgs) error {
 
 	var targetEntry *pb.IndexListEntry
 	for _, entry := range index.Entries {
-		if entry.Name == g.FileName {
+		if entry.Name == g.Name {
 			targetEntry = entry
 			break
 		}
 	}
 
 	if targetEntry == nil {
-		return fmt.Errorf("file '%s' not found in the index", g.FileName)
+		return fmt.Errorf("file '%s' not found in the index", g.Name)
 	}
 
 	if targetEntry.Content != "" {
@@ -44,7 +44,7 @@ func Get(g GetArgs) error {
 	} else {
 		content, err := os.ReadFile(targetEntry.URI)
 		if err != nil {
-			return fmt.Errorf("failed to read file '%s': %w", g.FileName, err)
+			return fmt.Errorf("failed to read file '%s': %w", g.Name, err)
 		}
 		fmt.Println(string(content))
 	}

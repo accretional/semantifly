@@ -65,7 +65,7 @@ func TestGet(t *testing.T) {
 
 	getArgs := subcommands.GetArgs{
 		IndexPath: indexDir,
-		FileName:  srcFile.Name(),
+		Name:      srcFile.Name(),
 	}
 
 	output := captureOutput(func() {
@@ -91,7 +91,7 @@ func TestGetError(t *testing.T) {
 	nonExistentFile := "non_existent_file.txt"
 	getArgsNonExistent := subcommands.GetArgs{
 		IndexPath: indexDir,
-		FileName:  nonExistentFile,
+		Name:      nonExistentFile,
 	}
 
 	srcContent := "Existing Content"
