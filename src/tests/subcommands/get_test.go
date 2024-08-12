@@ -109,7 +109,7 @@ func TestGetError(t *testing.T) {
 
 	err := subcommands.Get(getArgsNonExistent)
 
-	// Validate the error
+	// validate the error
 	if err == nil {
 		t.Fatalf("Expected an error for non-existent file, but got nil")
 	}
