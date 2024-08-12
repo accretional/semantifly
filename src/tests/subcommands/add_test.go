@@ -45,19 +45,14 @@ func createTempFile(t *testing.T, dir string, data string) *os.File {
 // Parameters:
 //   - srcFileName: The name of the source file to search for in the added list.
 //   - addedFilePath: The path to the added file list.
-//
-// Returns:
-//   - error: nil if the entry is found, otherwise an error describing the issue.
 func verifyAddedFileEntry(srcFileName string, addedFilePath string) error {
 
-	//Verify source list entry present in the Index
 	addedFile, err := os.Open(addedFilePath)
 	if err != nil {
 		return err
 	}
 	defer addedFile.Close()
 
-	// Reading the added.list file
 	data, err := os.ReadFile(addedFilePath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -66,7 +61,6 @@ func verifyAddedFileEntry(srcFileName string, addedFilePath string) error {
 		return fmt.Errorf("Failed to read index file: %w", err)
 	}
 
-	// Checking for srcFileName in added.list file
 	var entryFound = false
 	var index pb.Index
 	if err := proto.Unmarshal(data, &index); err != nil {
@@ -93,11 +87,8 @@ func verifyAddedFileEntry(srcFileName string, addedFilePath string) error {
 // - dstFilePath: the file path of the destination file to be verified
 // - ale: the IndexListEntry to compare with the destination file's content
 // - content: the content to compare with the destination file's content field
-//
-// Returns:
-// - error: an error indicating any issues encountered during the verification process
 func verifyMakeCopy(dstFilePath string, ale *pb.IndexListEntry, content string) error {
-	// Check destination file opening
+
 	dest, err := os.ReadFile(dstFilePath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -106,7 +97,6 @@ func verifyMakeCopy(dstFilePath string, ale *pb.IndexListEntry, content string) 
 		return fmt.Errorf("failed to read index file: %w", err)
 	}
 
-	// Marshall entry file
 	var entry pb.IndexListEntry
 	if err := proto.Unmarshal(dest, &entry); err != nil {
 		return fmt.Errorf("failed to unmarshall entry file: %w", err)
@@ -163,7 +153,6 @@ func TestReadWrite(t *testing.T) {
 		DataURIs:   []string{srcFile.Name()},
 	}
 
-	// Invoking the `Add` function
 	subcommands.Add(args)
 
 	// Verifying the source file entry in index list
@@ -173,7 +162,6 @@ func TestReadWrite(t *testing.T) {
 		t.Fatalf("Failed to verify source file entry in added list: %v", err)
 	}
 
-	// Creating dstFilePath and ale for assertions
 	dstFilePath := filepath.Join(cacheDir, srcFile.Name())
 	ile := &pb.IndexListEntry{
 		Name:       srcFile.Name(),
@@ -222,16 +210,12 @@ func TestMultipleAddCommands(t *testing.T) {
 		DataURIs:   []string{srcFile1.Name()},
 	}
 
-	// Invoking the `Add` function for source file 1
 	subcommands.Add(args)
 
 	// Modifying the args to now include source file 2
 	args.DataURIs = []string{srcFile2.Name()}
-
-	// Invoking the `Add` function for source file 2
 	subcommands.Add(args)
 
-	// Creating the index file path
 	indexFilePath := filepath.Join(indexDir, indexFile)
 
 	// Verifying the source file entries in added list
@@ -242,7 +226,6 @@ func TestMultipleAddCommands(t *testing.T) {
 		t.Fatalf("Failed to verify source file 2 entry in added list: %v", err)
 	}
 
-	// Creating dstFilePath1 and ale for assertions of source file 1
 	dstFilePath1 := filepath.Join(cacheDir, srcFile1.Name())
 	ile := &pb.IndexListEntry{
 		Name:       srcFile1.Name(),
@@ -256,7 +239,6 @@ func TestMultipleAddCommands(t *testing.T) {
 		t.Fatalf("Failed to verify copy of source file 1: %v", err)
 	}
 
-	// Creating dstFilePath2 and ale for assertions of source file 2
 	dstFilePath2 := filepath.Join(cacheDir, srcFile2.Name())
 	ile.Name = srcFile2.Name()
 	ile.URI = srcFile2.Name()
