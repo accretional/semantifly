@@ -37,7 +37,7 @@ func TestGet(t *testing.T) {
 	}
 	defer os.RemoveAll(indexDir)
 
-	srcContent := "Test Content 1"
+	srcContent := "Test Content"
 	srcFile := createTempFile(t, indexDir, srcContent)
 
 	addArgs := subcommands.AddArgs{
@@ -50,7 +50,7 @@ func TestGet(t *testing.T) {
 
 	subcommands.Add(addArgs)
 
-	srcContent2 := "Test Content 2"
+	srcContent2 := "Other Content"
 	srcFile2 := createTempFile(t, indexDir, srcContent2)
 
 	addArgs2 := subcommands.AddArgs{
