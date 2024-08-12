@@ -1,125 +1,94 @@
 package tests
 
 import (
-	"bytes"
-	"encoding/gob"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
-	"accretional.com/semantifly/subcommands"
+	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func TestGetCommand(t *testing.T) {
-	// Setting up the paths
-	indexDir, err := os.MkdirTemp("", "testdir")
+func TestGet(t *testing.T) {
+	// Set up temporary directory
+	indexDir, err := os.MkdirTemp("", "test_get")
 	if err != nil {
 		t.Fatalf("Failed to create temp directory: %v", err)
 	}
-	defer os.RemoveAll(indexDir)
+	defer os.RemoveAll(tempDir)
 
-	cacheDir := filepath.Join(indexDir, "add_cache")
-	err = os.MkdirAll(cacheDir, 0755)
-	if err != nil {
-		t.Fatalf("Failed to create cache directory: %v", err)
-	}
+	srcContent1 := "Test Content 1"
+	srcContent2 := "Test Content 2"
 
-	const addedFile = "added.list"
+	srcFile1 := createTempFile(t, indexDir, srcContent1)
+	srcFile2 := createTempFile(t, indexDir, srcContent2)
 
-	// Preparing the test data
-	originalContent := []byte("Test File Contents")
-	srcFile := createTempFile(t, indexDir, originalContent)
-
-	// Create a mock `AddArgs` structure and add the file
-	addArgs := subcommands.AddArgs{
+	args_1 := subcommands.AddArgs{
 		IndexPath:  indexDir,
-		DataType:   "text",
-		SourceType: "file",
+		DataType:   pb.DataType_TEXT,
+		SourceType: pb.SourceType_LOCAL_FILE,
 		MakeCopy:   true,
-		DataURIs:   []string{srcFile.Name()},
+		DataURIs:   []string{srcFile1.Name()},
 	}
 
-	// Invoking the `Add` function
-	subcommands.Add(addArgs)
+	subcommands.Add(args_1)
 
-	// Create a mock `GetArgs` structure
-	getArgs := subcommands.GetArgs{
-		IndexPath:  indexDir,
-		DataType:   "text",
-		SourceType: "file",
-		Name:       filepath.Base(srcFile.Name()),
+	indexPath := createIndexFile(t, tempDir, entries)
+
+	tests := []struct {
+		name        string
+		fileName    string
+		expectedOut string
+		expectError bool
+	}{
+		{"Get existing file without copy", "file1.txt", file1Content, false},
+		{"Get existing file with copy", "file2.txt", file2Content, false},
+		{"Get non-existent file", "file3.txt", "", true},
 	}
 
-	old := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			oldStdout := os.Stdout
+			r, w, _ := os.Pipe()
+			os.Stdout = w
 
-	subcommands.Get(getArgs)
+			err := Get(GetArgs{
+				IndexPath: tempDir,
+				FileName:  tt.fileName,
+			})
 
-	w.Close()
-	os.Stdout = old
+			w.Close()
+			os.Stdout = oldStdout
+			out, _ := os.ReadAll(r)
 
-	var buf bytes.Buffer
-	io.Copy(&buf, r)
-	output := strings.TrimSpace(buf.String())
-
-	if output != string(originalContent) {
-		t.Errorf("Expected output '%s', but got '%s'", string(originalContent), output)
-	}
-
-	verifyTimeLastRefreshed(t, filepath.Join(cacheDir, filepath.Base(srcFile.Name())))
-}
-
-func verifyTimeLastRefreshed(t *testing.T, filePath string) {
-	file, err := os.Open(filePath)
-	if err != nil {
-		t.Fatalf("Failed to open file %s: %v", filePath, err)
-	}
-	defer file.Close()
-
-	var entry subcommands.AddCacheEntry
-	decoder := gob.NewDecoder(file)
-	err = decoder.Decode(&entry)
-	if err != nil {
-		t.Fatalf("Failed to decode file %s: %v", filePath, err)
-	}
-
-	if entry.TimeLastRefreshed == entry.TimeFirstAdded {
-		t.Errorf("TimeLastRefreshed was not updated")
+			if tt.expectError && err == nil {
+				t.Errorf("Expected an error, but got none")
+			}
+			if !tt.expectError && err != nil {
+				t.Errorf("Unexpected error: %v", err)
+			}
+			if !tt.expectError && strings.TrimSpace(string(out)) != tt.expectedOut {
+				t.Errorf("Expected output %q, but got %q", tt.expectedOut, strings.TrimSpace(string(out)))
+			}
+		})
 	}
 }
 
-func TestGetNonExistentFile(t *testing.T) {
-	indexDir, err := os.MkdirTemp("", "testdir")
+func TestGetWithNonExistentIndex(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "test_get_no_index")
 	if err != nil {
 		t.Fatalf("Failed to create temp directory: %v", err)
 	}
-	defer os.RemoveAll(indexDir)
+	defer os.RemoveAll(tempDir)
 
-	getArgs := subcommands.GetArgs{
-		IndexPath:  indexDir,
-		DataType:   "text",
-		SourceType: "file",
-		Name:       "non_existent_file.txt",
-	}
+	err = Get(GetArgs{
+		IndexPath: tempDir,
+		FileName:  "any_file.txt",
+	})
 
-	old := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	subcommands.Get(getArgs)
-
-	w.Close()
-	os.Stdout = old
-
-	var buf bytes.Buffer
-	io.Copy(&buf, r)
-	output := strings.TrimSpace(buf.String())
-
-	expectedOutput := "File 'non_existent_file.txt' not found in the index."
-	if output != expectedOutput {
-		t.Errorf("Expected output '%s', but got '%s'", expectedOutput, output)
+	if err == nil {
+		t.Errorf("Expected an error due to non-existent index, but got none")
 	}
 }
