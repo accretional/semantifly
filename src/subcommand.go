@@ -91,7 +91,7 @@ func CommandReadRun() {
 		subcommands.Add(args)
 
 	case "delete":
-		cmd := flag.NewFlagSet("add", flag.ExitOnError)
+		cmd := flag.NewFlagSet("delete", flag.ExitOnError)
 		deleteLocalCopy := cmd.Bool("copy", false, "Whether to delete the copy made")
 		indexPath := cmd.String("index-path", "", "Path to the index file")
 		cmd.Parse(os.Args[2:])
