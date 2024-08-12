@@ -109,6 +109,24 @@ func CommandReadRun() {
 
 		subcommands.Delete(args)
 
+	case "get":
+		cmd := flag.NewFlagSet("get", flag.ExitOnError)
+		indexPath := cmd.String("index-path", "", "Path to the index file")
+		cmd.Parse(os.Args[2:])
+
+		if len(cmd.Args()) != 1 {
+			printCmdErr("Get subcommand requires exactly one arg.")
+			return
+		}
+
+		name := cmd.Args()[0]
+		args := subcommands.GetArgs{
+			IndexPath: *indexPath,
+			Name:      name,
+		}
+
+		subcommands.Get(args)
+
 	default:
 		printCmdErr("No valid subcommand provided.")
 		os.Exit(1)

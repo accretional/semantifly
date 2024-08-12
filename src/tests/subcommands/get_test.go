@@ -69,13 +69,8 @@ func TestGet(t *testing.T) {
 	}
 
 	output := captureOutput(func() {
-		err = subcommands.Get(getArgs)
+		subcommands.Get(getArgs)
 	})
-
-	// validate the output and error
-	if err != nil {
-		t.Fatalf("Get() returned an error: %v", err)
-	}
 
 	// add new line because of fmt.PrintLn()
 	expectedOutput := srcContent + "\n"
@@ -107,15 +102,13 @@ func TestGetError(t *testing.T) {
 
 	subcommands.Add(args)
 
-	err := subcommands.Get(getArgsNonExistent)
+	expectedOutput := fmt.Sprintf("file '%s' not found in the index\n", nonExistentFile)
 
-	// validate the error
-	if err == nil {
-		t.Fatalf("Expected an error for non-existent file, but got nil")
-	}
+	output := captureOutput(func() {
+		subcommands.Get(getArgsNonExistent)
+	})
 
-	expectedErrMsg := fmt.Sprintf("file '%s' not found in the index", nonExistentFile)
-	if err.Error() != expectedErrMsg {
-		t.Fatalf("Expected error message %q, but got %q", expectedErrMsg, err.Error())
+	if output != expectedOutput {
+		t.Fatalf("Expected content %q, got %q", expectedOutput, output)
 	}
 }

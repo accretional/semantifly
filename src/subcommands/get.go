@@ -14,17 +14,19 @@ type GetArgs struct {
 	Name      string
 }
 
-func Get(g GetArgs) error {
+func Get(g GetArgs) {
 	indexFilePath := path.Join(g.IndexPath, indexFile)
 
 	data, err := os.ReadFile(indexFilePath)
 	if err != nil {
-		return fmt.Errorf("failed to read index file: %w", err)
+		fmt.Printf("failed to read index file: %v\n", err)
+		return
 	}
 
 	var index pb.Index
 	if err := proto.Unmarshal(data, &index); err != nil {
-		return fmt.Errorf("failed to unmarshal index file: %w", err)
+		fmt.Printf("failed to unmarshal index file: %v\n", err)
+		return
 	}
 
 	var targetEntry *pb.IndexListEntry
@@ -36,7 +38,8 @@ func Get(g GetArgs) error {
 	}
 
 	if targetEntry == nil {
-		return fmt.Errorf("file '%s' not found in the index", g.Name)
+		fmt.Printf("file '%s' not found in the index\n", g.Name)
+		return
 	}
 
 	if targetEntry.Content != "" {
@@ -44,10 +47,9 @@ func Get(g GetArgs) error {
 	} else {
 		content, err := os.ReadFile(targetEntry.URI)
 		if err != nil {
-			return fmt.Errorf("failed to read file '%s': %w", g.Name, err)
+			fmt.Printf("failed to read file '%s': %v\n", g.Name, err)
+			return
 		}
 		fmt.Println(string(content))
 	}
-
-	return nil
 }
