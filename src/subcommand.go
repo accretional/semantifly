@@ -97,7 +97,7 @@ func CommandReadRun() {
 		cmd.Parse(os.Args[2:])
 
 		if len(cmd.Args()) < 1 {
-			printCmdErr("Delete subcommand requires at least one input arg: the names of the entries to be deleted")
+			printCmdErr("Delete subcommand requires at least one input arg.")
 			return
 		}
 
