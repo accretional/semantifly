@@ -58,7 +58,7 @@ func CommandReadRun() {
 	case "add":
 		cmd := flag.NewFlagSet("add", flag.ExitOnError)
 		dataTypeStr := cmd.String("type", "text", "The type of the input data")
-		sourceTypeStr := cmd.String("source-type", "file", "How to access the content")
+		sourceTypeStr := cmd.String("source-type", "local_file", "How to access the content")
 		makeLocalCopy := cmd.Bool("copy", false, "Whether to copy and use the file as it is now, or dynamically access it")
 		indexPath := cmd.String("index-path", "", "Path to the index file")
 		cmd.Parse(os.Args[2:])
@@ -89,6 +89,25 @@ func CommandReadRun() {
 		}
 
 		subcommands.Add(args)
+
+	case "delete":
+		cmd := flag.NewFlagSet("add", flag.ExitOnError)
+		deleteLocalCopy := cmd.Bool("copy", false, "Whether to delete the copy made")
+		indexPath := cmd.String("index-path", "", "Path to the index file")
+		cmd.Parse(os.Args[2:])
+
+		if len(cmd.Args()) < 1 {
+			printCmdErr("Delete subcommand requires at least one input arg.")
+			return
+		}
+
+		args := subcommands.DeleteArgs{
+			IndexPath:  *indexPath,
+			DeleteCopy: *deleteLocalCopy,
+			DataURIs:   cmd.Args(),
+		}
+
+		subcommands.Delete(args)
 
 	default:
 		printCmdErr("No valid subcommand provided.")
