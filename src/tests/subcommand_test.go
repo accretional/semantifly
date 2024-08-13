@@ -43,7 +43,7 @@ func TestCommandRun(t *testing.T) {
 
 	err := cmd.Run()
 	if err != nil {
-		t.Fatalf("Build for semantifly failed: %v\nStderr: %s", err, stderr.String())
+		t.Fatalf("Setup for semantifly failed: %v\nStderr: %s", err, stderr.String())
 	}
 
 	// Adding semantifly to PATH
