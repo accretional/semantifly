@@ -46,7 +46,15 @@ func TestParseArgs(t *testing.T) {
 			},
 		},
 		{
-			name: "Complicated different flags and order of arguments",
+			name: "Only flags, no non-flag arguments",
+			args: []string{"--flag1=value1", "--flag2", "value2"},
+			expected: map[string][]string{
+				"flags":    {"--flag1", "value1", "--flag2", "value2"},
+				"nonFlags": nil,
+			},
+		},
+		{
+			name: "Complicated test: different types of flags and order of arguments",
 			args: []string{"--flag1", "value1", "arg1", "arg2", "-flag2=value2", "arg3", "-flag3", "value3"},
 			expected: map[string][]string{
 				"flags":    {"--flag1", "value1", "-flag2", "value2", "-flag3", "value3"},
