@@ -40,10 +40,22 @@ func runAndAssertSubcommand(subcommand string, assertStatement string, args []st
 }
 
 func TestCommandRun(t *testing.T) {
+
+	semantifly_dir := os.Getenv("HOME") + "/opt/semantifly"
+	cmd := exec.Command("go", "build", "-o", semantifly_dir+"/semantifly", "../")
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
+	if err != nil {
+		t.Fatalf("Build for semantifly failed: %v\nStderr: %s", err, stderr.String())
+	}
+
 	oldPath := os.Getenv("PATH")
 	defer os.Setenv("PATH", oldPath)
 
-	semantifly_dir := os.Getenv("HOME") + "/opt/semantifly"
 	os.Setenv("PATH", oldPath+":"+semantifly_dir)
 
 	tempFile, err := os.CreateTemp("", "semantifly_test_*.txt")
@@ -58,7 +70,7 @@ func TestCommandRun(t *testing.T) {
 	}
 	tempFile.Close()
 
-	args := []string{tempFile.Name()}	// Need to test for different flags
+	args := []string{tempFile.Name()} // Need to test for different flags
 
 	// Testing Add subcommand
 	if err := runAndAssertSubcommand("add", "Added file successfully", args); err != nil {
@@ -67,7 +79,7 @@ func TestCommandRun(t *testing.T) {
 
 	// Testing Get subcommand
 	if err := runAndAssertSubcommand("get", testContent, args); err != nil {
-		t.Errorf("Failed to execute 'add' subcommand: %v", err)
+		t.Errorf("Failed to execute 'get' subcommand: %v", err)
 	}
 
 	// Testing Delete subcommand
