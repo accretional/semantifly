@@ -33,7 +33,7 @@ func runAndAssertSubcommand(subcommand string, assertStatement string, args []st
 
 	// Assertion for command output
 	if !strings.Contains(output, assertStatement) {
-		return fmt.Errorf("Expected output to contain 'Added file successfully', but got: %s", output)
+		return fmt.Errorf("Expected output to contain %s, but got: %s", assertStatement, output)
 	}
 
 	return nil
@@ -43,7 +43,7 @@ func TestCommandRun_Add(t *testing.T) {
 	oldPath := os.Getenv("PATH")
 	defer os.Setenv("PATH", oldPath)
 
-	semantifly_dir := os.Getenv("HOME")+"/opt/semantifly"
+	semantifly_dir := os.Getenv("HOME") + "/opt/semantifly"
 	os.Setenv("PATH", oldPath+":"+semantifly_dir)
 
 	tempFile, err := os.CreateTemp("", "semantifly_test_*.txt")
@@ -57,11 +57,16 @@ func TestCommandRun_Add(t *testing.T) {
 		t.Fatalf("Failed to write to temporary file: %v", err)
 	}
 	tempFile.Close()
-	
-	args := []string{"--index-path", semantifly_dir, tempFile.Name()}
+
+	args := []string{tempFile.Name()}
 
 	// Testing Add subcommand
 	if err := runAndAssertSubcommand("add", "Added file successfully", args); err != nil {
+		t.Errorf("Failed to execute 'add' subcommand: %v", err)
+	}
+
+	// Testing Get subcommand
+	if err := runAndAssertSubcommand("get", testContent, args); err != nil {
 		t.Errorf("Failed to execute 'add' subcommand: %v", err)
 	}
 
