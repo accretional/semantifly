@@ -41,6 +41,7 @@ func runAndAssertSubcommand(subcommand string, assertStatement string, args []st
 
 func TestCommandRun(t *testing.T) {
 
+	// Build for semantifly
 	semantifly_dir := os.Getenv("HOME") + "/opt/semantifly"
 	cmd := exec.Command("go", "build", "-o", semantifly_dir+"/semantifly", "../")
 
@@ -53,6 +54,7 @@ func TestCommandRun(t *testing.T) {
 		t.Fatalf("Build for semantifly failed: %v\nStderr: %s", err, stderr.String())
 	}
 
+	// Adding semantifly to PATH
 	oldPath := os.Getenv("PATH")
 	defer os.Setenv("PATH", oldPath)
 
