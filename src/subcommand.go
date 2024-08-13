@@ -9,11 +9,82 @@ import (
 
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 	"accretional.com/semantifly/subcommands"
-	"accretional.com/semantifly/utils"
 )
 
 func printCmdErr(e string) {
 	fmt.Println(fmt.Sprintf("%s\n Try --help to list subcommands and options.", e))
+}
+
+func isFlag(fs *flag.FlagSet, name string) bool {
+	f := fs.Lookup(name)
+	return f != nil
+}
+
+func isBoolFlag(fs *flag.FlagSet, name string) bool {
+	f := fs.Lookup(name)
+	if f == nil {
+		return false
+	}
+
+	if getter, ok := f.Value.(flag.Getter); ok {
+		if _, ok := getter.Get().(bool); ok {
+			return true
+		}
+	}
+
+	if bf, ok := f.Value.(interface{ IsBoolFlag() bool }); ok {
+		return bf.IsBoolFlag()
+	}
+
+	return false
+}
+
+func parseArgs(args []string, cmd *flag.FlagSet) ([]string, []string, error) {
+	var flags []string
+	var nonFlags []string
+	var flagName string
+	i := 0
+
+	for i < len(args) {
+		arg := args[i]
+		if strings.HasPrefix(arg, "-") {
+			if strings.Contains(arg, "=") {
+				parts := strings.SplitN(arg, "=", 2)
+				if strings.HasPrefix(parts[0], "--") {
+					flagName = parts[0][2:]
+				} else {
+					flagName = parts[0][1:]
+				}
+
+				if !isFlag(cmd, flagName) {
+					return nil, nil, fmt.Errorf("unrecognized flag: %s", arg)
+				}
+
+				flags = append(flags, arg)
+			} else {
+				if strings.HasPrefix(arg, "--") {
+					flagName = arg[2:]
+				} else {
+					flagName = arg[1:]
+				}
+
+				if !isFlag(cmd, flagName) {
+					return nil, nil, fmt.Errorf("unrecognized flag: %s", arg)
+				}
+
+				flags = append(flags, arg)
+				if i+1 < len(args) && !strings.HasPrefix(args[i+1], "-") && !isBoolFlag(cmd, flagName) {
+					i++
+					flags = append(flags, args[i])
+				}
+			}
+		} else {
+			nonFlags = append(nonFlags, arg)
+		}
+		i++
+	}
+
+	return flags, nonFlags, nil
 }
 
 func CommandReadRun() {
@@ -57,18 +128,22 @@ func CommandReadRun() {
 
 	cmdName := os.Args[1]
 	args := os.Args[2:]
-	parsedArgs := utils.ParseArgs(args)
-	flags := parsedArgs["flags"]
-	nonFlags := parsedArgs["nonFlags"]
-	reorderedArgs := append(flags, nonFlags...)
 
 	switch cmdName {
 	case "add":
 		cmd := flag.NewFlagSet("add", flag.ExitOnError)
 		dataTypeStr := cmd.String("type", "text", "The type of the input data")
 		sourceTypeStr := cmd.String("source-type", "local_file", "How to access the content")
-		makeLocalCopy := cmd.String("copy", "false", "Whether to copy and use the file as it is now, or dynamically access it")
+		makeLocalCopy := cmd.Bool("copy", false, "Whether to copy and use the file as it is now, or dynamically access it")
 		indexPath := cmd.String("index-path", "", "Path to the index file")
+
+		flags, nonFlags, err := parseArgs(args, cmd)
+		if err != nil {
+			printCmdErr(fmt.Sprintf("Error: %v", err))
+			return
+		}
+
+		reorderedArgs := append(flags, nonFlags...)
 
 		if len(nonFlags) < 1 {
 			printCmdErr("Add subcommand requires at least one input arg append to index log")
@@ -93,7 +168,7 @@ func CommandReadRun() {
 			IndexPath:  *indexPath,
 			DataType:   dataType,
 			SourceType: sourceType,
-			MakeCopy:   (*makeLocalCopy == "true"),
+			MakeCopy:   *makeLocalCopy,
 			DataURIs:   cmd.Args(),
 		}
 
@@ -101,8 +176,16 @@ func CommandReadRun() {
 
 	case "delete":
 		cmd := flag.NewFlagSet("delete", flag.ExitOnError)
-		deleteLocalCopy := cmd.String("copy", "false", "Whether to delete the copy made")
+		deleteLocalCopy := cmd.Bool("copy", false, "Whether to delete the copy made")
 		indexPath := cmd.String("index-path", "", "Path to the index file")
+
+		flags, nonFlags, err := parseArgs(args, cmd)
+		if err != nil {
+			printCmdErr(fmt.Sprintf("Error: %v", err))
+			return
+		}
+
+		reorderedArgs := append(flags, nonFlags...)
 
 		if len(nonFlags) < 1 {
 			printCmdErr("Delete subcommand requires at least one input arg.")
@@ -113,7 +196,7 @@ func CommandReadRun() {
 
 		args := subcommands.DeleteArgs{
 			IndexPath:  *indexPath,
-			DeleteCopy: (*deleteLocalCopy == "true"),
+			DeleteCopy: *deleteLocalCopy,
 			DataURIs:   cmd.Args(),
 		}
 
@@ -122,6 +205,14 @@ func CommandReadRun() {
 	case "get":
 		cmd := flag.NewFlagSet("get", flag.ExitOnError)
 		indexPath := cmd.String("index-path", "", "Path to the index file")
+
+		flags, nonFlags, err := parseArgs(args, cmd)
+		if err != nil {
+			printCmdErr(fmt.Sprintf("Error: %v", err))
+			return
+		}
+
+		reorderedArgs := append(flags, nonFlags...)
 
 		if len(nonFlags) != 1 {
 			printCmdErr("Get subcommand requires exactly one arg.")
