@@ -75,6 +75,7 @@ func TestCommandRun(t *testing.T) {
 	if err := runAndCheckStdoutContains("add", "Added file successfully", args); err != nil {
 		t.Errorf("Failed to execute 'add' subcommand: %v", err)
 	}
+	defer os.Remove("index.list")
 
 	// Testing Get subcommand
 	if err := runAndCheckStdoutContains("get", testContent, args); err != nil {
@@ -96,5 +97,4 @@ func TestCommandRun(t *testing.T) {
 		t.Errorf("Failed to execute 'delete' subcommand: %v", err)
 	}
 
-	defer os.Remove("index.list")
 }
