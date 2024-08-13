@@ -26,12 +26,6 @@ func isBoolFlag(fs *flag.FlagSet, name string) bool {
 		return false
 	}
 
-	if getter, ok := f.Value.(flag.Getter); ok {
-		if _, ok := getter.Get().(bool); ok {
-			return true
-		}
-	}
-
 	if bf, ok := f.Value.(interface{ IsBoolFlag() bool }); ok {
 		return bf.IsBoolFlag()
 	}
@@ -57,7 +51,7 @@ func parseArgs(args []string, cmd *flag.FlagSet) ([]string, []string, error) {
 				}
 
 				if !isFlag(cmd, flagName) {
-					return nil, nil, fmt.Errorf("unrecognized flag: %s", arg)
+					return nil, nil, fmt.Errorf("unrecognized flag: %s", flagName)
 				}
 
 				flags = append(flags, arg)
@@ -69,7 +63,7 @@ func parseArgs(args []string, cmd *flag.FlagSet) ([]string, []string, error) {
 				}
 
 				if !isFlag(cmd, flagName) {
-					return nil, nil, fmt.Errorf("unrecognized flag: %s", arg)
+					return nil, nil, fmt.Errorf("unrecognized flag: %s", flagName)
 				}
 
 				flags = append(flags, arg)

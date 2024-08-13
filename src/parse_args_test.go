@@ -1,18 +1,21 @@
 package main
 
 import (
+	"errors"
 	"flag"
+	"fmt"
 	"reflect"
 	"testing"
 )
 
 func TestParseArgs(t *testing.T) {
 	tests := []struct {
-		name             string
-		args             []string
-		expectedFlags    []string
-		expectedNonFlags []string
-		expectError      bool
+		name                 string
+		args                 []string
+		expectedFlags        []string
+		expectedNonFlags     []string
+		expectError          bool
+		expectedErrorMessage error
 	}{
 		{
 			name:             "Simple flag and non-flag arguments",
@@ -85,18 +88,20 @@ func TestParseArgs(t *testing.T) {
 			expectError:      false,
 		},
 		{
-			name:             "Unrecognized flag",
-			args:             []string{"--unknown-flag", "value"},
-			expectedFlags:    nil,
-			expectedNonFlags: nil,
-			expectError:      true,
+			name:                 "Unrecognized flag",
+			args:                 []string{"--unknown-flag", "value"},
+			expectedFlags:        nil,
+			expectedNonFlags:     nil,
+			expectError:          true,
+			expectedErrorMessage: fmt.Errorf("unrecognized flag: unknown-flag"),
 		},
 		{
-			name:             "Too many dashes on flag",
-			args:             []string{"---flag1", "value"},
-			expectedFlags:    nil,
-			expectedNonFlags: nil,
-			expectError:      true,
+			name:                 "Too many dashes on flag",
+			args:                 []string{"---flag1", "value"},
+			expectedFlags:        nil,
+			expectedNonFlags:     nil,
+			expectError:          true,
+			expectedErrorMessage: fmt.Errorf("unrecognized flag: -flag1"),
 		},
 	}
 
@@ -115,6 +120,8 @@ func TestParseArgs(t *testing.T) {
 
 			if tt.expectError && err == nil {
 				t.Errorf("parseArgs() expected an error, but got none")
+			} else if tt.expectError && errors.Is(err, tt.expectedErrorMessage) {
+				t.Errorf("parseArgs() returned error message = %v, expected %v", err, tt.expectedErrorMessage)
 			} else if !tt.expectError && err != nil {
 				t.Errorf("parseArgs() unexpected error: %v", err)
 			}
