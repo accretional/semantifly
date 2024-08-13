@@ -52,13 +52,13 @@ func TestCommandRun(t *testing.T) {
 	}
 	defer os.Remove(tempFile.Name())
 
-	testContent := "This is a test file for semantifly add command."
+	testContent := "This is a test file for semantifly subcommands."
 	if _, err := tempFile.WriteString(testContent); err != nil {
 		t.Fatalf("Failed to write to temporary file: %v", err)
 	}
 	tempFile.Close()
 
-	args := []string{tempFile.Name()}
+	args := []string{tempFile.Name()}	// Need to test for different flags
 
 	// Testing Add subcommand
 	if err := runAndAssertSubcommand("add", "Added file successfully", args); err != nil {
