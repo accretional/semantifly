@@ -39,7 +39,7 @@ func runAndAssertSubcommand(subcommand string, assertStatement string, args []st
 	return nil
 }
 
-func TestCommandRun_Add(t *testing.T) {
+func TestCommandRun(t *testing.T) {
 	oldPath := os.Getenv("PATH")
 	defer os.Setenv("PATH", oldPath)
 
