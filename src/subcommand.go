@@ -15,6 +15,37 @@ func printCmdErr(e string) {
 	fmt.Println(fmt.Sprintf("%s\n Try --help to list subcommands and options.", e))
 }
 
+func parseArgs(args []string) map[string][]string {
+	var flags []string
+	var nonFlags []string
+	result := make(map[string][]string)
+	i := 0
+
+	for i < len(args) {
+		arg := args[i]
+		if strings.HasPrefix(arg, "-") {
+			if strings.Contains(arg, "=") {
+				parts := strings.SplitN(arg, "=", 2)
+				flags = append(flags, parts[0], parts[1])
+			} else {
+				flags = append(flags, arg)
+
+				if i+1 < len(args) && !strings.HasPrefix(args[i+1], "-") {
+					i++
+					flags = append(flags, args[i])
+				}
+			}
+		} else {
+			nonFlags = append(nonFlags, arg)
+		}
+		i++
+	}
+
+	result["flags"] = flags
+	result["nonFlags"] = nonFlags
+	return result
+}
+
 func CommandReadRun() {
 	if len(os.Args) < 2 {
 		printCmdErr("expected subcommand like 'add' or 'describe'")
@@ -54,19 +85,27 @@ func CommandReadRun() {
 	}
 	f.Close()
 
-	switch os.Args[1] {
+	cmdName := os.Args[1]
+	args := os.Args[2:]
+	parsedArgs := parseArgs(args)
+	flags := parsedArgs["flags"]
+	nonFlags := parsedArgs["nonFlags"]
+	reorderedArgs := append(flags, nonFlags...)
+
+	switch cmdName {
 	case "add":
 		cmd := flag.NewFlagSet("add", flag.ExitOnError)
 		dataTypeStr := cmd.String("type", "text", "The type of the input data")
 		sourceTypeStr := cmd.String("source-type", "local_file", "How to access the content")
 		makeLocalCopy := cmd.Bool("copy", false, "Whether to copy and use the file as it is now, or dynamically access it")
 		indexPath := cmd.String("index-path", "", "Path to the index file")
-		cmd.Parse(os.Args[2:])
 
-		if len(cmd.Args()) < 1 {
+		if len(nonFlags) < 1 {
 			printCmdErr("Add subcommand requires at least one input arg append to index log")
 			return
 		}
+
+		cmd.Parse(reorderedArgs)
 
 		dataType, err := parseDataType(*dataTypeStr)
 		if err != nil {
@@ -94,12 +133,13 @@ func CommandReadRun() {
 		cmd := flag.NewFlagSet("delete", flag.ExitOnError)
 		deleteLocalCopy := cmd.Bool("copy", false, "Whether to delete the copy made")
 		indexPath := cmd.String("index-path", "", "Path to the index file")
-		cmd.Parse(os.Args[2:])
 
-		if len(cmd.Args()) < 1 {
+		if len(nonFlags) < 1 {
 			printCmdErr("Delete subcommand requires at least one input arg.")
 			return
 		}
+
+		cmd.Parse(reorderedArgs)
 
 		args := subcommands.DeleteArgs{
 			IndexPath:  *indexPath,
@@ -112,12 +152,13 @@ func CommandReadRun() {
 	case "get":
 		cmd := flag.NewFlagSet("get", flag.ExitOnError)
 		indexPath := cmd.String("index-path", "", "Path to the index file")
-		cmd.Parse(os.Args[2:])
 
-		if len(cmd.Args()) != 1 {
+		if len(nonFlags) != 1 {
 			printCmdErr("Get subcommand requires exactly one arg.")
 			return
 		}
+
+		cmd.Parse(reorderedArgs)
 
 		name := cmd.Args()[0]
 		args := subcommands.GetArgs{
