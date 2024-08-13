@@ -127,6 +127,8 @@ func CommandReadRun() {
 
 		subcommands.Get(args)
 
+	case "update":
+
 	default:
 		printCmdErr("No valid subcommand provided.")
 		os.Exit(1)

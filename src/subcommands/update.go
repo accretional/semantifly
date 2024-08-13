@@ -35,7 +35,7 @@ func Update(u UpdateArgs) {
 		fmt.Printf("Failed to read the index file: %v", err)
 	}
 
-	if entryFound:= updateIndex(&index, ile); !entryFound {
+	if entryFound := updateIndex(&index, ile); !entryFound {
 		fmt.Printf("Entry %s not found in the index file %s", u.Name, indexFilePath)
 	}
 
@@ -44,7 +44,7 @@ func Update(u UpdateArgs) {
 	}
 
 	if u.UpdateCopy == "true" {
-		if err := updateCopy(u.Name, path.Join(u.IndexPath, addedCopiesSubDir, u.Name)); err != nil {
+		if err := copyFile(ile.Name, path.Join(u.IndexPath, addedCopiesSubDir, ile.Name), ile); err != nil {
 			fmt.Printf("Failed to update the copy of the source file: %v", err)
 		}
 	}
@@ -66,7 +66,7 @@ func readIndex(indexFilePath string, index *pb.Index, ignoreIfNotFound ...bool) 
 	return nil
 }
 
-func updateIndex(index *pb.Index, ile *pb.IndexListEntry) bool{
+func updateIndex(index *pb.Index, ile *pb.IndexListEntry) bool {
 	for i, entry := range index.Entries {
 		if entry.Name == ile.Name {
 			if ile.URI != "" {

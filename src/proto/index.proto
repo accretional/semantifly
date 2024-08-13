@@ -22,10 +22,12 @@ message IndexListEntry {
 
 // Roughly corresponding to file extension, how to parse/encode the file.
 enum DataType {
-    TEXT = 0;
+    DATA_TYPE_UNSPECIFIED = 0;
+    TEXT = 1;
 }
 
 // How to *access* the content. Eg locally as a file, remotely as a web page, etc.
 enum SourceType {
-    LOCAL_FILE = 0;
+    SOURCE_TYPE_UNSPECIFIED = 0;
+    LOCAL_FILE = 1;
 }
