@@ -90,10 +90,7 @@ func CommandReadRun() {
 	parsedArgs := parseArgs(args)
 	flags := parsedArgs["flags"]
 	nonFlags := parsedArgs["nonFlags"]
-	fmt.Println(flags)
-	fmt.Println(nonFlags)
 	reorderedArgs := append(flags, nonFlags...)
-	fmt.Println(reorderedArgs)
 
 	switch cmdName {
 	case "add":
