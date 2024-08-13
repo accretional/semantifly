@@ -9,14 +9,7 @@ import (
 	"testing"
 )
 
-// runAndAssertSubcommand executes a subcommand of the "semantifly" command with the provided arguments
-// and asserts that the output contains the specified assertion statement.
-//
-// Parameters:
-//   - subcommand (string): The subcommand to execute.
-//   - assertStatement (string): The expected substring to be present in the command output.
-//   - args ([]string): Additional arguments to pass to the subcommand.
-func runAndAssertSubcommand(subcommand string, assertStatement string, args []string) error {
+func runAndCheckStdoutContains(subcommand string, wantedStdoutSubstr string, args []string) error {
 	allArgs := append([]string{subcommand}, args...)
 	cmd := exec.Command("semantifly", allArgs...)
 
@@ -31,9 +24,8 @@ func runAndAssertSubcommand(subcommand string, assertStatement string, args []st
 
 	output := stdout.String()
 
-	// Assertion for command output
-	if !strings.Contains(output, assertStatement) {
-		return fmt.Errorf("Expected output to contain %s, but got: %s", assertStatement, output)
+	if !strings.Contains(output, wantedStdoutSubstr) {
+		return fmt.Errorf("Expected output to contain %s, but got: %s", wantedStdoutSubstr, output)
 	}
 
 	return nil
@@ -41,9 +33,9 @@ func runAndAssertSubcommand(subcommand string, assertStatement string, args []st
 
 func TestCommandRun(t *testing.T) {
 
-	// Build for semantifly
+	// Setup
 	semantifly_dir := os.Getenv("HOME") + "/opt/semantifly"
-	cmd := exec.Command("go", "build", "-o", semantifly_dir+"/semantifly", "../")
+	cmd := exec.Command("bash", "../../setup.sh")
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -72,20 +64,35 @@ func TestCommandRun(t *testing.T) {
 	}
 	tempFile.Close()
 
-	args := []string{tempFile.Name()} // Need to test for different flags
+	// Testing Add subcommand for a non-existing file
+	args := []string{"nofile"}
+	if err := runAndCheckStdoutContains("add", "file does not exist", args); err != nil {
+		t.Errorf("Failed to execute 'add' subcommand: %v", err)
+	}
 
-	// Testing Add subcommand
-	if err := runAndAssertSubcommand("add", "Added file successfully", args); err != nil {
+	// Testing Add subcommand for an existing file
+	args = []string{tempFile.Name()}
+	if err := runAndCheckStdoutContains("add", "Added file successfully", args); err != nil {
 		t.Errorf("Failed to execute 'add' subcommand: %v", err)
 	}
 
 	// Testing Get subcommand
-	if err := runAndAssertSubcommand("get", testContent, args); err != nil {
+	if err := runAndCheckStdoutContains("get", testContent, args); err != nil {
 		t.Errorf("Failed to execute 'get' subcommand: %v", err)
 	}
 
 	// Testing Delete subcommand
-	if err := runAndAssertSubcommand("delete", "Deleted entry from index", args); err != nil {
+	if err := runAndCheckStdoutContains("delete", "Deleted entry from index", args); err != nil {
+		t.Errorf("Failed to execute 'delete' subcommand: %v", err)
+	}
+
+	// Testing Get command after deleting the entry
+	if err := runAndCheckStdoutContains("get", "not found in the index", args); err != nil {
+		t.Errorf("Failed to execute 'get' subcommand: %v", err)
+	}
+
+	// Testing Delete subcommand after deleting the entry
+	if err := runAndCheckStdoutContains("delete", "Entry not found in index", args); err != nil {
 		t.Errorf("Failed to execute 'delete' subcommand: %v", err)
 	}
 
