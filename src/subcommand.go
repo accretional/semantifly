@@ -90,14 +90,17 @@ func CommandReadRun() {
 	parsedArgs := parseArgs(args)
 	flags := parsedArgs["flags"]
 	nonFlags := parsedArgs["nonFlags"]
+	fmt.Println(flags)
+	fmt.Println(nonFlags)
 	reorderedArgs := append(flags, nonFlags...)
+	fmt.Println(reorderedArgs)
 
 	switch cmdName {
 	case "add":
 		cmd := flag.NewFlagSet("add", flag.ExitOnError)
 		dataTypeStr := cmd.String("type", "text", "The type of the input data")
 		sourceTypeStr := cmd.String("source-type", "local_file", "How to access the content")
-		makeLocalCopy := cmd.Bool("copy", false, "Whether to copy and use the file as it is now, or dynamically access it")
+		makeLocalCopy := cmd.String("copy", "false", "Whether to copy and use the file as it is now, or dynamically access it")
 		indexPath := cmd.String("index-path", "", "Path to the index file")
 
 		if len(nonFlags) < 1 {
@@ -123,7 +126,7 @@ func CommandReadRun() {
 			IndexPath:  *indexPath,
 			DataType:   dataType,
 			SourceType: sourceType,
-			MakeCopy:   *makeLocalCopy,
+			MakeCopy:   (*makeLocalCopy == "true"),
 			DataURIs:   cmd.Args(),
 		}
 
@@ -131,7 +134,7 @@ func CommandReadRun() {
 
 	case "delete":
 		cmd := flag.NewFlagSet("delete", flag.ExitOnError)
-		deleteLocalCopy := cmd.Bool("copy", false, "Whether to delete the copy made")
+		deleteLocalCopy := cmd.String("copy", "false", "Whether to delete the copy made")
 		indexPath := cmd.String("index-path", "", "Path to the index file")
 
 		if len(nonFlags) < 1 {
@@ -143,7 +146,7 @@ func CommandReadRun() {
 
 		args := subcommands.DeleteArgs{
 			IndexPath:  *indexPath,
-			DeleteCopy: *deleteLocalCopy,
+			DeleteCopy: (*deleteLocalCopy == "true"),
 			DataURIs:   cmd.Args(),
 		}
 
