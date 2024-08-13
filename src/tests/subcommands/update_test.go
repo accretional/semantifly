@@ -12,7 +12,7 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func verifyUpdatedFileEntry(srcFileName string, addedFilePath string) error {
+func verifyUpdatedFileEntry(srcFileName string, addedFilePath string, updatedFileName string) error {
 
 	addedFile, err := os.Open(addedFilePath)
 	if err != nil {
@@ -40,8 +40,8 @@ func verifyUpdatedFileEntry(srcFileName string, addedFilePath string) error {
 			entryFound = true
 		}
 	}
-	if entryFound {
-		return fmt.Errorf("Entry %s found in added list. Not deleted\n", srcFileName)
+	if !entryFound {
+		return fmt.Errorf("Entry %s not found in index list.\n", srcFileName)
 	}
 
 	return nil
@@ -98,21 +98,21 @@ func TestUpdate(t *testing.T) {
 	updatedFile := createTempFile(t, indexDir, updatedContent)
 
 	// Update the entry
-	updateArgs := subcommands.UpdateArgs {
-		IndexPath:  indexDir,
-		Name: srcFile.Name(),
-		DataURI: updatedFile.Name(),
+	updateArgs := subcommands.UpdateArgs{
+		IndexPath: indexDir,
+		Name:      srcFile.Name(),
+		DataURI:   updatedFile.Name(),
 	}
 
 	subcommands.Update(updateArgs)
 
 	indexFilePath := filepath.Join(indexDir, indexFile)
-	if err := verifyDeletedFileEntry(srcFile.Name(), indexFilePath); err != nil {
+	if err := verifyUpdatedFileEntry(srcFile.Name(), indexFilePath, updatedFile.Name()); err != nil {
 		t.Fatalf("Failed to verify delete command in index list: %v", err)
 	}
 
 	dstFilePath := filepath.Join(cacheDir, srcFile.Name())
-	if err := verifyDeleteCopy(dstFilePath); err != nil {
+	if err := verifyUpdateCopy(dstFilePath); err != nil {
 		t.Fatalf("Failed to verify delete copy: %v", err)
 	}
 }
