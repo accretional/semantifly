@@ -86,4 +86,6 @@ func TestCommandRun(t *testing.T) {
 	if err := runAndAssertSubcommand("delete", "Deleted entry from index", args); err != nil {
 		t.Errorf("Failed to execute 'delete' subcommand: %v", err)
 	}
+
+	defer os.Remove("index.list")
 }
