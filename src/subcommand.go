@@ -15,6 +15,20 @@ func printCmdErr(e string) {
 	fmt.Println(fmt.Sprintf("%s\n Try --help to list subcommands and options.", e))
 }
 
+func reorderArgs(args []string) []string {
+	var flags []string
+	var nonFlags []string
+
+	for _, arg := range args {
+		if strings.HasPrefix(arg, "-") {
+			flags = append(flags, arg)
+		} else {
+			nonFlags = append(nonFlags, arg)
+		}
+	}
+	return append(flags, nonFlags...)
+}
+
 func CommandReadRun() {
 	if len(os.Args) < 2 {
 		printCmdErr("expected subcommand like 'add' or 'describe'")
@@ -54,14 +68,18 @@ func CommandReadRun() {
 	}
 	f.Close()
 
-	switch os.Args[1] {
+	args := os.Args[1:]
+	reorderedArgs := reorderArgs(args)
+	cmdName := reorderedArgs[0]
+
+	switch cmdName {
 	case "add":
 		cmd := flag.NewFlagSet("add", flag.ExitOnError)
 		dataTypeStr := cmd.String("type", "text", "The type of the input data")
 		sourceTypeStr := cmd.String("source-type", "local_file", "How to access the content")
 		makeLocalCopy := cmd.Bool("copy", false, "Whether to copy and use the file as it is now, or dynamically access it")
 		indexPath := cmd.String("index-path", "", "Path to the index file")
-		cmd.Parse(os.Args[2:])
+		cmd.Parse(reorderedArgs[1:])
 
 		if len(cmd.Args()) < 1 {
 			printCmdErr("Add subcommand requires at least one input arg append to index log")
@@ -94,7 +112,7 @@ func CommandReadRun() {
 		cmd := flag.NewFlagSet("delete", flag.ExitOnError)
 		deleteLocalCopy := cmd.Bool("copy", false, "Whether to delete the copy made")
 		indexPath := cmd.String("index-path", "", "Path to the index file")
-		cmd.Parse(os.Args[2:])
+		cmd.Parse(reorderedArgs[1:])
 
 		if len(cmd.Args()) < 1 {
 			printCmdErr("Delete subcommand requires at least one input arg.")
@@ -112,7 +130,7 @@ func CommandReadRun() {
 	case "get":
 		cmd := flag.NewFlagSet("get", flag.ExitOnError)
 		indexPath := cmd.String("index-path", "", "Path to the index file")
-		cmd.Parse(os.Args[2:])
+		cmd.Parse(reorderedArgs[1:])
 
 		if len(cmd.Args()) != 1 {
 			printCmdErr("Get subcommand requires exactly one arg.")
