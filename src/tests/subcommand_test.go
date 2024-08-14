@@ -34,14 +34,19 @@ func runAndCheckStdoutContains(subcommand string, wantedStdoutSubstr string, arg
 func TestCommandRun(t *testing.T) {
 
 	// Setup
+	err := os.Chdir("../..")
+	if err != nil {
+		t.Fatalf("Failed to change directory: %v", err)
+	}
+
 	semantifly_dir := os.Getenv("HOME") + "/opt/semantifly"
-	cmd := exec.Command("bash", "../../setup.sh")
+	cmd := exec.Command("bash", "setup.sh")
 
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	err := cmd.Run()
+	err = cmd.Run()
 	if err != nil {
 		t.Fatalf("Setup for semantifly failed: %v\nStderr: %s", err, stderr.String())
 	}
@@ -80,6 +85,24 @@ func TestCommandRun(t *testing.T) {
 	// Testing Get subcommand
 	if err := runAndCheckStdoutContains("get", testContent, args); err != nil {
 		t.Errorf("Failed to execute 'get' subcommand: %v", err)
+	}
+
+	updatedTempFile, err := os.CreateTemp("", "semantifly_test_updated_*.txt")
+	if err != nil {
+		t.Fatalf("Failed to create temporary file: %v", err)
+	}
+	defer os.Remove(updatedTempFile.Name())
+
+	updatedContent := "This is an updated test file for semantifly subcommands."
+	if _, err := updatedTempFile.WriteString(updatedContent); err != nil {
+		t.Fatalf("Failed to write to temporary file: %v", err)
+	}
+	tempFile.Close()
+
+	// Testing Update subcommand
+	updateArgs := []string{tempFile.Name(), updatedTempFile.Name()}
+	if err := runAndCheckStdoutContains("update", "updated successfully", updateArgs); err != nil {
+		t.Errorf("Failed to execute 'delete' subcommand: %v", err)
 	}
 
 	// Testing Delete subcommand
