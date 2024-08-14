@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 	"google.golang.org/protobuf/proto"
@@ -178,6 +179,13 @@ func copyFile(src string, dest string, ile *pb.IndexListEntry) error {
 
 	ile.Content = string(content)
 	ile.LastRefreshedTime = timestamppb.Now()
+
+	// Create and populate the word_occurrences map
+	ile.WordOccurrences = make(map[string]int32)
+	tokens := strings.Fields(strings.ToLower(ile.Content))
+	for _, token := range tokens {
+		ile.WordOccurrences[token]++
+	}
 
 	dir := filepath.Dir(dest)
 	if err := os.MkdirAll(dir, 0770); err != nil {

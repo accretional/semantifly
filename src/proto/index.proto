@@ -18,6 +18,8 @@ message IndexListEntry {
     google.protobuf.Timestamp last_refreshed_time = 6;
     // Possibly to be changed to byte or some more complex representation based on DataType
 	string content = 7;
+    // Map that stores the count of each word
+    map<string, int32> word_occurrences = 8;
 }
 
 // Roughly corresponding to file extension, how to parse/encode the file.
