@@ -133,6 +133,7 @@ func CommandReadRun() {
 		sourceTypeStr := cmd.String("source-type", "", "How to access the content")
 		makeLocalCopy := cmd.String("copy", "false", "Whether to copy and use the file as it is now, or dynamically access it")
 		indexPath := cmd.String("index-path", "", "Path to the index file")
+		cmd.Parse(os.Args[2:])
 
 		if len(cmd.Args()) != 2 {
 			printCmdErr("Update subcommand requires two input args - index name and updated URI")
