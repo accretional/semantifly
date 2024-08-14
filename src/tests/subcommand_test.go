@@ -69,6 +69,18 @@ func TestCommandRun(t *testing.T) {
 	}
 	tempFile.Close()
 
+	updatedTempFile, err := os.CreateTemp("", "semantifly_test_updated_*.txt")
+	if err != nil {
+		t.Fatalf("Failed to create temporary file: %v", err)
+	}
+	defer os.Remove(updatedTempFile.Name())
+
+	updatedContent := "This is an updated test file for semantifly subcommands."
+	if _, err := updatedTempFile.WriteString(updatedContent); err != nil {
+		t.Fatalf("Failed to write to temporary file: %v", err)
+	}
+	tempFile.Close()
+
 	// Testing Add subcommand for a non-existing file
 	args := []string{"nofile"}
 	if err := runAndCheckStdoutContains("add", "file does not exist", args); err != nil {
@@ -87,17 +99,10 @@ func TestCommandRun(t *testing.T) {
 		t.Errorf("Failed to execute 'get' subcommand: %v", err)
 	}
 
-	updatedTempFile, err := os.CreateTemp("", "semantifly_test_updated_*.txt")
-	if err != nil {
-		t.Fatalf("Failed to create temporary file: %v", err)
+	// Testing Update subcommand without passing in the updated URI
+	if err := runAndCheckStdoutContains("update", "Update subcommand requires two input args", args); err != nil {
+		t.Errorf("Failed to execute 'delete' subcommand: %v", err)
 	}
-	defer os.Remove(updatedTempFile.Name())
-
-	updatedContent := "This is an updated test file for semantifly subcommands."
-	if _, err := updatedTempFile.WriteString(updatedContent); err != nil {
-		t.Fatalf("Failed to write to temporary file: %v", err)
-	}
-	tempFile.Close()
 
 	// Testing Update subcommand
 	updateArgs := []string{tempFile.Name(), updatedTempFile.Name()}
