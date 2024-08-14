@@ -25,7 +25,7 @@ func Update(u UpdateArgs) {
 	indexFilePath := path.Join(u.IndexPath, indexFile)
 	var index pb.Index
 
-	if err := readIndex(indexFilePath, &index); err != nil {
+	if err := readIndex(indexFilePath, &index, false); err != nil {
 		fmt.Printf("Failed to read the index file: %v", err)
 		return
 	}

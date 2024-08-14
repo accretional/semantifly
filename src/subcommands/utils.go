@@ -9,10 +9,10 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-func readIndex(indexFilePath string, index *pb.Index, ignoreIfNotFound ...bool) error {
+func readIndex(indexFilePath string, index *pb.Index, ignoreIfNotFound bool) error {
 	data, err := os.ReadFile(indexFilePath)
 	if err != nil {
-		if os.IsNotExist(err) && (len(ignoreIfNotFound) > 0 && ignoreIfNotFound[0]) {
+		if os.IsNotExist(err) && ignoreIfNotFound {
 			return nil
 		}
 		return fmt.Errorf("failed to read index file: %w", err)
