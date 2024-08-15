@@ -66,6 +66,7 @@ func writeIndex(indexFilePath string, indexMap map[string]*pb.IndexListEntry) er
 
 	return nil
 }
+
 func makeCopy(indexPath string, ile *pb.IndexListEntry) error {
 
 	dest := path.Join(indexPath, addedCopiesSubDir, ile.Name)

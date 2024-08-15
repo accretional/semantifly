@@ -44,7 +44,7 @@ func Update(u UpdateArgs) {
 			SourceType: pb.SourceType(pb.SourceType_value[u.SourceType]),
 		}
 
-		if err := makeCopy(indexFilePath, ile); err != nil {
+		if err := makeCopy(u.IndexPath, ile); err != nil {
 			fmt.Printf("Failed to update the copy of the source file: %v", err)
 			return
 		}
