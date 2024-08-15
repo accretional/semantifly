@@ -4,9 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-
-	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
-	"google.golang.org/protobuf/proto"
 )
 
 type DeleteArgs struct {
@@ -30,100 +27,34 @@ type DeleteArgs struct {
 func Delete(d DeleteArgs) {
 	indexFilePath := path.Join(d.IndexPath, indexFile)
 
-	for _, uri := range d.DataURIs {
-		if inIndex, err := isInIndex(uri, indexFilePath); err != nil {
-			fmt.Printf("Failed to search for file %s in index %s with err: %s, skipping", uri, indexFilePath, err)
-		} else if inIndex {
-			if err := deleteFromIndex(uri, indexFilePath); err != nil {
-				fmt.Printf("Failed to remove file %s from index %s with err: %s, skipping", uri, indexFilePath, err)
-				continue
-			} else {
-				fmt.Printf("Deleted entry from index: %s\n", uri)
-			}
+	indexMap, err := readIndex(indexFilePath, false)
+	if err != nil {
+		fmt.Printf("Failed to read the index file: %v", err)
+		return
+	}
 
-			if d.DeleteCopy {
-				if err := deleteCopy(d.IndexPath, uri); err != nil {
-					fmt.Printf("Failed to delete copy of file %s with err: %s, skipping", uri, err)
-				}
-			}
-		} else {
-			fmt.Printf("Entry not found in index: %s, skipping\n", uri)
+	for _, uri := range d.DataURIs {
+
+		if _, present := indexMap[uri]; !present {
+			fmt.Printf("Entry %s not found in index file %s, skipping\n", uri, indexFilePath)
 			continue
 		}
-	}
-}
 
-// isInIndex checks if a given name exists in the specified index file.
-// It reads the index file, unmarshals the protobuf data, and searches for the name in the index entries.
-//
-// Parameters:
-//   - name: The name to search for in the index.
-//   - indexFilePath: The path to the index file.
-//
-// Returns:
-//   - bool: True if the name is found in the index, false otherwise.
-func isInIndex(name string, indexFilePath string) (bool, error) {
-	data, err := os.ReadFile(indexFilePath)
-	if err != nil {
-		// If the index file does not exist, return false
-		if os.IsNotExist(err) {
-			return false, nil
-		}
-		return false, fmt.Errorf("failed to read index file: %w", err)
-	}
+		delete(indexMap, uri)
 
-	var index pb.Index
-	if err := proto.Unmarshal(data, &index); err != nil {
-		return false, fmt.Errorf("failed to marshall index file: %w", err)
-	}
+		fmt.Printf("Index %s deleted successfully.\n", uri)
 
-	for _, entry := range index.Entries {
-		if entry.Name == name {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
-// deleteFromIndex deletes an entry with the given name from the index file at the specified path.
-//
-// Parameters:
-//   - name: The name of the entry to delete from the index.
-//   - indexFilePath: The path to the index file.
-func deleteFromIndex(name string, indexFilePath string) error {
-	data, err := os.ReadFile(indexFilePath)
-	if err != nil {
-		// If the index file does not exist, return false
-		if os.IsNotExist(err) {
-			return nil
-		}
-		return fmt.Errorf("failed to read index file: %w", err)
-	}
-
-	var index pb.Index
-	if err := proto.Unmarshal(data, &index); err != nil {
-		return fmt.Errorf("failed to marshall index file: %w", err)
-	}
-
-	newEntries := make([]*pb.IndexListEntry, 0, len(index.Entries))
-	for _, entry := range index.Entries {
-		if entry.Name != name {
-			newEntries = append(newEntries, entry)
+		if d.DeleteCopy {
+			if err := deleteCopy(d.IndexPath, uri); err != nil {
+				fmt.Printf("Failed to delete copy of file %s with err: %s, skipping", uri, err)
+			}
 		}
 	}
 
-	index.Entries = newEntries
-
-	updatedData, err := proto.Marshal(&index)
-	if err != nil {
-		return fmt.Errorf("failed to marshal updated index: %w", err)
+	if err := writeIndex(indexFilePath, indexMap); err != nil {
+		fmt.Printf("Failed to write to the index file: %v", err)
+		return
 	}
-
-	if err := os.WriteFile(indexFilePath, updatedData, 0644); err != nil {
-		return fmt.Errorf("failed to write updated index to file: %w", err)
-	}
-
-	return nil
 }
 
 // deleteCopy deletes a copied file with the given name from the specified index path.
