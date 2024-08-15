@@ -2,7 +2,6 @@ package subcommands
 
 import (
 	"fmt"
-	"os"
 	"path"
 )
 
@@ -30,11 +29,19 @@ func Get(g GetArgs) {
 	if targetEntry.Content != "" {
 		fmt.Println(targetEntry.Content)
 	} else {
-		content, err := os.ReadFile(targetEntry.URI)
-		if err != nil {
-			fmt.Printf("failed to read file '%s': %v\n", g.Name, err)
-			return
+		content, err := fetchFromCopy(g.IndexPath, g.Name)
+		if content == nil {
+			if err != nil {
+				fmt.Printf("Failed to read content from copy: %v. Fetching from the source.\n", err)
+			}
+
+			content, err = fetchFromSource(targetEntry.SourceType, targetEntry.URI)
+			if err != nil {
+				fmt.Printf("Failed to read content from source: %v.\n", err)
+				return
+			}
 		}
+
 		fmt.Println(string(content))
 	}
 }

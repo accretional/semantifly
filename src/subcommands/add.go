@@ -1,17 +1,12 @@
 package subcommands
 
 import (
-	"errors"
 	"fmt"
-	"os"
 	"path"
 
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
-
-const addedCopiesSubDir = "add_cache"
-const indexFile = "index.list"
 
 type AddArgs struct {
 	IndexPath  string
@@ -42,21 +37,12 @@ func Add(a AddArgs) {
 		return
 	}
 
-	for i, u := range a.DataURIs {
-		if sourceType == pb.SourceType_LOCAL_FILE {
-			f, err := os.Stat(u)
-			if errors.Is(err, os.ErrNotExist) {
-				fmt.Printf("Failed to add file %s at input list index %v: file does not exist\n", u, i)
-				continue
-			}
-			if f.IsDir() {
-				fmt.Printf("Cannot add directory %s as file. Try adding as a directory instead. Skipping.\n", u)
-				continue
-			}
-			if !f.Mode().IsRegular() {
-				fmt.Printf("File %s is not a regular file and cannot be added. Skipping.\n", u)
-				continue
-			}
+	for _, u := range a.DataURIs {
+		content, err := fetchFromSource(sourceType, u)
+
+		if err != nil {
+			fmt.Printf("Failed to validate the URI %s: %v\n", u, err)
+			continue
 		}
 
 		if indexMap[u] != nil {
@@ -69,6 +55,7 @@ func Add(a AddArgs) {
 			URI:            u,
 			DataType:       dataType,
 			SourceType:     sourceType,
+			Content:        string(content),
 			FirstAddedTime: timestamppb.Now(),
 		}
 
