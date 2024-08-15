@@ -1,4 +1,4 @@
-package tests
+package main
 
 import (
 	"bytes"
@@ -34,7 +34,7 @@ func runAndCheckStdoutContains(subcommand string, wantedStdoutSubstr string, arg
 func TestCommandRun(t *testing.T) {
 
 	// Setup
-	err := os.Chdir("../..")
+	err := os.Chdir("..")
 	if err != nil {
 		t.Fatalf("Failed to change directory: %v", err)
 	}
