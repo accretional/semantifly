@@ -143,3 +143,68 @@ func TestAdd_MultipleFilesSamePath(t *testing.T) {
 		t.Errorf("More than one entry found in the index file\n")
 	}
 }
+
+func TestAdd_Webpage(t *testing.T) {
+
+	// Create a temporary directory for testing
+	tempDir, err := os.MkdirTemp("", "add_test")
+	if err != nil {
+		t.Fatalf("Failed to create temp directory: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	// Create the test files
+	testWebpageURL := "https://www.google.com"
+
+	// Set up test arguments
+	args := AddArgs{
+		IndexPath:  tempDir,
+		DataType:   "text",
+		SourceType: "webpage",
+		MakeCopy:   true,
+		DataURIs:   []string{testWebpageURL},
+	}
+
+	// Call the Add function
+	Add(args)
+
+	// Check if the index file was created
+	indexFilePath := path.Join(tempDir, indexFile)
+	if _, err := os.Stat(indexFilePath); os.IsNotExist(err) {
+		t.Errorf("Index file was not created")
+	}
+
+	// Read the index file
+	indexMap, err := readIndex(indexFilePath, false)
+	if err != nil {
+		t.Fatalf("Failed to read index file: %v", err)
+	}
+
+	// Check if the test file was added to the index
+	if entry, exists := indexMap[testWebpageURL]; !exists {
+		t.Errorf("Test file was not added to the index")
+	} else {
+		// Verify the entry details
+		if entry.Name != testWebpageURL {
+			t.Errorf("Expected Name %s, got %s", testWebpageURL, entry.Name)
+		}
+		if entry.URI != testWebpageURL {
+			t.Errorf("Expected URI %s, got %s", testWebpageURL, entry.URI)
+		}
+		if entry.DataType != pb.DataType_TEXT {
+			t.Errorf("Expected DataType %v, got %v", pb.DataType_TEXT, entry.DataType)
+		}
+		if entry.SourceType != pb.SourceType_WEBPAGE {
+			t.Errorf("Expected SourceType %v, got %v", pb.SourceType_LOCAL_FILE, entry.SourceType)
+		}
+		if entry.FirstAddedTime == nil {
+			t.Errorf("FirstAddedTime is nil")
+		}
+	}
+
+	// Check if the copy of data file for testFilePath was created
+	copiesDir := path.Join(tempDir, addedCopiesSubDir)
+	if _, err := os.Stat(path.Join(copiesDir, testWebpageURL)); os.IsNotExist(err) {
+		t.Errorf("Data file for %s was not copied", testWebpageURL)
+	}
+}
