@@ -223,6 +223,39 @@ func CommandReadRun() {
 
 		subcommands.Get(args)
 
+	case "update":
+		cmd := flag.NewFlagSet("update", flag.ExitOnError)
+		dataTypeStr := cmd.String("type", "", "The type of the input data")
+		sourceTypeStr := cmd.String("source-type", "", "How to access the content")
+		makeLocalCopy := cmd.String("copy", "false", "Whether to copy and use the file as it is now, or dynamically access it")
+		indexPath := cmd.String("index-path", "", "Path to the index file")
+
+		flags, nonFlags, err := parseArgs(args, cmd)
+		if err != nil {
+			printCmdErr(fmt.Sprintf("Error: %v", err))
+			return
+		}
+
+		reorderedArgs := append(flags, nonFlags...)
+
+		if len(nonFlags) != 2 {
+			printCmdErr("Update subcommand requires two input args - index name and updated URI")
+			return
+		}
+
+		cmd.Parse(reorderedArgs)
+
+		args := subcommands.UpdateArgs{
+			IndexPath:  *indexPath,
+			Name:       cmd.Args()[0],
+			DataType:   *dataTypeStr,
+			SourceType: *sourceTypeStr,
+			UpdateCopy: *makeLocalCopy,
+			DataURI:    cmd.Args()[1],
+		}
+
+		subcommands.Update(args)
+
 	default:
 		printCmdErr("No valid subcommand provided.")
 		os.Exit(1)
