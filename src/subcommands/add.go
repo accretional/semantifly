@@ -74,6 +74,20 @@ func Add(a AddArgs) {
 				FirstAddedTime: timestamppb.Now(),
 			}
 
+			srcFile, err := os.Open(u)
+
+			content, err := io.ReadAll(srcFile)
+			if err != nil {
+				fmt.Printf("failed to read source file: %w", err)
+			}
+
+			// Create and populate the word_occurrences map
+			ile.WordOccurrences = make(map[string]int32)
+			tokens := strings.Fields(strings.ToLower(string(content)))
+			for _, token := range tokens {
+				ile.WordOccurrences[token]++
+			}
+
 			if a.MakeCopy {
 				err = copyFile(u, path.Join(a.IndexPath, addedCopiesSubDir, ile.Name), ile)
 				if err != nil {
