@@ -1,6 +1,7 @@
 package subcommands
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"testing"
@@ -10,6 +11,7 @@ import (
 )
 
 func TestUpdate(t *testing.T) {
+	fmt.Println("--- Testing Update command ---")
 	// Create a temporary directory for testing
 	tempDir, err := os.MkdirTemp("", "add_test")
 	if err != nil {
@@ -27,8 +29,8 @@ func TestUpdate(t *testing.T) {
 	// Set up test arguments
 	args := AddArgs{
 		IndexPath:  tempDir,
-		DataType:   pb.DataType_TEXT,
-		SourceType: pb.SourceType_LOCAL_FILE,
+		DataType:   "text",
+		SourceType: "local_file",
 		MakeCopy:   true,
 		DataURIs:   []string{testFilePath},
 	}
@@ -92,16 +94,16 @@ func TestUpdate(t *testing.T) {
 		t.Errorf("Data file for %s was not created", updatedFilePath)
 	}
 
-    data, err := os.ReadFile(copiedFile)
-    if err != nil {
-        t.Errorf("failed to read copy file: %v", err)
-    }
+	data, err := os.ReadFile(copiedFile)
+	if err != nil {
+		t.Errorf("failed to read copy file: %v", err)
+	}
 
-    ile := &pb.IndexListEntry{}
-    err = proto.Unmarshal(data, ile)
-    if err != nil {
-       t.Errorf("failed to unmarshal IndexListEntry: %v", err)
-    }
+	ile := &pb.IndexListEntry{}
+	err = proto.Unmarshal(data, ile)
+	if err != nil {
+		t.Errorf("failed to unmarshal IndexListEntry: %v", err)
+	}
 
 	if ile.Content != updatedContent {
 		t.Errorf("Copy ile for %s not updated. Expected content \"%s\", found \"%s\"", testFilePath, updatedContent, ile.Content)

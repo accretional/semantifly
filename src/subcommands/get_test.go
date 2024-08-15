@@ -2,15 +2,15 @@ package subcommands
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"path"
 	"testing"
-
-	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 )
 
 func TestGet(t *testing.T) {
+	fmt.Println("--- Testing Get command ---")
 	// Create a temporary directory for testing
 	tempDir, err := os.MkdirTemp("", "add_test")
 	if err != nil {
@@ -29,8 +29,8 @@ func TestGet(t *testing.T) {
 	// Set up test arguments
 	args := AddArgs{
 		IndexPath:  tempDir,
-		DataType:   pb.DataType_TEXT,
-		SourceType: pb.SourceType_LOCAL_FILE,
+		DataType:   "text",
+		SourceType: "local_file",
 		MakeCopy:   true,
 		DataURIs:   []string{testFilePath},
 	}
@@ -46,7 +46,7 @@ func TestGet(t *testing.T) {
 
 	getArgs := GetArgs{
 		IndexPath: tempDir,
-		Name: testFilePath,
+		Name:      testFilePath,
 	}
 
 	// Capture stdout
