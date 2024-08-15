@@ -2,6 +2,7 @@ package subcommands
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 	"path"
@@ -12,6 +13,7 @@ import (
 )
 
 func TestAdd(t *testing.T) {
+	fmt.Println("--- Testing Add command ---")
 	// Create a temporary directory for testing
 	tempDir, err := os.MkdirTemp("", "add_test")
 	if err != nil {
@@ -29,8 +31,8 @@ func TestAdd(t *testing.T) {
 	// Set up test arguments
 	args := AddArgs{
 		IndexPath:  tempDir,
-		DataType:   pb.DataType_TEXT,
-		SourceType: pb.SourceType_LOCAL_FILE,
+		DataType:   "text",
+		SourceType: "local_file",
 		MakeCopy:   true,
 		DataURIs:   []string{testFilePath},
 	}
@@ -99,8 +101,8 @@ func TestAdd_MultipleFilesSamePath(t *testing.T) {
 	// Set up test arguments
 	args := AddArgs{
 		IndexPath:  tempDir,
-		DataType:   pb.DataType_TEXT,
-		SourceType: pb.SourceType_LOCAL_FILE,
+		DataType:   "text",
+		SourceType: "local_file",
 		MakeCopy:   true,
 		DataURIs:   []string{testFilePath1, testFilePath2},
 	}

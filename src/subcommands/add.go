@@ -15,14 +15,27 @@ const indexFile = "index.list"
 
 type AddArgs struct {
 	IndexPath  string
-	DataType   pb.DataType
-	SourceType pb.SourceType
+	DataType   string
+	SourceType string
 	MakeCopy   bool
 	DataURIs   []string
 }
 
 func Add(a AddArgs) {
-	switch a.SourceType {
+
+	dataType, err := parseDataType(a.DataType)
+	if err != nil {
+		fmt.Printf("error in parsing DataType: %v", err)
+		return
+	}
+
+	sourceType, err := parseSourceType(a.SourceType)
+	if err != nil {
+		fmt.Printf("Invalid source type: %v", err)
+		return
+	}
+
+	switch sourceType {
 	case pb.SourceType_LOCAL_FILE:
 
 		indexFilePath := path.Join(a.IndexPath, indexFile)
@@ -55,8 +68,8 @@ func Add(a AddArgs) {
 			ile := &pb.IndexListEntry{
 				Name:           u,
 				URI:            u,
-				DataType:       a.DataType,
-				SourceType:     a.SourceType,
+				DataType:       dataType,
+				SourceType:     sourceType,
 				FirstAddedTime: timestamppb.Now(),
 			}
 

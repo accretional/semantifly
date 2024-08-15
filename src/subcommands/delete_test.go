@@ -1,14 +1,14 @@
 package subcommands
 
 import (
+	"fmt"
 	"os"
 	"path"
 	"testing"
-
-	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 )
 
 func TestDelete(t *testing.T) {
+	fmt.Println("--- Testing Delete command ---")
 	// Create a temporary directory for testing
 	tempDir, err := os.MkdirTemp("", "test_delete")
 	if err != nil {
@@ -32,8 +32,8 @@ func TestDelete(t *testing.T) {
 	// Set up test arguments
 	args := AddArgs{
 		IndexPath:  tempDir,
-		DataType:   pb.DataType_TEXT,
-		SourceType: pb.SourceType_LOCAL_FILE,
+		DataType:   "text",
+		SourceType: "local_file",
 		MakeCopy:   true,
 		DataURIs:   []string{testFilePath1, testFilePath2},
 	}
