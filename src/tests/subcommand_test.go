@@ -25,7 +25,7 @@ func runAndCheckStdoutContains(subcommand string, wantedStdoutSubstr string, arg
 	output := stdout.String()
 
 	if !strings.Contains(output, wantedStdoutSubstr) {
-		return fmt.Errorf("Expected output to contain %s, but got: %s", wantedStdoutSubstr, output)
+		return fmt.Errorf("Expected output to contain \"%s\". Output obtained \"%s\"", wantedStdoutSubstr, output)
 	}
 
 	return nil
@@ -93,7 +93,7 @@ func TestCommandRun(t *testing.T) {
 	if err := runAndCheckStdoutContains("add", "added successfully", args); err != nil {
 		t.Errorf("Failed to execute 'add' subcommand: %v", err)
 	}
-	// defer os.Remove("index.list")
+	defer os.Remove("index.list")
 
 	// Testing Get subcommand
 	if err := runAndCheckStdoutContains("get", testContent, args); err != nil {
@@ -117,12 +117,12 @@ func TestCommandRun(t *testing.T) {
 	}
 
 	// Testing Get command after deleting the entry
-	if err := runAndCheckStdoutContains("get", "not found in index file", args); err != nil {
+	if err := runAndCheckStdoutContains("get", "empty index file", args); err != nil {
 		t.Errorf("Failed to execute 'get' subcommand: %v", err)
 	}
 
 	// Testing Delete subcommand after deleting the entry
-	if err := runAndCheckStdoutContains("delete", "not found in index file", args); err != nil {
+	if err := runAndCheckStdoutContains("delete", "empty index file", args); err != nil {
 		t.Errorf("Failed to execute 'delete' subcommand: %v", err)
 	}
 
