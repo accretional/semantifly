@@ -4,9 +4,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-
-	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
-	"google.golang.org/protobuf/proto"
 )
 
 type GetArgs struct {
@@ -17,28 +14,16 @@ type GetArgs struct {
 func Get(g GetArgs) {
 	indexFilePath := path.Join(g.IndexPath, indexFile)
 
-	data, err := os.ReadFile(indexFilePath)
+	indexMap, err := readIndex(indexFilePath, true)
 	if err != nil {
-		fmt.Printf("failed to read index file: %v\n", err)
+		fmt.Printf("Failed to read the index file: %v", err)
 		return
 	}
 
-	var index pb.Index
-	if err := proto.Unmarshal(data, &index); err != nil {
-		fmt.Printf("failed to unmarshal index file: %v\n", err)
-		return
-	}
-
-	var targetEntry *pb.IndexListEntry
-	for _, entry := range index.Entries {
-		if entry.Name == g.Name {
-			targetEntry = entry
-			break
-		}
-	}
+	targetEntry := indexMap[g.Name]
 
 	if targetEntry == nil {
-		fmt.Printf("file '%s' not found in the index\n", g.Name)
+		fmt.Printf("file '%s' not found in index file %s\n", g.Name, indexFilePath)
 		return
 	}
 

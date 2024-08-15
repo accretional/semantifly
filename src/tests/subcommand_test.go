@@ -69,7 +69,7 @@ func TestCommandRun(t *testing.T) {
 	}
 	tempFile.Close()
 
-	// Making a second file to test the update command 
+	// Making a second file to test the update command
 	updatedTempFile, err := os.CreateTemp("", "semantifly_test_updated_*.txt")
 	if err != nil {
 		t.Fatalf("Failed to create temporary file: %v", err)
@@ -90,10 +90,10 @@ func TestCommandRun(t *testing.T) {
 
 	// Testing Add subcommand for an existing file
 	args = []string{tempFile.Name()}
-	if err := runAndCheckStdoutContains("add", "Added file successfully", args); err != nil {
+	if err := runAndCheckStdoutContains("add", "added successfully", args); err != nil {
 		t.Errorf("Failed to execute 'add' subcommand: %v", err)
 	}
-	defer os.Remove("index.list")
+	// defer os.Remove("index.list")
 
 	// Testing Get subcommand
 	if err := runAndCheckStdoutContains("get", testContent, args); err != nil {
@@ -112,17 +112,17 @@ func TestCommandRun(t *testing.T) {
 	}
 
 	// Testing Delete subcommand
-	if err := runAndCheckStdoutContains("delete", "Deleted entry from index", args); err != nil {
+	if err := runAndCheckStdoutContains("delete", "deleted successfully", args); err != nil {
 		t.Errorf("Failed to execute 'delete' subcommand: %v", err)
 	}
 
 	// Testing Get command after deleting the entry
-	if err := runAndCheckStdoutContains("get", "not found in the index", args); err != nil {
+	if err := runAndCheckStdoutContains("get", "not found in index file", args); err != nil {
 		t.Errorf("Failed to execute 'get' subcommand: %v", err)
 	}
 
 	// Testing Delete subcommand after deleting the entry
-	if err := runAndCheckStdoutContains("delete", "Entry not found in index", args); err != nil {
+	if err := runAndCheckStdoutContains("delete", "not found in index file", args); err != nil {
 		t.Errorf("Failed to execute 'delete' subcommand: %v", err)
 	}
 
