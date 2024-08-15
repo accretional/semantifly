@@ -222,7 +222,7 @@ func CommandReadRun() {
 		}
 
 		subcommands.Get(args)
-	
+
 	case "search":
 		cmd := flag.NewFlagSet("search", flag.ExitOnError)
 		indexPath := cmd.String("index-path", "", "Path to the index file")
@@ -246,12 +246,19 @@ func CommandReadRun() {
 
 		searchTerm := cmd.Args()[0]
 		args := subcommands.LexicalSearchArgs{
-			IndexPath: *indexPath,
-			SearchTerm:      searchTerm,
-			TopN: *topN,
+			IndexPath:  *indexPath,
+			SearchTerm: searchTerm,
+			TopN:       *topN,
 		}
 
-		subcommands.LexicalSearch(args)
+		searchResults, err := subcommands.LexicalSearch(args)
+
+		if err != nil {
+			printCmdErr(fmt.Sprintf("Error during search: %v", err))
+			return
+		}
+
+		subcommands.PrintSearchResults(searchResults)
 
 	default:
 		printCmdErr("No valid subcommand provided.")
