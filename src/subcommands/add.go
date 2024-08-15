@@ -32,10 +32,6 @@ func Add(a AddArgs) {
 			return
 		}
 
-		if indexMap == nil {
-			indexMap = make(map[string]*pb.IndexListEntry)
-		}
-
 		for i, u := range a.DataURIs {
 			f, err := os.Stat(u)
 			if errors.Is(err, os.ErrNotExist) {

@@ -14,7 +14,7 @@ type GetArgs struct {
 func Get(g GetArgs) {
 	indexFilePath := path.Join(g.IndexPath, indexFile)
 
-	indexMap, err := readIndex(indexFilePath, true)
+	indexMap, err := readIndex(indexFilePath, false)
 	if err != nil {
 		fmt.Printf("Failed to read the index file: %v", err)
 		return

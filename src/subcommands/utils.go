@@ -17,9 +17,11 @@ func readIndex(indexFilePath string, ignoreIfNotFound bool) (map[string]*pb.Inde
 	index := &pb.Index{}
 	data, err := os.ReadFile(indexFilePath)
 
+	indexMap := make(map[string]*pb.IndexListEntry)
+
 	if err != nil {
 		if os.IsNotExist(err) && ignoreIfNotFound {
-			return nil, nil
+			return indexMap, nil
 		}
 		return nil, fmt.Errorf("failed to read index file: %w", err)
 	}
@@ -28,11 +30,13 @@ func readIndex(indexFilePath string, ignoreIfNotFound bool) (map[string]*pb.Inde
 		return nil, fmt.Errorf("failed to unmarshal index file: %w", err)
 	}
 
-	if !ignoreIfNotFound && (index == nil || len(index.Entries) == 0) {
-		return nil, fmt.Errorf("empty index file")
+	if index == nil || len(index.Entries) == 0 {
+		if !ignoreIfNotFound {
+			return nil, fmt.Errorf("empty index file")
+		} else {
+			return indexMap, nil
+		}
 	}
-
-	indexMap := make(map[string]*pb.IndexListEntry)
 
 	for _, entry := range index.Entries {
 		indexMap[entry.Name] = entry
