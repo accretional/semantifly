@@ -212,8 +212,8 @@ func CommandReadRun() {
 
 	case "update":
 		cmd := flag.NewFlagSet("update", flag.ExitOnError)
-		dataTypeStr := cmd.String("type", "", "The type of the input data")
-		sourceTypeStr := cmd.String("source-type", "", "How to access the content")
+		dataType := cmd.String("type", "", "The type of the input data")
+		sourceType := cmd.String("source-type", "", "How to access the content")
 		makeLocalCopy := cmd.String("copy", "false", "Whether to copy and use the file as it is now, or dynamically access it")
 		indexPath := cmd.String("index-path", "", "Path to the index file")
 
@@ -235,8 +235,8 @@ func CommandReadRun() {
 		args := subcommands.UpdateArgs{
 			IndexPath:  *indexPath,
 			Name:       cmd.Args()[0],
-			DataType:   *dataTypeStr,
-			SourceType: *sourceTypeStr,
+			DataType:   *dataType,
+			SourceType: *sourceType,
 			UpdateCopy: *makeLocalCopy,
 			DataURI:    cmd.Args()[1],
 		}
