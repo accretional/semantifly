@@ -69,7 +69,7 @@ func TestCommandRun(t *testing.T) {
 	}
 	tempFile.Close()
 
-	// Making a second file to test the update command
+	// Making a second file to test the update command 
 	updatedTempFile, err := os.CreateTemp("", "semantifly_test_updated_*.txt")
 	if err != nil {
 		t.Fatalf("Failed to create temporary file: %v", err)
