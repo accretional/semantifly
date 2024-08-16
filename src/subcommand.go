@@ -289,19 +289,3 @@ func CommandReadRun() {
 func loadIndex(indexDir string) {
 	fmt.Println("loadIndex in commands.go is unimplemented")
 }
-
-func parseDataType(str string) (pb.DataType, error) {
-	val, ok := pb.DataType_value[strings.ToUpper(str)]
-	if !ok {
-		return pb.DataType_TEXT, fmt.Errorf("unknown data type: %s", str)
-	}
-	return pb.DataType(val), nil
-}
-
-func parseSourceType(str string) (pb.SourceType, error) {
-	val, ok := pb.SourceType_value[strings.ToUpper(str)]
-	if !ok {
-		return pb.SourceType_LOCAL_FILE, fmt.Errorf("unknown source type: %s", str)
-	}
-	return pb.SourceType(val), nil
-}

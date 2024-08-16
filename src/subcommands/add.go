@@ -3,8 +3,10 @@ package subcommands
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path"
+	"strings"
 
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -71,6 +73,20 @@ func Add(a AddArgs) {
 				DataType:       dataType,
 				SourceType:     sourceType,
 				FirstAddedTime: timestamppb.Now(),
+			}
+
+			srcFile, _ := os.Open(u)
+
+			content, err := io.ReadAll(srcFile)
+			if err != nil {
+				fmt.Println("failed to read source file: %w", err)
+			}
+
+			// Create and populate the word_occurrences map
+			ile.WordOccurrences = make(map[string]int32)
+			tokens := strings.Fields(strings.ToLower(string(content)))
+			for _, token := range tokens {
+				ile.WordOccurrences[token]++
 			}
 
 			if a.MakeCopy {
