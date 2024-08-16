@@ -6,6 +6,7 @@ import (
 
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
+	fetch "accretional.com/semantifly/fetcher"
 )
 
 type AddArgs struct {
@@ -38,7 +39,7 @@ func Add(a AddArgs) {
 	}
 
 	for _, u := range a.DataURIs {
-		content, err := fetchFromSource(sourceType, u)
+		content, err := fetch.FetchFromSource(sourceType, u)
 
 		if err != nil {
 			fmt.Printf("Failed to validate the URI %s: %v\n", u, err)

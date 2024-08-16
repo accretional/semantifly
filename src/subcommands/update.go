@@ -6,6 +6,7 @@ import (
 
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
+	fetch "accretional.com/semantifly/fetcher"
 )
 
 type UpdateArgs struct {
@@ -43,7 +44,7 @@ func Update(u UpdateArgs) {
 			return
 		}
 
-		content, err := fetchFromSource(sourceType, u.DataURI)
+		content, err := fetch.FetchFromSource(sourceType, u.DataURI)
 
 		if err != nil {
 			fmt.Printf("Failed to validate the URI %s: %v\n", u, err)

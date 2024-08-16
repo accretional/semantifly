@@ -1,16 +1,12 @@
 package subcommands
 
 import (
-	"context"
 	"errors"
 	"fmt"
-	"io"
-	"net/http"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
-	"time"
 
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 	"google.golang.org/protobuf/proto"
@@ -90,87 +86,6 @@ func writeIndex(indexFilePath string, indexMap map[string]*pb.IndexListEntry) er
 	return nil
 }
 
-// fetchFromSource retrieves content from either a local file or a webpage based on the provided source type.
-//
-// Parameters:
-//   - sourceType: The type of source (pb.SourceType).
-//   - uri: The location of the content (file path or URL).
-//
-// Returns:
-//   - []byte: The content retrieved from the source.
-func fetchFromSource(sourceType pb.SourceType, uri string) ([]byte, error) {
-
-	switch sourceType {
-	case pb.SourceType_LOCAL_FILE:
-
-		f, err := os.Stat(uri)
-		if err != nil {
-			if errors.Is(err, os.ErrNotExist) {
-				return nil, fmt.Errorf("file does not exist")
-			}
-			return nil, fmt.Errorf("failed to stat file: %w", err)
-		}
-
-		if f.IsDir() {
-			return nil, fmt.Errorf("cannot add directory %s as file. Try adding as a directory instead", uri)
-		}
-
-		if !f.Mode().IsRegular() {
-			return nil, fmt.Errorf("file %s is not a regular file and cannot be added", uri)
-		}
-
-		srcFile, err := os.Open(uri)
-		if err != nil {
-			return nil, fmt.Errorf("failed to open source file: %w", err)
-		}
-		defer srcFile.Close()
-
-		content, err := io.ReadAll(srcFile)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read source file: %w", err)
-		}
-
-		return content, nil
-
-	case pb.SourceType_WEBPAGE:
-
-		if strings.HasPrefix(uri, "http://") || strings.HasPrefix(uri, "https://") {
-			// Using a context with timeout for HTTP request
-			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-			defer cancel()
-
-			req, err := http.NewRequestWithContext(ctx, "GET", uri, nil)
-			if err != nil {
-				return nil, fmt.Errorf("failed to create request: %v", err)
-			}
-
-			resp, err := http.DefaultClient.Do(req)
-			if err != nil {
-				return nil, fmt.Errorf("failed to fetch web page: %v", err)
-			}
-			defer resp.Body.Close()
-
-			if resp.StatusCode != http.StatusOK {
-				return nil, fmt.Errorf("web page returned non-OK status: %s", resp.Status)
-			}
-
-			body, err := io.ReadAll(resp.Body)
-			if err != nil {
-				return nil, fmt.Errorf("failed to read web page content: %v", err)
-			}
-
-			return body, nil
-
-		} else {
-			return nil, fmt.Errorf("invalid URI for sourceType: webpage")
-		}
-
-	default:
-		return nil, fmt.Errorf("invalid sourceType argument")
-	}
-}
-
-
 // makeCopy creates a copy of the given IndexListEntry in the specified index path.
 // It updates the LastRefreshedTime of the entry and marshals it to a file.
 //
@@ -198,7 +113,6 @@ func makeCopy(indexPath string, ile *pb.IndexListEntry) error {
 
 	return nil
 }
-
 
 // fetchFromCopy retrieves the content of a file from the copy directory.
 //
@@ -239,7 +153,6 @@ func fetchFromCopy(indexPath string, name string) ([]byte, error) {
 	return []byte(ile.Content), nil
 }
 
-
 // parseDataType converts a string representation of a data type to its corresponding pb.DataType enum value.
 // It returns the parsed pb.DataType and an error if the input string is not a valid data type.
 //
@@ -252,7 +165,6 @@ func parseDataType(str string) (pb.DataType, error) {
 	}
 	return pb.DataType(val), nil
 }
-
 
 // parseSourceType converts a string representation of a source type to its corresponding pb.SourceType enum value.
 // It returns the parsed pb.SourceType and nil error if successful, or pb.SourceType_LOCAL_FILE and an error if the input is invalid.

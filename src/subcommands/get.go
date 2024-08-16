@@ -3,6 +3,8 @@ package subcommands
 import (
 	"fmt"
 	"path"
+
+	fetch "accretional.com/semantifly/fetcher"
 )
 
 type GetArgs struct {
@@ -35,7 +37,7 @@ func Get(g GetArgs) {
 				fmt.Printf("Failed to read content from copy: %v. Fetching from the source.\n", err)
 			}
 
-			content, err = fetchFromSource(targetEntry.SourceType, targetEntry.URI)
+			content, err = fetch.FetchFromSource(targetEntry.SourceType, targetEntry.URI)
 			if err != nil {
 				fmt.Printf("Failed to read content from source: %v.\n", err)
 				return
