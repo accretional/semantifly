@@ -7,12 +7,11 @@ import (
 	"path"
 	"strings"
 
-	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 	"accretional.com/semantifly/subcommands"
 )
 
 func printCmdErr(e string) {
-	fmt.Println(fmt.Sprintf("%s\n Try --help to list subcommands and options.", e))
+	fmt.Printf("%s\n Try --help to list subcommands and options.\n", e)
 }
 
 func isFlag(fs *flag.FlagSet, name string) bool {
@@ -89,7 +88,7 @@ func CommandReadRun() {
 	semantifly_dir := flag.String("semantifly_dir", os.ExpandEnv("$HOME/.semantifly"), "Where to read existing semantifly data, and write new semantifly data.")
 	_, err := os.ReadDir(*semantifly_dir)
 	if err != nil {
-		fmt.Println(fmt.Sprintf("No existing semantifly directory detected. Creating new semantifly directory at %s", *semantifly_dir))
+		fmt.Printf("No existing semantifly directory detected. Creating new semantifly directory at %s\n", *semantifly_dir)
 		err := os.Mkdir(*semantifly_dir, 0777)
 		if err != nil {
 			printCmdErr(fmt.Sprintf("Failed to create semantifly directory at %s: %s", *semantifly_dir, err))
@@ -100,7 +99,7 @@ func CommandReadRun() {
 	indexLog := path.Join(index_path, "index.log")
 	_, err = os.ReadDir(index_path)
 	if err != nil {
-		fmt.Println(fmt.Sprintf("No existing semantifly index detected. Creating new semantifly index at %s", index_path))
+		fmt.Printf("No existing semantifly index detected. Creating new semantifly index at %s\n", index_path)
 		err := os.Mkdir(index_path, 0777)
 		if err != nil {
 			printCmdErr(fmt.Sprintf("Failed to create semantifly index directory at %s: %s", index_path, err))
@@ -126,8 +125,8 @@ func CommandReadRun() {
 	switch cmdName {
 	case "add":
 		cmd := flag.NewFlagSet("add", flag.ExitOnError)
-		dataTypeStr := cmd.String("type", "text", "The type of the input data")
-		sourceTypeStr := cmd.String("source-type", "local_file", "How to access the content")
+		dataType := cmd.String("type", "text", "The type of the input data")
+		sourceType := cmd.String("source-type", "local_file", "How to access the content")
 		makeLocalCopy := cmd.Bool("copy", false, "Whether to copy and use the file as it is now, or dynamically access it")
 		indexPath := cmd.String("index-path", "", "Path to the index file")
 
@@ -146,22 +145,10 @@ func CommandReadRun() {
 
 		cmd.Parse(reorderedArgs)
 
-		dataType, err := parseDataType(*dataTypeStr)
-		if err != nil {
-			printCmdErr(fmt.Sprintf("Invalid data type: %v", err))
-			return
-		}
-
-		sourceType, err := parseSourceType(*sourceTypeStr)
-		if err != nil {
-			printCmdErr(fmt.Sprintf("Invalid source type: %v", err))
-			return
-		}
-
 		args := subcommands.AddArgs{
 			IndexPath:  *indexPath,
-			DataType:   dataType,
-			SourceType: sourceType,
+			DataType:   *dataType,
+			SourceType: *sourceType,
 			MakeCopy:   *makeLocalCopy,
 			DataURIs:   cmd.Args(),
 		}
@@ -222,6 +209,39 @@ func CommandReadRun() {
 		}
 
 		subcommands.Get(args)
+
+	case "update":
+		cmd := flag.NewFlagSet("update", flag.ExitOnError)
+		dataType := cmd.String("type", "", "The type of the input data")
+		sourceType := cmd.String("source-type", "", "How to access the content")
+		makeLocalCopy := cmd.String("copy", "false", "Whether to copy and use the file as it is now, or dynamically access it")
+		indexPath := cmd.String("index-path", "", "Path to the index file")
+
+		flags, nonFlags, err := parseArgs(args, cmd)
+		if err != nil {
+			printCmdErr(fmt.Sprintf("Error: %v", err))
+			return
+		}
+
+		reorderedArgs := append(flags, nonFlags...)
+
+		if len(nonFlags) != 2 {
+			printCmdErr("Update subcommand requires two input args - index name and updated URI")
+			return
+		}
+
+		cmd.Parse(reorderedArgs)
+
+		args := subcommands.UpdateArgs{
+			IndexPath:  *indexPath,
+			Name:       cmd.Args()[0],
+			DataType:   *dataType,
+			SourceType: *sourceType,
+			UpdateCopy: *makeLocalCopy,
+			DataURI:    cmd.Args()[1],
+		}
+
+		subcommands.Update(args)
 
 	case "search":
 		cmd := flag.NewFlagSet("search", flag.ExitOnError)
