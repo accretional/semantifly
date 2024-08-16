@@ -73,6 +73,7 @@ func Add(a AddArgs) {
 				FirstAddedTime: timestamppb.Now(),
 			}
 
+			indexMap[ile.Name] = ile
 			err = createSearchDictionary(ile)
 
 			if err != nil {
