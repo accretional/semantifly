@@ -53,6 +53,12 @@ func Add(a AddArgs) {
 		}
 
 		indexMap[ile.Name] = ile
+		err = createSearchDictionary(ile)
+
+		if err != nil {
+			fmt.Printf("File %s failed to create search dictionary with err: %s. Skipping.\n", u, err)
+			continue
+		}
 
 		if a.MakeCopy {
 			err = makeCopy(a.IndexPath, ile)

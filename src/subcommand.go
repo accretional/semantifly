@@ -243,6 +243,43 @@ func CommandReadRun() {
 
 		subcommands.Update(args)
 
+	case "search":
+		cmd := flag.NewFlagSet("search", flag.ExitOnError)
+		indexPath := cmd.String("index-path", "", "Path to the index file")
+		topN := cmd.Int("n", 1, "Top n search results")
+
+		flags, nonFlags, err := parseArgs(args, cmd)
+
+		if err != nil {
+			printCmdErr(fmt.Sprintf("Error: %v", err))
+			return
+		}
+
+		reorderedArgs := append(flags, nonFlags...)
+
+		if len(nonFlags) != 1 {
+			printCmdErr("Search subcommand requires exactly one arg.")
+			return
+		}
+
+		cmd.Parse(reorderedArgs)
+
+		searchTerm := cmd.Args()[0]
+		args := subcommands.LexicalSearchArgs{
+			IndexPath:  *indexPath,
+			SearchTerm: searchTerm,
+			TopN:       *topN,
+		}
+
+		searchResults, err := subcommands.LexicalSearch(args)
+
+		if err != nil {
+			printCmdErr(fmt.Sprintf("Error during search: %v", err))
+			return
+		}
+
+		subcommands.PrintSearchResults(searchResults)
+
 	default:
 		printCmdErr("No valid subcommand provided.")
 		os.Exit(1)
