@@ -18,14 +18,13 @@ type LexicalSearchArgs struct {
 	TopN       int
 }
 
-type FileOccurrence struct {
+type fileOccurrence struct {
 	FileName   string
 	Occurrence int32
 }
 
-type OccurrenceList []FileOccurrence
-
-type SearchMap map[string]OccurrenceList // Search Map maps search terms to TermMaps
+type occurrenceList []fileOccurrence
+type searchMap map[string]occurrenceList // Search Map maps search terms to TermMaps
 
 func createSearchDictionary(ile *pb.IndexListEntry) error {
 	srcFile, err := os.Open(ile.URI)
@@ -51,7 +50,7 @@ func createSearchDictionary(ile *pb.IndexListEntry) error {
 }
 
 // LexicalSearch performs a search in the index for the specified term and returns the top N results ranked by the frequency of the term.
-func LexicalSearch(args LexicalSearchArgs) ([]FileOccurrence, error) {
+func LexicalSearch(args LexicalSearchArgs) ([]fileOccurrence, error) {
 	indexFilePath := path.Join(args.IndexPath, indexFile)
 	data, err := os.ReadFile(indexFilePath)
 	if err != nil {
@@ -66,29 +65,29 @@ func LexicalSearch(args LexicalSearchArgs) ([]FileOccurrence, error) {
 		return nil, fmt.Errorf("failed to unmarshal index: %w", err)
 	}
 
-	searchMap := make(SearchMap)
+	newSearchMap := make(searchMap)
 	for _, entry := range index.Entries {
 		for word, occ := range entry.WordOccurrences {
-			newFileOcc := FileOccurrence{
+			newFileOcc := fileOccurrence{
 				FileName:   entry.Name,
 				Occurrence: occ,
 			}
-			if val, ok := searchMap[word]; ok {
-				searchMap[word] = append(val, newFileOcc)
+			if val, ok := newSearchMap[word]; ok {
+				newSearchMap[word] = append(val, newFileOcc)
 			} else {
-				newOccList := []FileOccurrence{newFileOcc}
-				searchMap[word] = newOccList
+				newOccList := []fileOccurrence{newFileOcc}
+				newSearchMap[word] = newOccList
 			}
 		}
 	}
 
-	for _, occList := range searchMap {
+	for _, occList := range newSearchMap {
 		sort.Slice(occList, func(i, j int) bool {
 			return occList[i].Occurrence > occList[j].Occurrence
 		})
 	}
 
-	searchResults := searchMap[args.SearchTerm]
+	searchResults := newSearchMap[args.SearchTerm]
 	// If TopN is specified and less than the total results, truncate the results
 	if args.TopN > 0 && len(searchResults) > args.TopN {
 		searchResults = searchResults[:args.TopN]
@@ -97,7 +96,7 @@ func LexicalSearch(args LexicalSearchArgs) ([]FileOccurrence, error) {
 	return searchResults, nil
 }
 
-func PrintSearchResults(results []FileOccurrence) {
+func PrintSearchResults(results []fileOccurrence) {
 	for _, result := range results {
 		fmt.Printf("File: %s\nOccurrences: %d\n\n", result.FileName, result.Occurrence)
 	}

@@ -119,7 +119,7 @@ func TestLexicalSearch_NonExistentIndex(t *testing.T) {
 }
 
 func TestPrintSearchResults(t *testing.T) {
-	results := []FileOccurrence{
+	results := []fileOccurrence{
 		{
 			FileName:   "file1.txt",
 			Occurrence: 5,
