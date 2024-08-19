@@ -1,12 +1,8 @@
-image: gitpod/workspace-postgres
+image: marcopeg/gitpod-workspace-postgres:2.6.0
 
 ports:
-  - port: 5432
+  - port: 8008
     onOpen: open-preview
-
-tasks:
-  - name: Start PostgreSQL
-    init: |
-      pg_ctl -D /var/lib/postgresql/data start
-    command: |
-      psql -c "CREATE DATABASE mydatabase;"
+    visibility: private
+  - port: 5432
+    onOpen: ignore
