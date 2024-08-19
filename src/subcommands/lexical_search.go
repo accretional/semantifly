@@ -3,6 +3,7 @@ package subcommands
 import (
 	"fmt"
 	"io"
+	"math"
 	"os"
 	"path"
 	"sort"
@@ -51,6 +52,9 @@ func createSearchDictionary(ile *pb.IndexListEntry) error {
 
 // LexicalSearch performs a search in the index for the specified term and returns the top N results ranked by the frequency of the term.
 func LexicalSearch(args LexicalSearchArgs) ([]fileOccurrence, error) {
+	if args.TopN <= 0 {
+		return nil, fmt.Errorf("topn: %d is an invalid amount", args.TopN)
+	}
 	indexFilePath := path.Join(args.IndexPath, indexFile)
 	data, err := os.ReadFile(indexFilePath)
 	if err != nil {
@@ -87,13 +91,9 @@ func LexicalSearch(args LexicalSearchArgs) ([]fileOccurrence, error) {
 		})
 	}
 
-	searchResults := newSearchMap[args.SearchTerm]
-	// If TopN is specified and less than the total results, truncate the results
-	if args.TopN > 0 && len(searchResults) > args.TopN {
-		searchResults = searchResults[:args.TopN]
-	}
-
-	return searchResults, nil
+	resultsLen := len(newSearchMap[args.SearchTerm])
+	amountWanted := int(math.Min(float64(args.TopN), float64(resultsLen)))
+	return newSearchMap[args.SearchTerm][:amountWanted], nil
 }
 
 func PrintSearchResults(results []fileOccurrence) {
