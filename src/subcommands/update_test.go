@@ -106,6 +106,6 @@ func TestUpdate(t *testing.T) {
 	}
 
 	if ile.Content != updatedContent {
-		t.Errorf("Copy ile for %s not updated. Expected content \"%s\", found \"%s\"", testFilePath, updatedContent, ile.Content)
+		t.Errorf("Copy file for %s not updated. Expected content \"%s\", found \"%s\"", testFilePath, updatedContent, ile.Content)
 	}
 }

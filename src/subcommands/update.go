@@ -6,6 +6,7 @@ import (
 
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
+	fetch "accretional.com/semantifly/fetcher"
 )
 
 type UpdateArgs struct {
@@ -37,11 +38,25 @@ func Update(u UpdateArgs) {
 
 	if u.UpdateCopy == "true" {
 
+		sourceType, err := parseSourceType(u.SourceType)
+		if err != nil {
+			fmt.Printf("Invalid source type: %v", err)
+			return
+		}
+
+		content, err := fetch.FetchFromSource(sourceType, u.DataURI)
+
+		if err != nil {
+			fmt.Printf("Failed to validate the URI %s: %v\n", u, err)
+			return
+		}
+
 		ile := &pb.IndexListEntry{
 			Name:       u.Name,
 			URI:        u.DataURI,
 			DataType:   pb.DataType(pb.DataType_value[u.DataType]),
 			SourceType: pb.SourceType(pb.SourceType_value[u.SourceType]),
+			Content:    string(content),
 		}
 
 		if err := makeCopy(u.IndexPath, ile); err != nil {

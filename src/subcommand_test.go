@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"os/exec"
 	"strings"
@@ -57,6 +59,7 @@ func TestCommandRun(t *testing.T) {
 
 	os.Setenv("PATH", oldPath+":"+semantifly_dir)
 
+	// Making a temp file for testing
 	tempFile, err := os.CreateTemp("", "semantifly_test_*.txt")
 	if err != nil {
 		t.Fatalf("Failed to create temporary file: %v", err)
@@ -126,4 +129,63 @@ func TestCommandRun(t *testing.T) {
 		t.Errorf("Failed to execute 'delete' subcommand: %v", err)
 	}
 
+	//Testing the commands for webpage sourcetype
+	testWebpageURI := "http://echo.jsontest.com/title/lorem/content/ipsum"
+
+	
+	// Testing Add subcommand for webpage
+	webpageAddArgs := []string{testWebpageURI, "--source-type", "webpage"}
+	if err := runAndCheckStdoutContains("add", "added successfully", webpageAddArgs); err != nil {
+		t.Errorf("Failed to execute 'add' subcommand: %v", err)
+	}
+	defer os.Remove("index.list")
+
+	// Fetching content from webpage URI
+	resp, err := http.Get(testWebpageURI)
+	if err != nil {
+		t.Errorf("failed to fetch web page: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("web page returned non-OK status: %s", resp.Status)
+	}
+
+	webpageContent, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Errorf("failed to read web page content: %v", err)
+	}
+
+	// Testing Get subcommand for webpage
+	webpageArgs := []string{testWebpageURI}
+	if err := runAndCheckStdoutContains("get", string(webpageContent), webpageArgs); err != nil {
+		t.Errorf("Failed to execute 'get' subcommand: %v", err)
+	}
+
+	// Testing Update subcommand without passing in the updated web URI
+	if err := runAndCheckStdoutContains("update", "Update subcommand requires two input args", webpageArgs); err != nil {
+		t.Errorf("Failed to execute 'delete' subcommand: %v", err)
+	}
+
+	// Testing Update subcommand for webpage URI
+	updatedWebpageURI := "http://echo.jsontest.com/title/foo/content/bar"
+	webpageUpdateArgs := []string{testWebpageURI, updatedWebpageURI}
+	if err := runAndCheckStdoutContains("update", "updated successfully", webpageUpdateArgs); err != nil {
+		t.Errorf("Failed to execute 'delete' subcommand: %v", err)
+	}
+
+	// Testing Delete subcommand
+	if err := runAndCheckStdoutContains("delete", "deleted successfully", webpageArgs); err != nil {
+		t.Errorf("Failed to execute 'delete' subcommand: %v", err)
+	}
+
+	// Testing Get command after deleting the entry
+	if err := runAndCheckStdoutContains("get", "empty index file", webpageArgs); err != nil {
+		t.Errorf("Failed to execute 'get' subcommand: %v", err)
+	}
+
+	// Testing Delete subcommand after deleting the entry
+	if err := runAndCheckStdoutContains("delete", "empty index file", webpageArgs); err != nil {
+		t.Errorf("Failed to execute 'delete' subcommand: %v", err)
+	}
 }

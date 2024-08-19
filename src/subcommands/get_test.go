@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"path"
 	"testing"
+	"time"
 )
 
 func TestGet(t *testing.T) {
@@ -69,5 +71,82 @@ func TestGet(t *testing.T) {
 	// Validate the output
 	if output != testContent {
 		t.Errorf("Expected output '%s', but got '%s'", testContent, output)
+	}
+}
+
+func TestGet_Webpage(t *testing.T) {
+	// Create a temporary directory for testing
+	tempDir, err := os.MkdirTemp("", "add_test")
+	if err != nil {
+		t.Fatalf("Failed to create temp directory: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	testWebpageURL := "http://echo.jsontest.com/title/lorem/content/ipsum"
+
+	// Set up test arguments
+	args := AddArgs{
+		IndexPath:  tempDir,
+		DataType:   "text",
+		SourceType: "webpage",
+		MakeCopy:   true,
+		DataURIs:   []string{testWebpageURL},
+	}
+
+	// Call the Add function
+	Add(args)
+
+	// Check if the index file was created
+	indexFilePath := path.Join(tempDir, indexFile)
+	if _, err := os.Stat(indexFilePath); os.IsNotExist(err) {
+		t.Errorf("Index file was not created")
+	}
+
+	getArgs := GetArgs{
+		IndexPath: tempDir,
+		Name:      testWebpageURL,
+	}
+
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	Get(getArgs)
+
+	w.Close()
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	io.Copy(&buf, r)
+	output := buf.String()
+
+	// Fetching webpage content
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+	resp, err := client.Get(testWebpageURL)
+	if err != nil {
+		t.Errorf("failed to fetch web page: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("web page returned non-OK status: %s", resp.Status)
+		return
+	}
+
+	webpageContent, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Errorf("failed to read web page content: %v", err)
+		return
+	}
+
+	webpageContentStr := string(webpageContent) + "\n"
+
+	// Validating the contents of the copy file
+	if output != webpageContentStr {
+		t.Errorf("Failed to validate webpage copy: Expected \"%s\", got \"%s\"", webpageContent, output)
 	}
 }

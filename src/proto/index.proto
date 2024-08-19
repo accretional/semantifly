@@ -30,4 +30,5 @@ enum DataType {
 // How to *access* the content. Eg locally as a file, remotely as a web page, etc.
 enum SourceType {
     LOCAL_FILE = 0;
+    WEBPAGE = 1;
 }
