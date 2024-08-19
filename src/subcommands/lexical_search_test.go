@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"strings"
 	"testing"
 
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
@@ -125,15 +126,38 @@ func TestLexicalSearch_UnexpectedTopN(t *testing.T) {
 	}
 	defer os.RemoveAll(tempDir)
 
+	indexFilePath := path.Join(tempDir, indexFile)
+	mockIndex := &pb.Index{
+		Entries: []*pb.IndexListEntry{
+			{
+				Name:            "file1.txt",
+				WordOccurrences: map[string]int32{"test": 5, "search": 3, "hill": 2},
+			},
+		},
+	}
+
+	indexData, err := proto.Marshal(mockIndex)
+	if err != nil {
+		t.Fatalf("Failed to marshal mock index: %v", err)
+	}
+
+	err = os.WriteFile(indexFilePath, indexData, 0644)
+	if err != nil {
+		t.Fatalf("Failed to write mock index file: %v", err)
+	}
+
 	args := LexicalSearchArgs{
 		IndexPath:  tempDir,
 		SearchTerm: "test",
 		TopN:       -4,
 	}
 
+	expectedErrorMsg := "topn: -4 is an invalid amount"
 	_, err = LexicalSearch(args)
 	if err == nil {
-		t.Error("Expected an error for non-existent index file, but got nil")
+		t.Error("Expected an error for bad topN, but got nil")
+	} else if strings.Compare(err.Error(), expectedErrorMsg) != 0 {
+		t.Errorf("Expected error:\n%s\nGot:\n%s", expectedErrorMsg, err.Error())
 	}
 }
 
