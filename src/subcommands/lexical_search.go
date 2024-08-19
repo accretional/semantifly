@@ -6,8 +6,11 @@ import (
 	"math"
 	"os"
 	"path"
+	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/kljensen/snowball"
 
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 	"google.golang.org/protobuf/proto"
@@ -27,6 +30,26 @@ type fileOccurrence struct {
 type occurrenceList []fileOccurrence
 type searchMap map[string]occurrenceList // Search Map maps search terms to TermMaps
 
+func tokenizeFile(content string) ([]string, error) {
+	// Remove punctuation using regex
+	re := regexp.MustCompile(`[^a-zA-Z0-9\s]`)
+	cleanPhrase := re.ReplaceAllString(content, " ")
+
+	words := strings.Fields(cleanPhrase)
+
+	// Stem each word
+	var stemmedWords []string
+	for _, word := range words {
+		stemmedWord, err := snowball.Stem(word, "english", true)
+		if err != nil {
+			return nil, fmt.Errorf("failed to stem word: %w", err)
+		}
+		stemmedWords = append(stemmedWords, stemmedWord)
+	}
+
+	return stemmedWords, nil
+}
+
 func createSearchDictionary(ile *pb.IndexListEntry) error {
 	srcFile, err := os.Open(ile.URI)
 
@@ -42,11 +65,16 @@ func createSearchDictionary(ile *pb.IndexListEntry) error {
 
 	// Create and populate the word_occurrences map
 	ile.WordOccurrences = make(map[string]int32)
-	tokens := strings.Fields(strings.ToLower(string(content)))
+	tokens, err := tokenizeFile(string(content))
+	if err != nil {
+		return fmt.Errorf("failed to tokenize file: %w", err)
+	}
+
 	for _, token := range tokens {
 		ile.WordOccurrences[token]++
 	}
 
+	fmt.Println(ile.WordOccurrences)
 	return nil
 }
 
@@ -91,9 +119,14 @@ func LexicalSearch(args LexicalSearchArgs) ([]fileOccurrence, error) {
 		})
 	}
 
-	resultsLen := len(newSearchMap[args.SearchTerm])
+	stemmedTerm, err := snowball.Stem(args.SearchTerm, "english", true)
+	if err != nil {
+		return nil, fmt.Errorf("failed to stem word: %w", err)
+	}
+
+	resultsLen := len(newSearchMap[stemmedTerm])
 	amountWanted := int(math.Min(float64(args.TopN), float64(resultsLen)))
-	return newSearchMap[args.SearchTerm][:amountWanted], nil
+	return newSearchMap[stemmedTerm][:amountWanted], nil
 }
 
 func PrintSearchResults(results []fileOccurrence) {
