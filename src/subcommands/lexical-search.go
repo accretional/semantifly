@@ -87,19 +87,8 @@ func LexicalSearch(args LexicalSearchArgs) ([]FileOccurrence, error) {
 			return occList[i].Occurrence > occList[j].Occurrence
 		})
 	}
+
 	searchResults := searchMap[args.SearchTerm]
-	/*
-		searchResults := make([]SearchResult, 0)
-
-		for _, entry := range index.Entries {
-			if occurrence, found := entry.WordOccurrences[args.SearchTerm]; found {
-				searchResults = append(searchResults, SearchResult{
-					Entry:      entry,
-					Occurrence: occurrence,
-				})
-			}
-		}*/
-
 	// If TopN is specified and less than the total results, truncate the results
 	if args.TopN > 0 && len(searchResults) > args.TopN {
 		searchResults = searchResults[:args.TopN]
