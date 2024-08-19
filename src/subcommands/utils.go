@@ -67,29 +67,6 @@ func writeIndex(indexFilePath string, indexMap map[string]*pb.IndexListEntry) er
 	return nil
 }
 
-func createSearchDictionary(ile *pb.IndexListEntry) error {
-	srcFile, err := os.Open(ile.URI)
-
-	if err != nil {
-		return fmt.Errorf("failed to open source file: %w", err)
-	}
-	defer srcFile.Close()
-
-	content, err := io.ReadAll(srcFile)
-	if err != nil {
-		return fmt.Errorf("failed to read source file: %w", err)
-	}
-
-	// Create and populate the word_occurrences map
-	ile.WordOccurrences = make(map[string]int32)
-	tokens := strings.Fields(strings.ToLower(string(content)))
-	for _, token := range tokens {
-		ile.WordOccurrences[token]++
-	}
-
-	return nil
-}
-
 func makeCopy(indexPath string, ile *pb.IndexListEntry) error {
 
 	dest := path.Join(indexPath, addedCopiesSubDir, ile.Name)
