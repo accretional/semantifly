@@ -1,14 +1,4 @@
-image:
-  file: .gitpod.Dockerfile
+image: gitpod/workspace-postgres
 
 tasks:
-  - init: |
-      sudo service postgresql start
-      sudo -u postgres psql -c "CREATE USER gitpod WITH PASSWORD 'gitpod';"
-      sudo -u postgres psql -c "CREATE DATABASE semantifly;"
-      sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE semantifly TO gitpod;"
-  - command: sudo service postgresql start
-
-ports:
-  - port: 5432
-    onOpen: ignore
+    - init: pg_start
