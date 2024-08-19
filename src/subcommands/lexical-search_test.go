@@ -88,8 +88,8 @@ func TestLexicalSearch(t *testing.T) {
 			}
 
 			if tc.wantLen > 0 {
-				if results[0].Entry.Name != tc.wantFirst {
-					t.Errorf("Expected first result to be %s, got %s", tc.wantFirst, results[0].Entry.Name)
+				if results[0].FileName != tc.wantFirst {
+					t.Errorf("Expected first result to be %s, got %s", tc.wantFirst, results[0].FileName)
 				}
 				if results[0].Occurrence != tc.wantOccurs {
 					t.Errorf("Expected first result to have %d occurrences, got %d", tc.wantOccurs, results[0].Occurrence)
@@ -119,17 +119,13 @@ func TestLexicalSearch_NonExistentIndex(t *testing.T) {
 }
 
 func TestPrintSearchResults(t *testing.T) {
-	results := []SearchResult{
+	results := []FileOccurrence{
 		{
-			Entry: &pb.IndexListEntry{
-				Name: "file1.txt",
-			},
+			FileName:   "file1.txt",
 			Occurrence: 5,
 		},
 		{
-			Entry: &pb.IndexListEntry{
-				Name: "file2.txt",
-			},
+			FileName:   "file2.txt",
 			Occurrence: 3,
 		},
 	}

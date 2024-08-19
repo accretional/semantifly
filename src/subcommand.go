@@ -246,7 +246,7 @@ func CommandReadRun() {
 	case "search":
 		cmd := flag.NewFlagSet("search", flag.ExitOnError)
 		indexPath := cmd.String("index-path", "", "Path to the index file")
-		topN := cmd.Int("top-n", 1, "Top n search results")
+		topN := cmd.Int("n", 1, "Top n search results")
 
 		flags, nonFlags, err := parseArgs(args, cmd)
 

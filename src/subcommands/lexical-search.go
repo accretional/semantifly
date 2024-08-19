@@ -16,13 +16,17 @@ type LexicalSearchArgs struct {
 	TopN       int
 }
 
-type SearchResult struct {
-	Entry      *pb.IndexListEntry
+type FileOccurrence struct {
+	FileName   string
 	Occurrence int32
 }
 
+type OccurrenceList []FileOccurrence
+
+type SearchMap map[string]OccurrenceList // Search Map maps search terms to TermMaps
+
 // LexicalSearch performs a search in the index for the specified term and returns the top N results ranked by the frequency of the term.
-func LexicalSearch(args LexicalSearchArgs) ([]SearchResult, error) {
+func LexicalSearch(args LexicalSearchArgs) ([]FileOccurrence, error) {
 	indexFilePath := path.Join(args.IndexPath, indexFile)
 	data, err := os.ReadFile(indexFilePath)
 	if err != nil {
@@ -37,21 +41,44 @@ func LexicalSearch(args LexicalSearchArgs) ([]SearchResult, error) {
 		return nil, fmt.Errorf("failed to unmarshal index: %w", err)
 	}
 
-	searchResults := make([]SearchResult, 0)
-
+	searchMap := make(SearchMap)
 	for _, entry := range index.Entries {
-		if occurrence, found := entry.WordOccurrences[args.SearchTerm]; found {
-			searchResults = append(searchResults, SearchResult{
-				Entry:      entry,
-				Occurrence: occurrence,
-			})
+		for word, occ := range entry.WordOccurrences {
+			newFileOcc := FileOccurrence{
+				FileName:   entry.Name,
+				Occurrence: occ,
+			}
+			if val, ok := searchMap[word]; ok {
+				searchMap[word] = append(val, newFileOcc)
+			} else {
+				newOccList := []FileOccurrence{newFileOcc}
+				searchMap[word] = newOccList
+			}
 		}
 	}
 
-	// Sort the search results by occurrence in descending order
-	sort.Slice(searchResults, func(i, j int) bool {
-		return searchResults[i].Occurrence > searchResults[j].Occurrence
-	})
+	for _, occList := range searchMap {
+		sort.Slice(occList, func(i, j int) bool {
+			return occList[i].Occurrence > occList[j].Occurrence
+		})
+	}
+
+	fmt.Println("searchMap", searchMap)
+
+	searchResults := searchMap[args.SearchTerm]
+
+	fmt.Println("searchResults", searchResults)
+	/*
+		searchResults := make([]SearchResult, 0)
+
+		for _, entry := range index.Entries {
+			if occurrence, found := entry.WordOccurrences[args.SearchTerm]; found {
+				searchResults = append(searchResults, SearchResult{
+					Entry:      entry,
+					Occurrence: occurrence,
+				})
+			}
+		}*/
 
 	// If TopN is specified and less than the total results, truncate the results
 	if args.TopN > 0 && len(searchResults) > args.TopN {
@@ -61,8 +88,8 @@ func LexicalSearch(args LexicalSearchArgs) ([]SearchResult, error) {
 	return searchResults, nil
 }
 
-func PrintSearchResults(results []SearchResult) {
+func PrintSearchResults(results []FileOccurrence) {
 	for _, result := range results {
-		fmt.Printf("File: %s\nOccurrences: %d\n\n", result.Entry.Name, result.Occurrence)
+		fmt.Printf("File: %s\nOccurrences: %d\n\n", result.FileName, result.Occurrence)
 	}
 }
