@@ -25,7 +25,7 @@ func TestLexicalSearch(t *testing.T) {
 		Entries: []*pb.IndexListEntry{
 			{
 				Name:            "file1.txt",
-				WordOccurrences: map[string]int32{"test": 5, "search": 3},
+				WordOccurrences: map[string]int32{"test": 5, "search": 3, "hill": 2},
 			},
 			{
 				Name:            "file2.txt",
