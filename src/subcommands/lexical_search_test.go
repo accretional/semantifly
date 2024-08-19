@@ -118,6 +118,25 @@ func TestLexicalSearch_NonExistentIndex(t *testing.T) {
 	}
 }
 
+func TestLexicalSearch_UnexpectedTopN(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "lexical_search_test_topn_error")
+	if err != nil {
+		t.Fatalf("Failed to create temp directory: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	args := LexicalSearchArgs{
+		IndexPath:  tempDir,
+		SearchTerm: "test",
+		TopN:       -4,
+	}
+
+	_, err = LexicalSearch(args)
+	if err == nil {
+		t.Error("Expected an error for non-existent index file, but got nil")
+	}
+}
+
 func TestPrintSearchResults(t *testing.T) {
 	results := []fileOccurrence{
 		{
