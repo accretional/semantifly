@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	fetch "accretional.com/semantifly/fetcher"
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -94,15 +95,29 @@ func writeIndex(indexFilePath string, indexMap map[string]*pb.IndexListEntry) er
 //   - ile: Pointer to the IndexListEntry to be copied.
 func makeCopy(indexPath string, ile *pb.IndexListEntry) error {
 
-	dest := path.Join(indexPath, addedCopiesSubDir, ile.Name)
-	ile.LastRefreshedTime = timestamppb.Now()
+	content, err := fetch.FetchFromSource(ile.SourceType, ile.URI)
+	if err != nil {
+		return fmt.Errorf("failed to fetch the content of URI %s: %v", ile.URI, err)
 
+	}
+
+	ileCopy := &pb.IndexListEntry{
+		Name:              ile.Name,
+		URI:               ile.URI,
+		DataType:          ile.DataType,
+		SourceType:        ile.SourceType,
+		FirstAddedTime:    ile.FirstAddedTime,
+		Content:           string(content),
+		LastRefreshedTime: timestamppb.Now(),
+	}
+
+	dest := path.Join(indexPath, addedCopiesSubDir, ile.Name)
 	dir := filepath.Dir(dest)
 	if err := os.MkdirAll(dir, 0770); err != nil {
 		return fmt.Errorf("failed to create destination dir %s: %w", dir, err)
 	}
 
-	data, err := proto.Marshal(ile)
+	data, err := proto.Marshal(ileCopy)
 	if err != nil {
 		return fmt.Errorf("failed to marshal IndexListEntry: %w", err)
 	}

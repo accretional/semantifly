@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
@@ -22,7 +21,7 @@ func FetchFromSource(sourceType pb.SourceType, uri string) ([]byte, error) {
 
 	case pb.SourceType_WEBPAGE:
 		fetch = fetchFromWebpage
-		
+
 	default:
 		return nil, fmt.Errorf("invalid sourceType argument")
 	}
@@ -68,34 +67,29 @@ func fetchFromFile(uri string) ([]byte, error) {
 
 func fetchFromWebpage(uri string) ([]byte, error) {
 
-	if strings.HasPrefix(uri, "http://") || strings.HasPrefix(uri, "https://") {
-		// Using a context with timeout for HTTP request
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cancel()
+	// Using a context with timeout for HTTP request
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 
-		req, err := http.NewRequestWithContext(ctx, "GET", uri, nil)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create request: %v", err)
-		}
-
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			return nil, fmt.Errorf("failed to fetch web page: %v", err)
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			return nil, fmt.Errorf("web page returned non-OK status: %s", resp.Status)
-		}
-
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return nil, fmt.Errorf("failed to read web page content: %v", err)
-		}
-
-		return body, nil
-
-	} else {
-		return nil, fmt.Errorf("invalid URI for sourceType: webpage")
+	req, err := http.NewRequestWithContext(ctx, "GET", uri, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %v", err)
 	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch web page: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("web page returned non-OK status: %s", resp.Status)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read web page content: %v", err)
+	}
+
+	return body, nil
 }

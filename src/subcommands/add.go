@@ -6,7 +6,6 @@ import (
 
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
-	fetch "accretional.com/semantifly/fetcher"
 )
 
 type AddArgs struct {
@@ -39,12 +38,6 @@ func Add(a AddArgs) {
 	}
 
 	for _, u := range a.DataURIs {
-		content, err := fetch.FetchFromSource(sourceType, u)
-
-		if err != nil {
-			fmt.Printf("Failed to validate the URI %s: %v\n", u, err)
-			continue
-		}
 
 		if indexMap[u] != nil {
 			fmt.Printf("File %s has already been added. Skipping without refresh.\n", u)
@@ -56,7 +49,6 @@ func Add(a AddArgs) {
 			URI:            u,
 			DataType:       dataType,
 			SourceType:     sourceType,
-			Content:        string(content),
 			FirstAddedTime: timestamppb.Now(),
 		}
 
@@ -65,7 +57,7 @@ func Add(a AddArgs) {
 		if a.MakeCopy {
 			err = makeCopy(a.IndexPath, ile)
 			if err != nil {
-				fmt.Printf("File %s failed to copy with err: %s. Skipping.\n", u, err)
+				fmt.Printf("Failed to make a copy for %s: %v. Skipping.\n", u, err)
 				continue
 			}
 		}
