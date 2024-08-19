@@ -1,4 +1,12 @@
 image: gitpod/workspace-postgres
 
+ports:
+  - port: 5432
+    onOpen: open-preview
+
 tasks:
-    - init: pg_start
+  - name: Start PostgreSQL
+    init: |
+      pg_ctl -D /var/lib/postgresql/data start
+    command: |
+      psql -c "CREATE DATABASE mydatabase;"
