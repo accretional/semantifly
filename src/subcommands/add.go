@@ -52,20 +52,20 @@ func Add(a AddArgs) {
 			FirstAddedTime: timestamppb.Now(),
 		}
 
-		indexMap[ile.Name] = ile
-		err = createSearchDictionary(ile)
-
-		if err != nil {
-			fmt.Printf("File %s failed to create search dictionary with err: %s. Skipping.\n", u, err)
-			continue
-		}
-
 		if a.MakeCopy {
 			err = makeCopy(a.IndexPath, ile)
 			if err != nil {
 				fmt.Printf("Failed to make a copy for %s: %v. Skipping.\n", u, err)
 				continue
 			}
+		}
+		
+		indexMap[ile.Name] = ile
+		err = createSearchDictionary(ile)
+
+		if err != nil {
+			fmt.Printf("File %s failed to create search dictionary with err: %s. Skipping.\n", u, err)
+			continue
 		}
 
 		fmt.Printf("Index %s added successfully.\n", u)

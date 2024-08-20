@@ -24,7 +24,7 @@ func Get(g GetArgs) {
 	targetEntry := indexMap[g.Name]
 
 	if targetEntry == nil {
-		fmt.Printf("file '%s' not found in index file %s\n", g.Name, indexFilePath)
+		fmt.Printf("entry '%s' not found in index file %s\n", g.Name, indexFilePath)
 		return
 	}
 

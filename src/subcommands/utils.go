@@ -168,6 +168,23 @@ func fetchFromCopy(indexPath string, name string) ([]byte, error) {
 	return []byte(ile.Content), nil
 }
 
+func createSearchDictionary(ile *pb.IndexListEntry) error {
+
+	content, err := fetch.FetchFromSource(ile.SourceType, ile.URI)
+	if err != nil {
+		return fmt.Errorf("failed to read source file: %w", err)
+	}
+
+	// Create and populate the word_occurrences map
+	ile.WordOccurrences = make(map[string]int32)
+	tokens := strings.Fields(strings.ToLower(string(content)))
+	for _, token := range tokens {
+		ile.WordOccurrences[token]++
+	}
+
+	return nil
+}
+
 // parseDataType converts a string representation of a data type to its corresponding pb.DataType enum value.
 // It returns the parsed pb.DataType and an error if the input string is not a valid data type.
 //
