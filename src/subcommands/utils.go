@@ -168,6 +168,11 @@ func fetchFromCopy(indexPath string, name string) ([]byte, error) {
 	return []byte(ile.Content), nil
 }
 
+
+// createSearchDictionary processes an IndexListEntry by fetching content from its source,
+// tokenizing the content, and populating the WordOccurrences map with word frequencies.
+// It takes a pointer to an IndexListEntry as input and returns an error if any issues occur
+// during content fetching or processing.
 func createSearchDictionary(ile *pb.IndexListEntry) error {
 
 	content, err := fetch.FetchFromSource(ile.SourceType, ile.URI)

@@ -146,7 +146,7 @@ func CommandReadRun() {
 		cmd.Parse(reorderedArgs)
 
 		if *sourceType == "" {
-			sourceTypeStr, err := identifySource(cmd.Args())
+			sourceTypeStr, err := inferSourceType(cmd.Args())
 			if err != nil {
 				printCmdErr(fmt.Sprintf("Failed to infer source type from URIs: %v\n", err))
 			}
@@ -298,7 +298,7 @@ func loadIndex(indexDir string) {
 	fmt.Println("loadIndex in commands.go is unimplemented")
 }
 
-func identifySource(uris []string) (string, error) {
+func inferSourceType(uris []string) (string, error) {
 	sourceTypeStr := "local_file"
 
 	for _, u := range uris {
