@@ -120,12 +120,12 @@ func TestCommandRun(t *testing.T) {
 	}
 
 	// Testing Get command after deleting the entry
-	if err := runAndCheckStdoutContains("get", "not found in index file", args); err != nil {
+	if err := runAndCheckStdoutContains("get", "empty index file", args); err != nil {
 		t.Errorf("Failed to execute 'get' subcommand: %v", err)
 	}
 
 	// Testing Delete subcommand after deleting the entry
-	if err := runAndCheckStdoutContains("delete", "not found in index file", args); err != nil {
+	if err := runAndCheckStdoutContains("delete", "empty index file", args); err != nil {
 		t.Errorf("Failed to execute 'delete' subcommand: %v", err)
 	}
 
@@ -179,12 +179,12 @@ func TestCommandRun(t *testing.T) {
 	}
 
 	// Testing Get command after deleting the entry
-	if err := runAndCheckStdoutContains("get", "not found in index file", webpageArgs); err != nil {
+	if err := runAndCheckStdoutContains("get", "empty index file", webpageArgs); err != nil {
 		t.Errorf("Failed to execute 'get' subcommand: %v", err)
 	}
 
 	// Testing Delete subcommand after deleting the entry
-	if err := runAndCheckStdoutContains("delete", "not found in index file", webpageArgs); err != nil {
+	if err := runAndCheckStdoutContains("delete", "empty index file", webpageArgs); err != nil {
 		t.Errorf("Failed to execute 'delete' subcommand: %v", err)
 	}
 }
