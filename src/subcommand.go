@@ -14,6 +14,19 @@ func printCmdErr(e string) {
 	fmt.Printf("%s\n Try --help to list subcommands and options.\n", e)
 }
 
+func baseHelp() {
+	fmt.Printf("semantifly currently has the following subcommands: add, delete, update, search.\nUse --help on these subcommands for more information.\n")
+}
+
+func containsHelpFlag(args []string) bool {
+	for _, arg := range args {
+		if arg == "--help" || arg == "-h" {
+			return true
+		}
+	}
+	return false
+}
+
 func isFlag(fs *flag.FlagSet, name string) bool {
 	f := fs.Lookup(name)
 	return f != nil
@@ -130,6 +143,11 @@ func CommandReadRun() {
 		makeLocalCopy := cmd.Bool("copy", false, "Whether to copy and use the file as it is now, or dynamically access it")
 		indexPath := cmd.String("index-path", "", "Path to the index file")
 
+		if containsHelpFlag(args) {
+			cmd.Usage()
+			return
+		}
+
 		flags, nonFlags, err := parseArgs(args, cmd)
 		if err != nil {
 			printCmdErr(fmt.Sprintf("Error: %v", err))
@@ -160,6 +178,11 @@ func CommandReadRun() {
 		deleteLocalCopy := cmd.Bool("copy", false, "Whether to delete the copy made")
 		indexPath := cmd.String("index-path", "", "Path to the index file")
 
+		if containsHelpFlag(args) {
+			cmd.Usage()
+			return
+		}
+
 		flags, nonFlags, err := parseArgs(args, cmd)
 		if err != nil {
 			printCmdErr(fmt.Sprintf("Error: %v", err))
@@ -186,6 +209,11 @@ func CommandReadRun() {
 	case "get":
 		cmd := flag.NewFlagSet("get", flag.ExitOnError)
 		indexPath := cmd.String("index-path", "", "Path to the index file")
+
+		if containsHelpFlag(args) {
+			cmd.Usage()
+			return
+		}
 
 		flags, nonFlags, err := parseArgs(args, cmd)
 		if err != nil {
@@ -216,6 +244,11 @@ func CommandReadRun() {
 		sourceType := cmd.String("source-type", "", "How to access the content")
 		makeLocalCopy := cmd.String("copy", "false", "Whether to copy and use the file as it is now, or dynamically access it")
 		indexPath := cmd.String("index-path", "", "Path to the index file")
+
+		if containsHelpFlag(args) {
+			cmd.Usage()
+			return
+		}
 
 		flags, nonFlags, err := parseArgs(args, cmd)
 		if err != nil {
@@ -248,6 +281,11 @@ func CommandReadRun() {
 		indexPath := cmd.String("index-path", "", "Path to the index file")
 		topN := cmd.Int("n", 1, "Top n search results")
 
+		if containsHelpFlag(args) {
+			cmd.Usage()
+			return
+		}
+
 		flags, nonFlags, err := parseArgs(args, cmd)
 
 		if err != nil {
@@ -279,6 +317,12 @@ func CommandReadRun() {
 		}
 
 		subcommands.PrintSearchResults(searchResults)
+
+	case "--help":
+		baseHelp()
+
+	case "-h":
+		baseHelp()
 
 	default:
 		printCmdErr("No valid subcommand provided.")
