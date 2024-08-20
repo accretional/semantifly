@@ -20,13 +20,13 @@ func Add(a AddArgs) {
 
 	dataType, err := parseDataType(a.DataType)
 	if err != nil {
-		fmt.Printf("error in parsing DataType: %v", err)
+		fmt.Printf("Error in parsing DataType: %v\n", err)
 		return
 	}
 
 	sourceType, err := parseSourceType(a.SourceType)
 	if err != nil {
-		fmt.Printf("Invalid source type: %v", err)
+		fmt.Printf("Error in parsing SourceType: %v\n", err)
 		return
 	}
 
