@@ -59,15 +59,14 @@ func Add(a AddArgs) {
 				continue
 			}
 		}
-		
-		indexMap[ile.Name] = ile
-		err = createSearchDictionary(ile)
 
+		err = createSearchDictionary(ile)
 		if err != nil {
 			fmt.Printf("File %s failed to create search dictionary with err: %s. Skipping.\n", u, err)
 			continue
 		}
 
+		indexMap[ile.Name] = ile
 		fmt.Printf("Index %s added successfully.\n", u)
 	}
 
