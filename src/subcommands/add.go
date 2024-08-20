@@ -6,6 +6,7 @@ import (
 
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
+	search "accretional.com/semantifly/search"
 )
 
 type AddArgs struct {
@@ -60,7 +61,7 @@ func Add(a AddArgs) {
 			}
 		}
 
-		err = createSearchDictionary(ile)
+		err = search.CreateSearchDictionary(ile)
 		if err != nil {
 			fmt.Printf("File %s failed to create search dictionary with err: %s. Skipping.\n", u, err)
 			continue
