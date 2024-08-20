@@ -85,6 +85,16 @@ func TestCommandRun(t *testing.T) {
 	}
 	tempFile.Close()
 
+	// Testing Help Flag subcommand
+	expectedHelpString := "semantifly currently has the following subcommands: add, delete, update, search.\nUse --help on these subcommands for more information.\n"
+	if err := runAndCheckStdoutContains("--help", expectedHelpString, nil); err != nil {
+		t.Errorf("Failed to execute --help flag subcommand: %v", err)
+	}
+
+	if err := runAndCheckStdoutContains("-h", expectedHelpString, nil); err != nil {
+		t.Errorf("Failed to execute --help flag subcommand: %v", err)
+	}
+
 	// Testing Add subcommand for a non-existing file
 	args := []string{"nofile"}
 	if err := runAndCheckStdoutContains("add", "file does not exist", args); err != nil {
@@ -132,7 +142,6 @@ func TestCommandRun(t *testing.T) {
 	//Testing the commands for webpage sourcetype
 	testWebpageURI := "http://echo.jsontest.com/title/lorem/content/ipsum"
 
-	
 	// Testing Add subcommand for webpage
 	webpageAddArgs := []string{testWebpageURI, "--source-type", "webpage"}
 	if err := runAndCheckStdoutContains("add", "added successfully", webpageAddArgs); err != nil {
