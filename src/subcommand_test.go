@@ -134,7 +134,7 @@ func TestCommandRun(t *testing.T) {
 
 	
 	// Testing Add subcommand for webpage
-	webpageAddArgs := []string{testWebpageURI, "--source-type", "webpage"}
+	webpageAddArgs := []string{testWebpageURI, "--copy"}
 	if err := runAndCheckStdoutContains("add", "added successfully", webpageAddArgs); err != nil {
 		t.Errorf("Failed to execute 'add' subcommand: %v", err)
 	}

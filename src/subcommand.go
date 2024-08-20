@@ -145,6 +145,11 @@ func CommandReadRun() {
 
 		cmd.Parse(reorderedArgs)
 
+		if *sourceType == "" {
+			sourceTypeStr := identifySource(cmd.Args())
+			*sourceType = sourceTypeStr
+		}
+
 		args := subcommands.AddArgs{
 			IndexPath:  *indexPath,
 			DataType:   *dataType,
@@ -288,4 +293,16 @@ func CommandReadRun() {
 
 func loadIndex(indexDir string) {
 	fmt.Println("loadIndex in commands.go is unimplemented")
+}
+
+func identifySource(uris []string) string {
+	sourceTypeStr := "local_file"
+
+	for _, u := range uris {
+		if strings.HasPrefix(u, "http://") || strings.HasPrefix(u, "https://") {
+			sourceTypeStr = "webpage"
+		}
+	}
+
+	return sourceTypeStr
 }
