@@ -304,7 +304,7 @@ func identifySource(uris []string) (string, error) {
 	for _, u := range uris {
 		if strings.HasPrefix(u, "http://") || strings.HasPrefix(u, "https://") {
 			sourceTypeStr = "webpage"
-		} else if sourceTypeStr != "webpage" {
+		} else if sourceTypeStr == "webpage" {
 			return "", fmt.Errorf("inconsistent URI source types")
 		}
 	}
