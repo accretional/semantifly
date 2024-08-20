@@ -18,20 +18,6 @@ func baseHelp() {
 	fmt.Printf("semantifly currently has the following subcommands: add, delete, update, search.\nUse --help on these subcommands for more information.\n")
 }
 
-func containsHelpFlag(args []string) bool {
-	for _, arg := range args {
-		if arg == "--help" || arg == "-h" {
-			return true
-		}
-	}
-	return false
-}
-
-func isFlag(fs *flag.FlagSet, name string) bool {
-	f := fs.Lookup(name)
-	return f != nil
-}
-
 func isBoolFlag(fs *flag.FlagSet, name string) bool {
 	f := fs.Lookup(name)
 	if f == nil {
@@ -55,27 +41,12 @@ func parseArgs(args []string, cmd *flag.FlagSet) ([]string, []string, error) {
 		arg := args[i]
 		if strings.HasPrefix(arg, "-") {
 			if strings.Contains(arg, "=") {
-				parts := strings.SplitN(arg, "=", 2)
-				if strings.HasPrefix(parts[0], "--") {
-					flagName = parts[0][2:]
-				} else {
-					flagName = parts[0][1:]
-				}
-
-				if !isFlag(cmd, flagName) {
-					return nil, nil, fmt.Errorf("unrecognized flag: %s", flagName)
-				}
-
 				flags = append(flags, arg)
 			} else {
 				if strings.HasPrefix(arg, "--") {
 					flagName = arg[2:]
 				} else {
 					flagName = arg[1:]
-				}
-
-				if !isFlag(cmd, flagName) {
-					return nil, nil, fmt.Errorf("unrecognized flag: %s", flagName)
 				}
 
 				flags = append(flags, arg)
@@ -143,11 +114,6 @@ func CommandReadRun() {
 		makeLocalCopy := cmd.Bool("copy", false, "Whether to copy and use the file as it is now, or dynamically access it")
 		indexPath := cmd.String("index-path", "", "Path to the index file")
 
-		if containsHelpFlag(args) {
-			cmd.Usage()
-			return
-		}
-
 		flags, nonFlags, err := parseArgs(args, cmd)
 		if err != nil {
 			printCmdErr(fmt.Sprintf("Error: %v", err))
@@ -156,12 +122,13 @@ func CommandReadRun() {
 
 		reorderedArgs := append(flags, nonFlags...)
 
+		// Parse has to come before to ensure --help flag is seen
+		cmd.Parse(reorderedArgs)
+
 		if len(nonFlags) < 1 {
 			printCmdErr("Add subcommand requires at least one input arg append to index log")
 			return
 		}
-
-		cmd.Parse(reorderedArgs)
 
 		args := subcommands.AddArgs{
 			IndexPath:  *indexPath,
@@ -178,11 +145,6 @@ func CommandReadRun() {
 		deleteLocalCopy := cmd.Bool("copy", false, "Whether to delete the copy made")
 		indexPath := cmd.String("index-path", "", "Path to the index file")
 
-		if containsHelpFlag(args) {
-			cmd.Usage()
-			return
-		}
-
 		flags, nonFlags, err := parseArgs(args, cmd)
 		if err != nil {
 			printCmdErr(fmt.Sprintf("Error: %v", err))
@@ -191,12 +153,12 @@ func CommandReadRun() {
 
 		reorderedArgs := append(flags, nonFlags...)
 
+		cmd.Parse(reorderedArgs)
+
 		if len(nonFlags) < 1 {
 			printCmdErr("Delete subcommand requires at least one input arg.")
 			return
 		}
-
-		cmd.Parse(reorderedArgs)
 
 		args := subcommands.DeleteArgs{
 			IndexPath:  *indexPath,
@@ -210,11 +172,6 @@ func CommandReadRun() {
 		cmd := flag.NewFlagSet("get", flag.ExitOnError)
 		indexPath := cmd.String("index-path", "", "Path to the index file")
 
-		if containsHelpFlag(args) {
-			cmd.Usage()
-			return
-		}
-
 		flags, nonFlags, err := parseArgs(args, cmd)
 		if err != nil {
 			printCmdErr(fmt.Sprintf("Error: %v", err))
@@ -223,12 +180,12 @@ func CommandReadRun() {
 
 		reorderedArgs := append(flags, nonFlags...)
 
+		cmd.Parse(reorderedArgs)
+
 		if len(nonFlags) != 1 {
 			printCmdErr("Get subcommand requires exactly one arg.")
 			return
 		}
-
-		cmd.Parse(reorderedArgs)
 
 		name := cmd.Args()[0]
 		args := subcommands.GetArgs{
@@ -245,11 +202,6 @@ func CommandReadRun() {
 		makeLocalCopy := cmd.String("copy", "false", "Whether to copy and use the file as it is now, or dynamically access it")
 		indexPath := cmd.String("index-path", "", "Path to the index file")
 
-		if containsHelpFlag(args) {
-			cmd.Usage()
-			return
-		}
-
 		flags, nonFlags, err := parseArgs(args, cmd)
 		if err != nil {
 			printCmdErr(fmt.Sprintf("Error: %v", err))
@@ -258,12 +210,12 @@ func CommandReadRun() {
 
 		reorderedArgs := append(flags, nonFlags...)
 
+		cmd.Parse(reorderedArgs)
+
 		if len(nonFlags) != 2 {
 			printCmdErr("Update subcommand requires two input args - index name and updated URI")
 			return
 		}
-
-		cmd.Parse(reorderedArgs)
 
 		args := subcommands.UpdateArgs{
 			IndexPath:  *indexPath,
@@ -281,11 +233,6 @@ func CommandReadRun() {
 		indexPath := cmd.String("index-path", "", "Path to the index file")
 		topN := cmd.Int("n", 1, "Top n search results")
 
-		if containsHelpFlag(args) {
-			cmd.Usage()
-			return
-		}
-
 		flags, nonFlags, err := parseArgs(args, cmd)
 
 		if err != nil {
@@ -295,12 +242,12 @@ func CommandReadRun() {
 
 		reorderedArgs := append(flags, nonFlags...)
 
+		cmd.Parse(reorderedArgs)
+
 		if len(nonFlags) != 1 {
 			printCmdErr("Search subcommand requires exactly one arg.")
 			return
 		}
-
-		cmd.Parse(reorderedArgs)
 
 		searchTerm := cmd.Args()[0]
 		args := subcommands.LexicalSearchArgs{
