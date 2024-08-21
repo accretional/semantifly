@@ -15,8 +15,8 @@ if ! command_exists psql; then
     echo "PostgreSQL is not installed. Installing now..."
 
     {
-        apt-get update
-        DEBIAN_FRONTEND=noninteractive apt-get install -y postgresql postgresql-contrib
+        sudo apt-get update
+        DEBIAN_FRONTEND=noninteractive sudo apt-get install -y postgresql postgresql-contrib
     } &>/dev/null &
 
     pid=$! # Process ID of the background installation
