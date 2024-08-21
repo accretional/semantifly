@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -191,5 +192,58 @@ func TestPrintSearchResults(t *testing.T) {
 
 	if output != expectedOutput {
 		t.Errorf("Expected output:\n%s\nGot:\n%s", expectedOutput, output)
+	}
+}
+
+func TestTokenizeString(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected []string
+		wantErr  bool
+	}{
+		{
+			name:     "Basic sentence",
+			input:    "The quick brown fox jumps over the lazy dog",
+			expected: []string{"the", "quick", "brown", "fox", "jump", "over", "the", "lazi", "dog"},
+			wantErr:  false,
+		},
+		{
+			name:     "Sentence with punctuation",
+			input:    "Hello, world! How are you?",
+			expected: []string{"hello", "world", "how", "are", "you"},
+			wantErr:  false,
+		},
+		{
+			name:     "Numbers and special characters",
+			input:    "I am eating 3 apples and 2 oranges!",
+			expected: []string{"i", "am", "eat", "3", "appl", "and", "2", "orang"},
+			wantErr:  false,
+		},
+		{
+			name:     "Empty string",
+			input:    "",
+			expected: nil,
+			wantErr:  false,
+		},
+		{
+			name:     "Only punctuation",
+			input:    "!@#$%^&*()_+",
+			expected: nil,
+			wantErr:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := tokenizeString(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("tokenizeString() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.expected) {
+				t.Errorf("tokenizeString() = %v, want %v", got, tt.expected)
+			}
+		})
 	}
 }

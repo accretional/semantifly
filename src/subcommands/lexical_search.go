@@ -30,7 +30,7 @@ type fileOccurrence struct {
 type occurrenceList []fileOccurrence
 type searchMap map[string]occurrenceList // Search Map maps search terms to TermMaps
 
-func tokenizeFile(content string) ([]string, error) {
+func tokenizeString(content string) ([]string, error) {
 	// Remove punctuation using regex
 	re := regexp.MustCompile(`[^a-zA-Z0-9\s]`)
 	cleanPhrase := re.ReplaceAllString(content, " ")
@@ -65,7 +65,7 @@ func createSearchDictionary(ile *pb.IndexListEntry) error {
 
 	// Create and populate the word_occurrences map
 	ile.WordOccurrences = make(map[string]int32)
-	tokens, err := tokenizeFile(string(content))
+	tokens, err := tokenizeString(string(content))
 	if err != nil {
 		return fmt.Errorf("failed to tokenize file: %w", err)
 	}
