@@ -82,8 +82,6 @@ func createSearchDictionary(ile *pb.IndexListEntry) error {
 	if err != nil {
 		return fmt.Errorf("failed to build word occurence map: %w", err)
 	}
-
-	fmt.Println(ile.WordOccurrences)
 	return nil
 }
 
