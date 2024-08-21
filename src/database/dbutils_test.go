@@ -2,29 +2,42 @@ package database
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"os"
 	"testing"
 
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
+	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/types/known/timestamppb"
+	"github.com/go-pg/pg/v10"
 )
 
-func createTestingDatabase() (*sql.DB, error) {
-	// Create the database for testing
-	db, err := sql.Open("postgres", "postgres://gitpod@localhost:5432/postgres")
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to postgres: %v", err)
-	}
+func createTestingDatabase() (*pg.DB, error) {
+	// Connect to the default "postgres" database
+	db := pg.Connect(&pg.Options{
+		User:     "gitpod",
+		Addr:     "localhost:5432",
+		Database: "postgres",
+	})
 
-	_, err = db.Exec("CREATE DATABASE testdb")
+	// Close the connection when we're done
+	defer db.Close()
+
+	// Create the new database
+	_, err := db.Exec("CREATE DATABASE testdb")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create test database: %v", err)
 	}
 
-	return db, nil
+	// Connect to the newly created database
+	testDB := pg.Connect(&pg.Options{
+		User:     "gitpod",
+		Addr:     "localhost:5432",
+		Database: "testdb",
+	})
+
+	return testDB, nil
 }
 
 func TestEstablishConnection(t *testing.T) {
