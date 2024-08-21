@@ -33,8 +33,30 @@ func runAndCheckStdoutContains(subcommand string, wantedStdoutSubstr string, arg
 	return nil
 }
 
-func TestCommandRun(t *testing.T) {
+func runAndCheckStderrContains(subcommand string, wantedStderrSubstr string, args []string) error {
+	allArgs := append([]string{subcommand}, args...)
+	cmd := exec.Command("semantifly", allArgs...)
 
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
+
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); !ok || exitErr.ExitCode() != 2 {
+			return fmt.Errorf("Command execution failed: %v\nStderr: %s", err, stderr.String())
+		}
+	}
+	stderrOutput := stderr.String()
+
+	if !strings.Contains(stderrOutput, wantedStderrSubstr) {
+		return fmt.Errorf("Expected stderr to contain \"%s\". Stderr obtained \"%s\"", wantedStderrSubstr, stderrOutput)
+	}
+
+	return nil
+}
+
+func TestCommandRun(t *testing.T) {
 	// Setup
 	err := os.Chdir("..")
 	if err != nil {
@@ -85,7 +107,7 @@ func TestCommandRun(t *testing.T) {
 	}
 	tempFile.Close()
 
-	// Testing Help Flag subcommand
+	// Testing Help Flag
 	expectedHelpString := "semantifly currently has the following subcommands: add, delete, update, search.\nUse --help on these subcommands for more information.\n"
 	if err := runAndCheckStdoutContains("--help", expectedHelpString, nil); err != nil {
 		t.Errorf("Failed to execute --help flag subcommand: %v", err)
@@ -95,8 +117,21 @@ func TestCommandRun(t *testing.T) {
 		t.Errorf("Failed to execute --help flag subcommand: %v", err)
 	}
 
+	// Testing Help Flag on subcommand add
+	// Have to use stderr function since --help prints to stderr
+	args := []string{"--help"}
+	if err := runAndCheckStderrContains("add", "Usage of add:", args); err != nil {
+		t.Errorf("Failed to execute 'add --help' subcommand: %v", err)
+	}
+
+	// Testing Help Flag on subcommand delete
+	args = []string{"--help"}
+	if err := runAndCheckStderrContains("delete", "Usage of delete:", args); err != nil {
+		t.Errorf("Failed to execute 'delete --help' subcommand: %v", err)
+	}
+
 	// Testing Add subcommand for a non-existing file
-	args := []string{"nofile"}
+	args = []string{"nofile"}
 	if err := runAndCheckStdoutContains("add", "file does not exist", args); err != nil {
 		t.Errorf("Failed to execute 'add' subcommand: %v", err)
 	}
