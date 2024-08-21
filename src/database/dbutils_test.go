@@ -28,7 +28,6 @@ func createTestingDatabase() (*pg.DB, error) {
         return nil, fmt.Errorf("failed to drop existing test database: %v", err)
     }
 
-	// Create the new database
 	_, err = db.Exec("CREATE DATABASE testdb")
 	if err != nil {
 		db.Close()
@@ -112,6 +111,7 @@ func TestInsertRow(t *testing.T) {
 				FirstAddedTime:    timestamppb.Now(),
 				LastRefreshedTime: timestamppb.Now(),
 				Content:           "Test Content",
+				WordOccurrences:   map[string]int32{"test": 1},
 			},
 		},
 	}
@@ -150,6 +150,7 @@ func TestQueryRow(t *testing.T) {
 		FirstAddedTime:    timestamppb.Now(),
 		LastRefreshedTime: timestamppb.Now(),
 		Content:           "Test Content",
+		WordOccurrences:   map[string]int32{"test": 1},
 	}
 
 	index := &pb.Index{
@@ -160,6 +161,7 @@ func TestQueryRow(t *testing.T) {
 	assert.NoError(t, err)
 
 	entry, err := queryRow(ctx, conn, "Test Entry")
+
 	assert.NoError(t, err)
 	assert.NotNil(t, entry)
 	assert.Equal(t, expectedEntry.Name, entry.Name)
@@ -167,6 +169,7 @@ func TestQueryRow(t *testing.T) {
 	assert.Equal(t, expectedEntry.DataType, entry.DataType)
 	assert.Equal(t, expectedEntry.SourceType, entry.SourceType)
 	assert.Equal(t, expectedEntry.Content, entry.Content)
+	assert.Equal(t, expectedEntry.WordOccurrences, entry.Content)
 
 	// Delete the test entry
 	_, err = conn.Exec(ctx, "DELETE FROM index_list WHERE name = $1", "Test Entry")

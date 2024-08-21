@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"time"
@@ -39,7 +40,8 @@ func insertRows(ctx context.Context, conn PgxIface, index *pb.Index) error {
 			source_type TEXT,
 			first_added_time TIMESTAMP,
 			last_refreshed_time TIMESTAMP,
-			content TEXT
+			content TEXT,
+			word_occurrences JSONB
 		)
 	`)
 	if err != nil {
@@ -48,10 +50,14 @@ func insertRows(ctx context.Context, conn PgxIface, index *pb.Index) error {
 
 	batch := &pgx.Batch{}
 	for _, entry := range index.Entries {
+		wordOccurrencesJSON, err := json.Marshal(entry.WordOccurrences)
+		if err != nil {
+			return fmt.Errorf("failed to marshal word occurrences: %w", err)
+		}
 		batch.Queue(`
-			INSERT INTO index_list(name, uri, data_type, source_type, first_added_time, last_refreshed_time, content)
-			VALUES($1, $2, $3, $4, $5, $6, $7)
-		`, entry.Name, entry.URI, entry.DataType.String(), entry.SourceType.String(), entry.FirstAddedTime.AsTime(), entry.LastRefreshedTime.AsTime(), entry.Content)
+			INSERT INTO index_list(name, uri, data_type, source_type, first_added_time, last_refreshed_time, content, word_occurrences)
+			VALUES($1, $2, $3, $4, $5, $6, $7, $8)
+		`, entry.Name, entry.URI, entry.DataType.String(), entry.SourceType.String(), entry.FirstAddedTime.AsTime(), entry.LastRefreshedTime.AsTime(), entry.Content, wordOccurrencesJSON)
 	}
 
 	br := tx.SendBatch(ctx, batch)
@@ -75,13 +81,14 @@ func queryRow(ctx context.Context, conn PgxIface, name string) (*pb.IndexListEnt
 	var entry pb.IndexListEntry
 	var dataType, sourceType string
 	var firstAddedTime, lastRefreshedTime time.Time
+	var wordOccurrencesJSON []byte
 
 	err = tx.QueryRow(ctx, `
-		SELECT name, uri, data_type, source_type, first_added_time, last_refreshed_time, content 
+		SELECT name, uri, data_type, source_type, first_added_time, last_refreshed_time, content, word_occurrences
 		FROM index_list 
 		WHERE name=$1
 	`, name).Scan(
-		&entry.Name, &entry.URI, &dataType, &sourceType, &firstAddedTime, &lastRefreshedTime, &entry.Content)
+		&entry.Name, &entry.URI, &dataType, &sourceType, &firstAddedTime, &lastRefreshedTime, &entry.Content, &wordOccurrencesJSON)
 	if err != nil {
 		return nil, fmt.Errorf("QueryRow failed: %w", err)
 	}
@@ -90,6 +97,11 @@ func queryRow(ctx context.Context, conn PgxIface, name string) (*pb.IndexListEnt
 	entry.SourceType = pb.SourceType(pb.SourceType_value[sourceType])
 	entry.FirstAddedTime = timestamppb.New(firstAddedTime)
 	entry.LastRefreshedTime = timestamppb.New(lastRefreshedTime)
+
+	err = json.Unmarshal(wordOccurrencesJSON, &entry.WordOccurrences)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal word occurrences: %w", err)
+	}
 
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
