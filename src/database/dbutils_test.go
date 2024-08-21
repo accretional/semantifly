@@ -21,8 +21,15 @@ func createTestingDatabase() (*pg.DB, error) {
 		Database: "postgres",
 	})
 
+    // Drop the database if it exists, then create it
+    _, err := db.Exec("DROP DATABASE IF EXISTS testdb")
+    if err != nil {
+        db.Close()
+        return nil, fmt.Errorf("failed to drop existing test database: %v", err)
+    }
+
 	// Create the new database
-	_, err := db.Exec("CREATE DATABASE testdb")
+	_, err = db.Exec("CREATE DATABASE testdb")
 	if err != nil {
 		db.Close()
 		return nil, fmt.Errorf("failed to create test database: %v", err)
