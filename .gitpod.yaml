@@ -1,8 +1,0 @@
-image: marcopeg/gitpod-workspace-postgres:2.6.0
-
-ports:
-  - port: 8008
-    onOpen: open-preview
-    visibility: private
-  - port: 5432
-    onOpen: ignore
