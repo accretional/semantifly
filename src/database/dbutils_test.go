@@ -7,10 +7,10 @@ import (
 	"testing"
 
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
+	"github.com/go-pg/pg/v10"
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/types/known/timestamppb"
-	"github.com/go-pg/pg/v10"
 )
 
 func createTestingDatabase() (*pg.DB, error) {
@@ -21,14 +21,15 @@ func createTestingDatabase() (*pg.DB, error) {
 		Database: "postgres",
 	})
 
-	// Close the connection when we're done
-	defer db.Close()
-
 	// Create the new database
 	_, err := db.Exec("CREATE DATABASE testdb")
 	if err != nil {
+		db.Close()
 		return nil, fmt.Errorf("failed to create test database: %v", err)
 	}
+
+	// Close the connection to the "postgres" database
+	db.Close()
 
 	// Connect to the newly created database
 	testDB := pg.Connect(&pg.Options{
@@ -38,6 +39,24 @@ func createTestingDatabase() (*pg.DB, error) {
 	})
 
 	return testDB, nil
+}
+
+func removeTestingDatabase() error {
+	// Connect to the default "postgres" database to drop the test database
+	defaultDB := pg.Connect(&pg.Options{
+		User:     "gitpod",
+		Addr:     "localhost:5432",
+		Database: "postgres",
+	})
+	defer defaultDB.Close()
+
+	// Drop the test database
+	_, err := defaultDB.Exec("DROP DATABASE testdb")
+	if err != nil {
+		return fmt.Errorf("Failed to drop test database: %v", err)
+	}
+
+	return nil
 }
 
 func TestEstablishConnection(t *testing.T) {
@@ -56,14 +75,8 @@ func TestEstablishConnection(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, conn)
 
-	// Clean up
 	conn.Close(ctx)
-
-	// Drop the test database
-	_, err = db.Exec("DROP DATABASE testdb")
-	if err != nil {
-		t.Fatalf("Failed to drop test database: %v", err)
-	}
+	removeTestingDatabase()
 }
 
 func TestInsertRow(t *testing.T) {
@@ -103,11 +116,7 @@ func TestInsertRow(t *testing.T) {
 	_, err = conn.Exec(ctx, "DELETE FROM index_list WHERE name = $1", "Test Entry")
 	assert.NoError(t, err)
 
-	// Drop the test database
-	_, err = db.Exec("DROP DATABASE testdb")
-	if err != nil {
-		t.Fatalf("Failed to drop test database: %v", err)
-	}
+	removeTestingDatabase()
 }
 
 func TestQueryRow(t *testing.T) {
@@ -156,9 +165,5 @@ func TestQueryRow(t *testing.T) {
 	_, err = conn.Exec(ctx, "DELETE FROM index_list WHERE name = $1", "Test Entry")
 	assert.NoError(t, err)
 
-	// Drop the test database
-	_, err = db.Exec("DROP DATABASE testdb")
-	if err != nil {
-		t.Fatalf("Failed to drop test database: %v", err)
-	}
+	removeTestingDatabase()
 }
