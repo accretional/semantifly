@@ -7,4 +7,4 @@ require (
 	google.golang.org/protobuf v1.34.2
 )
 
-require github.com/bzick/tokenizer v1.4.0 // indirect
+require github.com/bzick/tokenizer v1.4.0
