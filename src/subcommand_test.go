@@ -136,11 +136,18 @@ func TestCommandRun(t *testing.T) {
 		t.Errorf("Failed to execute 'add' subcommand: %v", err)
 	}
 
+	// Testing nonexistent flag on Add
+	args = []string{"--badflag"}
+	if err := runAndCheckStderrContains("add", "flag provided but not defined: -badflag", args); err != nil {
+		t.Errorf("Failed to execute 'add --help' subcommand: %v", err)
+	}
+
 	// Testing Add subcommand for an existing file
 	args = []string{tempFile.Name()}
 	if err := runAndCheckStdoutContains("add", "added successfully", args); err != nil {
 		t.Errorf("Failed to execute 'add' subcommand: %v", err)
 	}
+
 	defer os.Remove("index.list")
 
 	// Testing Get subcommand
