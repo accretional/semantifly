@@ -14,8 +14,8 @@ port_in_use() {
 if ! command_exists psql; then
     echo "PostgreSQL is not installed. Installing now..."
     {
-        sudo apt-get update
-        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y postgresql postgresql-contrib
+        apt-get update
+        DEBIAN_FRONTEND=noninteractive apt-get install -y postgresql postgresql-contrib
     } &>/dev/null &
 
     pid=$! # Process ID of the background installation
@@ -49,13 +49,12 @@ else
     echo "Starting PostgreSQL..."
     
     # Ensure the PostgreSQL data directory exists
-    sudo mkdir -p "$PGDATA" &>/dev/null
-    sudo chown postgres:postgres "$PGDATA" &>/dev/null
+    mkdir -p "$PGDATA" &>/dev/null
 
     # Initialize the database if it doesn't exist
     if [ ! -f "$PGDATA/PG_VERSION" ]; then
         echo "Initializing PostgreSQL database..."
-        sudo -u postgres initdb -D "$PGDATA" &>/dev/null
+        initdb -D "$PGDATA" &>/dev/null
     fi
 
     # Start PostgreSQL
