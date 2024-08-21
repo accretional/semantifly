@@ -24,7 +24,7 @@ func establishConnection(ctx context.Context) (*pgx.Conn, error) {
 	return conn, nil
 }
 
-func insertRow(ctx context.Context, conn PgxIface, index *pb.Index) error {
+func insertRows(ctx context.Context, conn PgxIface, index *pb.Index) error {
 
 	tx, err := conn.Begin(context.Background())
 	if err != nil {

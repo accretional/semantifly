@@ -12,7 +12,7 @@ import (
 
 func TestEstablishConnection(t *testing.T) {
 	// Set a mock DATABASE_URL for testing
-	os.Setenv("DATABASE_URL", "postgres://gitpod@localhost:5432/testdb")
+	os.Setenv("DATABASE_URL", "postgres://gitpod@localhost:5432/semantifly")
 	defer os.Unsetenv("DATABASE_URL")
 
 	ctx := context.Background()
@@ -26,7 +26,7 @@ func TestEstablishConnection(t *testing.T) {
 
 func TestInsertRow(t *testing.T) {
 	// Set a mock DATABASE_URL for testing
-	os.Setenv("DATABASE_URL", "postgres://gitpod@localhost:5432/testdb")
+	os.Setenv("DATABASE_URL", "postgres://gitpod@localhost:5432/semantifly")
 	defer os.Unsetenv("DATABASE_URL")
 
 	ctx := context.Background()
@@ -48,7 +48,7 @@ func TestInsertRow(t *testing.T) {
 		},
 	}
 
-	err = insertRow(ctx, conn, index)
+	err = insertRows(ctx, conn, index)
 	assert.NoError(t, err)
 
 	// Delete the test entry
@@ -58,7 +58,7 @@ func TestInsertRow(t *testing.T) {
 
 func TestQueryRow(t *testing.T) {
 	// Set a mock DATABASE_URL for testing
-	os.Setenv("DATABASE_URL", "postgres://gitpod@localhost:5432/testdb")
+	os.Setenv("DATABASE_URL", "postgres://gitpod@localhost:5432/semantifly")
 	defer os.Unsetenv("DATABASE_URL")
 
 	ctx := context.Background()
@@ -80,7 +80,7 @@ func TestQueryRow(t *testing.T) {
 		Entries: []*pb.IndexListEntry{expectedEntry},
 	}
 
-	err = insertRow(ctx, conn, index)
+	err = insertRows(ctx, conn, index)
 	assert.NoError(t, err)
 
 	entry, err := queryRow(ctx, conn, "Test Entry")
