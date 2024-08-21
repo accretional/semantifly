@@ -143,7 +143,7 @@ func TestCommandRun(t *testing.T) {
 	testWebpageURI := "http://echo.jsontest.com/title/lorem/content/ipsum"
 
 	// Testing Add subcommand for webpage
-	webpageAddArgs := []string{testWebpageURI, "--source-type", "webpage"}
+	webpageAddArgs := []string{testWebpageURI}
 	if err := runAndCheckStdoutContains("add", "added successfully", webpageAddArgs); err != nil {
 		t.Errorf("Failed to execute 'add' subcommand: %v", err)
 	}

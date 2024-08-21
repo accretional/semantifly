@@ -2,12 +2,10 @@ package subcommands
 
 import (
 	"fmt"
-	"io"
 	"math"
 	"os"
 	"path"
 	"sort"
-	"strings"
 
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 	"google.golang.org/protobuf/proto"
@@ -26,29 +24,6 @@ type fileOccurrence struct {
 
 type occurrenceList []fileOccurrence
 type searchMap map[string]occurrenceList // Search Map maps search terms to TermMaps
-
-func createSearchDictionary(ile *pb.IndexListEntry) error {
-	srcFile, err := os.Open(ile.URI)
-
-	if err != nil {
-		return fmt.Errorf("failed to open source file: %w", err)
-	}
-	defer srcFile.Close()
-
-	content, err := io.ReadAll(srcFile)
-	if err != nil {
-		return fmt.Errorf("failed to read source file: %w", err)
-	}
-
-	// Create and populate the word_occurrences map
-	ile.WordOccurrences = make(map[string]int32)
-	tokens := strings.Fields(strings.ToLower(string(content)))
-	for _, token := range tokens {
-		ile.WordOccurrences[token]++
-	}
-
-	return nil
-}
 
 // LexicalSearch performs a search in the index for the specified term and returns the top N results ranked by the frequency of the term.
 func LexicalSearch(args LexicalSearchArgs) ([]fileOccurrence, error) {
