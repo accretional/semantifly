@@ -6,10 +6,9 @@ import (
 	"math"
 	"os"
 	"path"
-	"regexp"
 	"sort"
-	"strings"
 
+	"github.com/bzick/tokenizer"
 	"github.com/kljensen/snowball"
 
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
@@ -30,24 +29,38 @@ type fileOccurrence struct {
 type occurrenceList []fileOccurrence
 type searchMap map[string]occurrenceList // Search Map maps search terms to TermMaps
 
-func tokenizeString(content string) ([]string, error) {
-	// Remove punctuation using regex
-	re := regexp.MustCompile(`[^a-zA-Z0-9\s]`)
-	cleanPhrase := re.ReplaceAllString(content, " ")
-
-	words := strings.Fields(cleanPhrase)
-
-	// Stem each word
-	var stemmedWords []string
-	for _, word := range words {
-		stemmedWord, err := snowball.Stem(word, "english", true)
-		if err != nil {
-			return nil, fmt.Errorf("failed to stem word: %w", err)
-		}
-		stemmedWords = append(stemmedWords, stemmedWord)
+func buildDictionary(content *string) (map[string]int32, error) {
+	// Check for nil pointer
+	wordMap := make(map[string]int32)
+	if content == nil {
+		return wordMap, nil
+	} else if *content == "" {
+		return wordMap, nil
 	}
 
-	return stemmedWords, nil
+	parser := tokenizer.New()
+	parser.AllowKeywordUnderscore()
+	fileContent := *content
+
+	// Parse the entire file content as a string
+	stream := parser.ParseString(fileContent)
+	defer stream.Close()
+
+	for stream.IsValid() {
+		token := stream.CurrentToken()
+		if token.IsNumber() {
+			wordMap[token.ValueString()]++
+		} else if token.IsKeyword() || token.IsString() {
+			stemmedWord, err := snowball.Stem(token.ValueString(), "english", true)
+			if err != nil {
+				return nil, fmt.Errorf("failed to stem word: %w", err)
+			}
+			wordMap[stemmedWord]++
+		}
+		stream.GoNext()
+	}
+
+	return wordMap, nil
 }
 
 func createSearchDictionary(ile *pb.IndexListEntry) error {
@@ -63,15 +76,11 @@ func createSearchDictionary(ile *pb.IndexListEntry) error {
 		return fmt.Errorf("failed to read source file: %w", err)
 	}
 
-	// Create and populate the word_occurrences map
-	ile.WordOccurrences = make(map[string]int32)
-	tokens, err := tokenizeString(string(content))
-	if err != nil {
-		return fmt.Errorf("failed to tokenize file: %w", err)
-	}
+	fileContent := string(content)
 
-	for _, token := range tokens {
-		ile.WordOccurrences[token]++
+	ile.WordOccurrences, err = buildDictionary(&fileContent)
+	if err != nil {
+		return fmt.Errorf("failed to build word occurence map: %w", err)
 	}
 
 	fmt.Println(ile.WordOccurrences)
