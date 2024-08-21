@@ -13,14 +13,11 @@ port_in_use() {
 # Check if PostgreSQL is installed
 if ! command_exists psql; then
     echo "PostgreSQL is not installed. Installing now..."
-    
-    # Create a temporary file to store the output
-    temp_output=$(mktemp)
 
     {
         apt-get update
         DEBIAN_FRONTEND=noninteractive apt-get install -y postgresql postgresql-contrib
-    } > "$temp_output" 2>&1 &
+    } &>/dev/null &
 
     pid=$! # Process ID of the background installation
     spin='-\|/'
@@ -39,20 +36,12 @@ if ! command_exists psql; then
             echo "PostgreSQL installed successfully."
         else
             echo "PostgreSQL binaries not found after installation. Installation might have failed."
-            echo "Installation output:"
-            cat "$temp_output"
-            rm "$temp_output"
             exit 1
         fi
     else
-        echo "Failed to install PostgreSQL. Error output:"
-        cat "$temp_output"
-        rm "$temp_output"
+        echo "Failed to install PostgreSQL. Please install it manually."
         exit 1
     fi
-
-    # Clean up the temporary file
-    rm "$temp_output"
 else
     echo "PostgreSQL is already installed."
 fi
