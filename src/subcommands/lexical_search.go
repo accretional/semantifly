@@ -30,7 +30,7 @@ type occurrenceList []fileOccurrence
 type searchMap map[string]occurrenceList // Search Map maps search terms to TermMaps
 
 func buildDictionary(content *string) (map[string]int32, error) {
-	// Check for nil pointer
+	// check for nil pointer
 	wordMap := make(map[string]int32)
 	if content == nil {
 		return wordMap, nil
@@ -42,7 +42,7 @@ func buildDictionary(content *string) (map[string]int32, error) {
 	parser.AllowKeywordUnderscore()
 	fileContent := *content
 
-	// Parse the entire file content as a string
+	// parse file content
 	stream := parser.ParseString(fileContent)
 	defer stream.Close()
 
