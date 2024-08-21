@@ -10,47 +10,92 @@ import (
 	"accretional.com/semantifly/subcommands"
 )
 
+type SubcommandInfo struct {
+	Description string
+	Execute     func([]string)
+}
+
+var subcommandDict = map[string]SubcommandInfo{
+	"add": {
+		Description: "Add new data to the index",
+		Execute:     executeAdd,
+	},
+	"delete": {
+		Description: "Delete data from the index",
+		Execute:     executeDelete,
+	},
+	"get": {
+		Description: "Retrieve data from the index",
+		Execute:     executeGet,
+	},
+	"update": {
+		Description: "Update existing data in the index",
+		Execute:     executeUpdate,
+	},
+	"search": {
+		Description: "Search (lexically) for a term in the index",
+		Execute:     executeSearch,
+	},
+}
+
 func printCmdErr(e string) {
 	fmt.Printf("%s\n Try --help to list subcommands and options.\n", e)
 }
 
-type SubcommandInfo struct {
-	Command     string
-	Description string
-}
+func CommandReadRun() {
+	if len(os.Args) < 2 {
+		printCmdErr("expected subcommand like 'add' or 'describe'")
+		os.Exit(1)
+	}
 
-var commandHelpInfo = []SubcommandInfo{
-	{
-		Command:     "add",
-		Description: "Add new data to the index",
-	},
-	{
-		Command:     "delete",
-		Description: "Delete data from the index",
-	},
-	{
-		Command:     "get",
-		Description: "Retrieve data from the index",
-	},
-	{
-		Command:     "update",
-		Description: "Update existing data in the index",
-	},
-	{
-		Command:     "search",
-		Description: "Search (lexically) for a term in the index",
-	},
+	setupSemantifly()
+
+	cmdName := os.Args[1]
+	args := os.Args[2:]
+
+	if cmdName == "--help" || cmdName == "-h" {
+		baseHelp()
+		return
+	}
+
+	if subcommand, exists := subcommandDict[cmdName]; exists {
+		subcommand.Execute(args)
+	} else {
+		printCmdErr("No valid subcommand provided.")
+		os.Exit(1)
+	}
 }
 
 func baseHelp() {
 	fmt.Println("Semantifly Help")
 	fmt.Println("Available subcommands:")
 
-	for _, subcommand := range commandHelpInfo {
-		fmt.Printf("  %-10s %s\n", subcommand.Command, subcommand.Description)
+	for cmd, info := range subcommandDict {
+		fmt.Printf("  %-10s %s\n", cmd, info.Description)
 	}
 
 	fmt.Println("\nUse 'semantifly <subcommand> --help' for more information about a specific subcommand.")
+}
+
+func setupSemantifly() {
+	semantifly_dir := flag.String("semantifly_dir", os.ExpandEnv("$HOME/.semantifly"), "Where to read existing semantifly data, and write new semantifly data.")
+	semantifly_index := flag.String("semantifly_index", "default", "By default, semantifly writes data to the 'default' subdir of the configured semantifly_dir. Setting this to a value other than 'default' allows for multiple indices on the same local machine.")
+
+	createDirectoryIfNotExists(*semantifly_dir)
+	index_path := path.Join(*semantifly_dir, *semantifly_index)
+	createDirectoryIfNotExists(index_path)
+
+	indexLog := path.Join(index_path, "index.log")
+	appendToIndexLog(indexLog)
+}
+
+func createDirectoryIfNotExists(dir string) {
+	if _, err := os.ReadDir(dir); err != nil {
+		fmt.Printf("No existing directory detected. Creating new directory at %s\n", dir)
+		if err := os.Mkdir(dir, 0777); err != nil {
+			printCmdErr(fmt.Sprintf("Failed to create directory at %s: %s", dir, err))
+		}
+	}
 }
 
 func isBoolFlag(fs *flag.FlagSet, name string) bool {
@@ -99,229 +144,178 @@ func parseArgs(args []string, cmd *flag.FlagSet) ([]string, []string, error) {
 	return flags, nonFlags, nil
 }
 
-func CommandReadRun() {
-	if len(os.Args) < 2 {
-		printCmdErr("expected subcommand like 'add' or 'describe'")
-		os.Exit(1)
-	}
-	semantifly_dir := flag.String("semantifly_dir", os.ExpandEnv("$HOME/.semantifly"), "Where to read existing semantifly data, and write new semantifly data.")
-	_, err := os.ReadDir(*semantifly_dir)
-	if err != nil {
-		fmt.Printf("No existing semantifly directory detected. Creating new semantifly directory at %s\n", *semantifly_dir)
-		err := os.Mkdir(*semantifly_dir, 0777)
-		if err != nil {
-			printCmdErr(fmt.Sprintf("Failed to create semantifly directory at %s: %s", *semantifly_dir, err))
-		}
-	}
-	semantifly_index := flag.String("semantifly_index", "default", "By default, semantifly writes data to the 'default' subdir of the configured semantifly_dir. Setting this to a value other than 'default' allows for multiple indices on the same local machine.")
-	index_path := path.Join(*semantifly_dir, *semantifly_index)
-	indexLog := path.Join(index_path, "index.log")
-	_, err = os.ReadDir(index_path)
-	if err != nil {
-		fmt.Printf("No existing semantifly index detected. Creating new semantifly index at %s\n", index_path)
-		err := os.Mkdir(index_path, 0777)
-		if err != nil {
-			printCmdErr(fmt.Sprintf("Failed to create semantifly index directory at %s: %s", index_path, err))
-		}
-		_, err = os.Create(indexLog)
-		if err != nil {
-			printCmdErr(fmt.Sprintf("Failed to create semantifly index log at %s: %s", indexLog, err))
-		}
-	}
-	f, err := os.OpenFile(indexLog, os.O_APPEND|os.O_WRONLY, 0644)
+func appendToIndexLog(indexLog string) {
+	f, err := os.OpenFile(indexLog, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
 		printCmdErr(fmt.Sprintf("Failed to open index log at %s: %s", indexLog, err))
+		return
 	}
-	_, err = f.WriteString(strings.Join(os.Args, " ") + "\n")
-	if err != nil {
+	defer f.Close()
+
+	if _, err := f.WriteString(strings.Join(os.Args, " ") + "\n"); err != nil {
 		printCmdErr(fmt.Sprintf("Failed to append to index log at %s: %s", indexLog, err))
-	}
-	f.Close()
-
-	cmdName := os.Args[1]
-	args := os.Args[2:]
-
-	switch cmdName {
-	case "add":
-		cmd := flag.NewFlagSet("add", flag.ExitOnError)
-		dataType := cmd.String("type", "text", "The type of the input data")
-		sourceType := cmd.String("source-type", "", "How to access the content")
-		makeLocalCopy := cmd.Bool("copy", false, "Whether to copy and use the file as it is now, or dynamically access it")
-		indexPath := cmd.String("index-path", "", "Path to the index file")
-
-		flags, nonFlags, err := parseArgs(args, cmd)
-		if err != nil {
-			printCmdErr(fmt.Sprintf("Error: %v", err))
-			return
-		}
-
-		reorderedArgs := append(flags, nonFlags...)
-
-		// Parse has to come before to ensure --help flag is seen
-		cmd.Parse(reorderedArgs)
-
-		if len(nonFlags) < 1 {
-			printCmdErr("Add subcommand requires at least one input arg append to index log")
-			return
-		}
-
-		if *sourceType == "" {
-			sourceTypeStr, err := inferSourceType(cmd.Args())
-			if err != nil {
-				printCmdErr(fmt.Sprintf("Failed to infer source type from URIs: %v\n", err))
-			}
-			*sourceType = sourceTypeStr
-		}
-
-		args := subcommands.AddArgs{
-			IndexPath:  *indexPath,
-			DataType:   *dataType,
-			SourceType: *sourceType,
-			MakeCopy:   *makeLocalCopy,
-			DataURIs:   cmd.Args(),
-		}
-
-		subcommands.Add(args)
-
-	case "delete":
-		cmd := flag.NewFlagSet("delete", flag.ExitOnError)
-		deleteLocalCopy := cmd.Bool("copy", false, "Whether to delete the copy made")
-		indexPath := cmd.String("index-path", "", "Path to the index file")
-
-		flags, nonFlags, err := parseArgs(args, cmd)
-		if err != nil {
-			printCmdErr(fmt.Sprintf("Error: %v", err))
-			return
-		}
-
-		reorderedArgs := append(flags, nonFlags...)
-
-		cmd.Parse(reorderedArgs)
-
-		if len(nonFlags) < 1 {
-			printCmdErr("Delete subcommand requires at least one input arg.")
-			return
-		}
-
-		args := subcommands.DeleteArgs{
-			IndexPath:  *indexPath,
-			DeleteCopy: *deleteLocalCopy,
-			DataURIs:   cmd.Args(),
-		}
-
-		subcommands.Delete(args)
-
-	case "get":
-		cmd := flag.NewFlagSet("get", flag.ExitOnError)
-		indexPath := cmd.String("index-path", "", "Path to the index file")
-
-		flags, nonFlags, err := parseArgs(args, cmd)
-		if err != nil {
-			printCmdErr(fmt.Sprintf("Error: %v", err))
-			return
-		}
-
-		reorderedArgs := append(flags, nonFlags...)
-
-		cmd.Parse(reorderedArgs)
-
-		if len(nonFlags) != 1 {
-			printCmdErr("Get subcommand requires exactly one arg.")
-			return
-		}
-
-		name := cmd.Args()[0]
-		args := subcommands.GetArgs{
-			IndexPath: *indexPath,
-			Name:      name,
-		}
-
-		subcommands.Get(args)
-
-	case "update":
-		cmd := flag.NewFlagSet("update", flag.ExitOnError)
-		dataType := cmd.String("type", "", "The type of the input data")
-		sourceType := cmd.String("source-type", "", "How to access the content")
-		makeLocalCopy := cmd.String("copy", "false", "Whether to copy and use the file as it is now, or dynamically access it")
-		indexPath := cmd.String("index-path", "", "Path to the index file")
-
-		flags, nonFlags, err := parseArgs(args, cmd)
-		if err != nil {
-			printCmdErr(fmt.Sprintf("Error: %v", err))
-			return
-		}
-
-		reorderedArgs := append(flags, nonFlags...)
-
-		cmd.Parse(reorderedArgs)
-
-		if len(nonFlags) != 2 {
-			printCmdErr("Update subcommand requires two input args - index name and updated URI")
-			return
-		}
-
-		args := subcommands.UpdateArgs{
-			IndexPath:  *indexPath,
-			Name:       cmd.Args()[0],
-			DataType:   *dataType,
-			SourceType: *sourceType,
-			UpdateCopy: *makeLocalCopy,
-			DataURI:    cmd.Args()[1],
-		}
-
-		subcommands.Update(args)
-
-	case "search":
-		cmd := flag.NewFlagSet("search", flag.ExitOnError)
-		indexPath := cmd.String("index-path", "", "Path to the index file")
-		topN := cmd.Int("n", 1, "Top n search results")
-
-		flags, nonFlags, err := parseArgs(args, cmd)
-
-		if err != nil {
-			printCmdErr(fmt.Sprintf("Error: %v", err))
-			return
-		}
-
-		reorderedArgs := append(flags, nonFlags...)
-
-		cmd.Parse(reorderedArgs)
-
-		if len(nonFlags) != 1 {
-			printCmdErr("Search subcommand requires exactly one arg.")
-			return
-		}
-
-		searchTerm := cmd.Args()[0]
-		args := subcommands.LexicalSearchArgs{
-			IndexPath:  *indexPath,
-			SearchTerm: searchTerm,
-			TopN:       *topN,
-		}
-
-		searchResults, err := subcommands.LexicalSearch(args)
-
-		if err != nil {
-			printCmdErr(fmt.Sprintf("Error during search: %v", err))
-			return
-		}
-
-		subcommands.PrintSearchResults(searchResults)
-
-	case "--help":
-		baseHelp()
-
-	case "-h":
-		baseHelp()
-
-	default:
-		printCmdErr("No valid subcommand provided.")
-		os.Exit(1)
 	}
 }
 
-func loadIndex(indexDir string) {
-	fmt.Println("loadIndex in commands.go is unimplemented")
+func executeAdd(args []string) {
+	cmd := flag.NewFlagSet("add", flag.ExitOnError)
+	dataType := cmd.String("type", "text", "The type of the input data")
+	sourceType := cmd.String("source-type", "", "How to access the content")
+	makeLocalCopy := cmd.Bool("copy", false, "Whether to copy and use the file as it is now, or dynamically access it")
+	indexPath := cmd.String("index-path", "", "Path to the index file")
+
+	flags, nonFlags, err := parseArgs(args, cmd)
+	if err != nil {
+		printCmdErr(fmt.Sprintf("Error: %v", err))
+		return
+	}
+
+	reorderedArgs := append(flags, nonFlags...)
+	cmd.Parse(reorderedArgs)
+
+	if len(nonFlags) < 1 {
+		printCmdErr("Add subcommand requires at least one input arg append to index log")
+		return
+	}
+
+	if *sourceType == "" {
+		sourceTypeStr, err := inferSourceType(cmd.Args())
+		if err != nil {
+			printCmdErr(fmt.Sprintf("Failed to infer source type from URIs: %v\n", err))
+		}
+		*sourceType = sourceTypeStr
+	}
+
+	addArgs := subcommands.AddArgs{
+		IndexPath:  *indexPath,
+		DataType:   *dataType,
+		SourceType: *sourceType,
+		MakeCopy:   *makeLocalCopy,
+		DataURIs:   cmd.Args(),
+	}
+
+	subcommands.Add(addArgs)
+}
+
+func executeDelete(args []string) {
+	cmd := flag.NewFlagSet("delete", flag.ExitOnError)
+	deleteLocalCopy := cmd.Bool("copy", false, "Whether to delete the copy made")
+	indexPath := cmd.String("index-path", "", "Path to the index file")
+
+	flags, nonFlags, err := parseArgs(args, cmd)
+	if err != nil {
+		printCmdErr(fmt.Sprintf("Error: %v", err))
+		return
+	}
+
+	reorderedArgs := append(flags, nonFlags...)
+	cmd.Parse(reorderedArgs)
+
+	if len(nonFlags) < 1 {
+		printCmdErr("Delete subcommand requires at least one input arg.")
+		return
+	}
+
+	deleteArgs := subcommands.DeleteArgs{
+		IndexPath:  *indexPath,
+		DeleteCopy: *deleteLocalCopy,
+		DataURIs:   cmd.Args(),
+	}
+
+	subcommands.Delete(deleteArgs)
+}
+
+func executeGet(args []string) {
+	cmd := flag.NewFlagSet("get", flag.ExitOnError)
+	indexPath := cmd.String("index-path", "", "Path to the index file")
+
+	flags, nonFlags, err := parseArgs(args, cmd)
+	if err != nil {
+		printCmdErr(fmt.Sprintf("Error: %v", err))
+		return
+	}
+
+	reorderedArgs := append(flags, nonFlags...)
+	cmd.Parse(reorderedArgs)
+
+	if len(nonFlags) != 1 {
+		printCmdErr("Get subcommand requires exactly one arg.")
+		return
+	}
+
+	getArgs := subcommands.GetArgs{
+		IndexPath: *indexPath,
+		Name:      cmd.Args()[0],
+	}
+
+	subcommands.Get(getArgs)
+}
+
+func executeUpdate(args []string) {
+	cmd := flag.NewFlagSet("update", flag.ExitOnError)
+	dataType := cmd.String("type", "", "The type of the input data")
+	sourceType := cmd.String("source-type", "", "How to access the content")
+	makeLocalCopy := cmd.String("copy", "false", "Whether to copy and use the file as it is now, or dynamically access it")
+	indexPath := cmd.String("index-path", "", "Path to the index file")
+
+	flags, nonFlags, err := parseArgs(args, cmd)
+	if err != nil {
+		printCmdErr(fmt.Sprintf("Error: %v", err))
+		return
+	}
+
+	reorderedArgs := append(flags, nonFlags...)
+	cmd.Parse(reorderedArgs)
+
+	if len(nonFlags) != 2 {
+		printCmdErr("Update subcommand requires two input args - index name and updated URI")
+		return
+	}
+
+	updateArgs := subcommands.UpdateArgs{
+		IndexPath:  *indexPath,
+		Name:       cmd.Args()[0],
+		DataType:   *dataType,
+		SourceType: *sourceType,
+		UpdateCopy: *makeLocalCopy,
+		DataURI:    cmd.Args()[1],
+	}
+
+	subcommands.Update(updateArgs)
+}
+
+func executeSearch(args []string) {
+	cmd := flag.NewFlagSet("search", flag.ExitOnError)
+	indexPath := cmd.String("index-path", "", "Path to the index file")
+	topN := cmd.Int("n", 1, "Top n search results")
+
+	flags, nonFlags, err := parseArgs(args, cmd)
+	if err != nil {
+		printCmdErr(fmt.Sprintf("Error: %v", err))
+		return
+	}
+
+	reorderedArgs := append(flags, nonFlags...)
+	cmd.Parse(reorderedArgs)
+
+	if len(nonFlags) != 1 {
+		printCmdErr("Search subcommand requires exactly one arg.")
+		return
+	}
+
+	searchArgs := subcommands.LexicalSearchArgs{
+		IndexPath:  *indexPath,
+		SearchTerm: cmd.Args()[0],
+		TopN:       *topN,
+	}
+
+	searchResults, err := subcommands.LexicalSearch(searchArgs)
+	if err != nil {
+		printCmdErr(fmt.Sprintf("Error during search: %v", err))
+		return
+	}
+
+	subcommands.PrintSearchResults(searchResults)
 }
 
 func inferSourceType(uris []string) (string, error) {
