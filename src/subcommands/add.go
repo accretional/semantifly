@@ -6,6 +6,7 @@ import (
 
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
+	search "accretional.com/semantifly/search"
 )
 
 type AddArgs struct {
@@ -20,13 +21,13 @@ func Add(a AddArgs) {
 
 	dataType, err := parseDataType(a.DataType)
 	if err != nil {
-		fmt.Printf("error in parsing DataType: %v", err)
+		fmt.Printf("Error in parsing DataType: %v\n", err)
 		return
 	}
 
 	sourceType, err := parseSourceType(a.SourceType)
 	if err != nil {
-		fmt.Printf("Invalid source type: %v", err)
+		fmt.Printf("Error in parsing SourceType: %v\n", err)
 		return
 	}
 
@@ -52,14 +53,6 @@ func Add(a AddArgs) {
 			FirstAddedTime: timestamppb.Now(),
 		}
 
-		indexMap[ile.Name] = ile
-		err = createSearchDictionary(ile)
-
-		if err != nil {
-			fmt.Printf("File %s failed to create search dictionary with err: %s. Skipping.\n", u, err)
-			continue
-		}
-
 		if a.MakeCopy {
 			err = makeCopy(a.IndexPath, ile)
 			if err != nil {
@@ -68,6 +61,13 @@ func Add(a AddArgs) {
 			}
 		}
 
+		err = search.CreateSearchDictionary(ile)
+		if err != nil {
+			fmt.Printf("File %s failed to create search dictionary with err: %s. Skipping.\n", u, err)
+			continue
+		}
+
+		indexMap[ile.Name] = ile
 		fmt.Printf("Index %s added successfully.\n", u)
 	}
 
