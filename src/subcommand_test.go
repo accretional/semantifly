@@ -108,7 +108,7 @@ func TestCommandRun(t *testing.T) {
 	tempFile.Close()
 
 	// Testing Help Flag
-	expectedHelpString := "semantifly currently has the following subcommands: add, delete, update, search.\nUse --help on these subcommands for more information.\n"
+	expectedHelpString := "Use 'semantifly <subcommand> --help' for more information about a specific subcommand."
 	if err := runAndCheckStdoutContains("--help", expectedHelpString, nil); err != nil {
 		t.Errorf("Failed to execute --help flag subcommand: %v", err)
 	}

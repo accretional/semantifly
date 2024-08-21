@@ -14,8 +14,43 @@ func printCmdErr(e string) {
 	fmt.Printf("%s\n Try --help to list subcommands and options.\n", e)
 }
 
+type SubcommandInfo struct {
+	Command     string
+	Description string
+}
+
+var commandHelpInfo = []SubcommandInfo{
+	{
+		Command:     "add",
+		Description: "Add new data to the index",
+	},
+	{
+		Command:     "delete",
+		Description: "Delete data from the index",
+	},
+	{
+		Command:     "get",
+		Description: "Retrieve data from the index",
+	},
+	{
+		Command:     "update",
+		Description: "Update existing data in the index",
+	},
+	{
+		Command:     "search",
+		Description: "Search (lexically) for a term in the index",
+	},
+}
+
 func baseHelp() {
-	fmt.Printf("semantifly currently has the following subcommands: add, delete, update, search.\nUse --help on these subcommands for more information.\n")
+	fmt.Println("Semantifly Help")
+	fmt.Println("Available subcommands:")
+
+	for _, subcommand := range commandHelpInfo {
+		fmt.Printf("  %-10s %s\n", subcommand.Command, subcommand.Description)
+	}
+
+	fmt.Println("\nUse 'semantifly <subcommand> --help' for more information about a specific subcommand.")
 }
 
 func isBoolFlag(fs *flag.FlagSet, name string) bool {
