@@ -13,7 +13,6 @@ import (
 
 // Main is run before every test to set up the testing folder & semantifly
 func TestMain(m *testing.M) {
-	// Setup
 	err := os.Chdir("..")
 	if err != nil {
 		fmt.Printf("Failed to change directory: %v\n", err)
@@ -33,14 +32,13 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	// Adding semantifly to PATH
 	oldPath := os.Getenv("PATH")
 	os.Setenv("PATH", oldPath+":"+semantifly_dir)
 
-	// Run tests
+	// run tests
 	code := m.Run()
 
-	// Cleanup
+	// clean up
 	os.Setenv("PATH", oldPath)
 	os.Remove("index.list")
 
@@ -102,7 +100,6 @@ func TestGetSubcommand(t *testing.T) {
 	}
 	defer os.Remove(tempFile)
 
-	// add file
 	if err := runAndCheckStdoutContains("add", "added successfully", []string{tempFile}); err != nil {
 		t.Fatalf("Failed to add file to index: %v", err)
 	}
@@ -134,7 +131,6 @@ func TestUpdateSubcommand(t *testing.T) {
 	}
 	defer os.Remove(updatedTempFile)
 
-	// add file
 	runAndCheckStdoutContains("add", "added successfully", []string{tempFile})
 
 	t.Run("Update without URI", func(t *testing.T) {
@@ -157,7 +153,6 @@ func TestDeleteSubcommand(t *testing.T) {
 	}
 	defer os.Remove(tempFile)
 
-	// add file
 	runAndCheckStdoutContains("add", "added successfully", []string{tempFile})
 
 	t.Run("Delete existing file", func(t *testing.T) {
