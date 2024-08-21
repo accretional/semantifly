@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
-	"github.com/pashagolub/pgxmock/v2"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -14,6 +13,7 @@ import (
 func TestEstablishConnection(t *testing.T) {
 	// Set a mock DATABASE_URL for testing
 	os.Setenv("DATABASE_URL", "postgres://gitpod@localhost:5432/testdb")
+	defer os.Unsetenv("DATABASE_URL")
 
 	ctx := context.Background()
 	conn, err := establishConnection(ctx)
@@ -25,15 +25,14 @@ func TestEstablishConnection(t *testing.T) {
 }
 
 func TestInsertRow(t *testing.T) {
-	mock, err := pgxmock.NewConn()
+	// Set a mock DATABASE_URL for testing
+	os.Setenv("DATABASE_URL", "postgres://gitpod@localhost:5432/testdb")
+	defer os.Unsetenv("DATABASE_URL")
+
+	ctx := context.Background()
+	conn, err := establishConnection(ctx)
 	assert.NoError(t, err)
-	defer mock.Close(context.Background())
-
-	mock.ExpectExec("CREATE TABLE IF NOT EXISTS index_list").WillReturnResult(pgxmock.NewResult("CREATE TABLE", 1))
-
-	mock.ExpectBegin()
-	mock.ExpectExec("INSERT INTO index_list").WillReturnResult(pgxmock.NewResult("INSERT", 1))
-	mock.ExpectCommit()
+	defer conn.Close(ctx)
 
 	index := &pb.Index{
 		Entries: []*pb.IndexListEntry{
@@ -49,17 +48,23 @@ func TestInsertRow(t *testing.T) {
 		},
 	}
 
-	err = insertRow(context.Background(), mock, index)
+	err = insertRow(ctx, conn, index)
 	assert.NoError(t, err)
 
-	err = mock.ExpectationsWereMet()
+	// Delete the test entry
+	_, err = conn.Exec(ctx, "DELETE FROM index_list WHERE name = $1", "Test Entry")
 	assert.NoError(t, err)
 }
 
 func TestQueryRow(t *testing.T) {
-	mock, err := pgxmock.NewConn()
+	// Set a mock DATABASE_URL for testing
+	os.Setenv("DATABASE_URL", "postgres://gitpod@localhost:5432/testdb")
+	defer os.Unsetenv("DATABASE_URL")
+
+	ctx := context.Background()
+	conn, err := establishConnection(ctx)
 	assert.NoError(t, err)
-	defer mock.Close(context.Background())
+	defer conn.Close(ctx)
 
 	expectedEntry := &pb.IndexListEntry{
 		Name:              "Test Entry",
@@ -71,15 +76,14 @@ func TestQueryRow(t *testing.T) {
 		Content:           "Test Content",
 	}
 
-	rows := pgxmock.NewRows([]string{"name", "uri", "data_type", "source_type", "first_added_time", "last_refreshed_time", "content"}).
-		AddRow(expectedEntry.Name, expectedEntry.URI, expectedEntry.DataType.String(), expectedEntry.SourceType.String(),
-			expectedEntry.FirstAddedTime.AsTime(), expectedEntry.LastRefreshedTime.AsTime(), expectedEntry.Content)
+	index := &pb.Index{
+		Entries: []*pb.IndexListEntry{expectedEntry},
+	}
 
-	mock.ExpectQuery("SELECT (.+) FROM index_list WHERE name=\\$1").
-		WithArgs("Test Entry").
-		WillReturnRows(rows)
+	err = insertRow(ctx, conn, index)
+	assert.NoError(t, err)
 
-	entry, err := queryRow(context.Background(), mock, "Test Entry")
+	entry, err := queryRow(ctx, conn, "Test Entry")
 	assert.NoError(t, err)
 	assert.NotNil(t, entry)
 	assert.Equal(t, expectedEntry.Name, entry.Name)
@@ -88,6 +92,7 @@ func TestQueryRow(t *testing.T) {
 	assert.Equal(t, expectedEntry.SourceType, entry.SourceType)
 	assert.Equal(t, expectedEntry.Content, entry.Content)
 
-	err = mock.ExpectationsWereMet()
+	// Delete the test entry
+	_, err = conn.Exec(ctx, "DELETE FROM index_list WHERE name = $1", "Test Entry")
 	assert.NoError(t, err)
 }
