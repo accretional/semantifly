@@ -169,7 +169,7 @@ func TestQueryRow(t *testing.T) {
 	assert.Equal(t, expectedEntry.DataType, entry.DataType)
 	assert.Equal(t, expectedEntry.SourceType, entry.SourceType)
 	assert.Equal(t, expectedEntry.Content, entry.Content)
-	assert.Equal(t, expectedEntry.WordOccurrences, entry.Content)
+	assert.Equal(t, expectedEntry.WordOccurrences, entry.WordOccurrences)
 
 	// Delete the test entry
 	_, err = conn.Exec(ctx, "DELETE FROM index_list WHERE name = $1", "Test Entry")
