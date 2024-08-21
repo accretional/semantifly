@@ -1,9 +1,11 @@
 package database
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"testing"
 
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
@@ -13,6 +15,27 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+func setupPostgres() error {
+	// Setup
+	err := os.Chdir("../..")
+	if err != nil {
+		return fmt.Errorf("Failed to change directory: %v", err)
+	}
+
+	cmd := exec.Command("bash", "setup_postgres.sh")
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	err = cmd.Run()
+	if err != nil {
+		return fmt.Errorf("Failed to setup PostgreSQL server.")
+	}
+
+	return nil
+}
+
 func createTestingDatabase() (*pg.DB, error) {
 	// Connect to the default "postgres" database
 	db := pg.Connect(&pg.Options{
@@ -21,12 +44,12 @@ func createTestingDatabase() (*pg.DB, error) {
 		Database: "postgres",
 	})
 
-    // Drop the database if it exists, then create it
-    _, err := db.Exec("DROP DATABASE IF EXISTS testdb")
-    if err != nil {
-        db.Close()
-        return nil, fmt.Errorf("failed to drop existing test database: %v", err)
-    }
+	// Drop the database if it exists, then create it
+	_, err := db.Exec("DROP DATABASE IF EXISTS testdb")
+	if err != nil {
+		db.Close()
+		return nil, fmt.Errorf("failed to drop existing test database: %v", err)
+	}
 
 	_, err = db.Exec("CREATE DATABASE testdb")
 	if err != nil {
@@ -66,6 +89,11 @@ func removeTestingDatabase() error {
 }
 
 func TestEstablishConnection(t *testing.T) {
+
+	if err := setupPostgres(); err != nil {
+		t.Fatalf("Failed to setup Postgres server: %v", err)
+	}
+
 	// Set a mock DATABASE_URL for testing
 	os.Setenv("DATABASE_URL", "postgres://gitpod@localhost:5432/testdb")
 	defer os.Unsetenv("DATABASE_URL")
@@ -86,6 +114,11 @@ func TestEstablishConnection(t *testing.T) {
 }
 
 func TestInsertRow(t *testing.T) {
+
+	if err := setupPostgres(); err != nil {
+		t.Fatalf("Failed to setup Postgres server: %v", err)
+	}
+
 	// Set a mock DATABASE_URL for testing
 	os.Setenv("DATABASE_URL", "postgres://gitpod@localhost:5432/testdb")
 	defer os.Unsetenv("DATABASE_URL")
@@ -127,6 +160,11 @@ func TestInsertRow(t *testing.T) {
 }
 
 func TestQueryRow(t *testing.T) {
+
+	if err := setupPostgres(); err != nil {
+		t.Fatalf("Failed to setup Postgres server: %v", err)
+	}
+
 	// Set a mock DATABASE_URL for testing
 	os.Setenv("DATABASE_URL", "postgres://gitpod@localhost:5432/testdb")
 	defer os.Unsetenv("DATABASE_URL")
