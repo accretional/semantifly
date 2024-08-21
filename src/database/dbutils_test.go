@@ -2,6 +2,8 @@ package database
 
 import (
 	"context"
+	"database/sql"
+	"fmt"
 	"os"
 	"testing"
 
@@ -10,10 +12,31 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+func createTestingDatabase() (*sql.DB, error) {
+	// Create the database for testing
+	db, err := sql.Open("postgres", "postgres://gitpod@localhost:5432/postgres")
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to postgres: %v", err)
+	}
+
+	_, err = db.Exec("CREATE DATABASE testdb")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create test database: %v", err)
+	}
+
+	return db, nil
+}
+
 func TestEstablishConnection(t *testing.T) {
 	// Set a mock DATABASE_URL for testing
-	os.Setenv("DATABASE_URL", "postgres://gitpod@localhost:5432/semantifly")
+	os.Setenv("DATABASE_URL", "postgres://gitpod@localhost:5432/testdb")
 	defer os.Unsetenv("DATABASE_URL")
+
+	db, err := createTestingDatabase()
+	if err != nil {
+		t.Fatalf("Failed to create test database: %v", err)
+	}
+	defer db.Close()
 
 	ctx := context.Background()
 	conn, err := establishConnection(ctx)
@@ -22,12 +45,24 @@ func TestEstablishConnection(t *testing.T) {
 
 	// Clean up
 	conn.Close(ctx)
+
+	// Drop the test database
+	_, err = db.Exec("DROP DATABASE testdb")
+	if err != nil {
+		t.Fatalf("Failed to drop test database: %v", err)
+	}
 }
 
 func TestInsertRow(t *testing.T) {
 	// Set a mock DATABASE_URL for testing
-	os.Setenv("DATABASE_URL", "postgres://gitpod@localhost:5432/semantifly")
+	os.Setenv("DATABASE_URL", "postgres://gitpod@localhost:5432/testdb")
 	defer os.Unsetenv("DATABASE_URL")
+
+	db, err := createTestingDatabase()
+	if err != nil {
+		t.Fatalf("Failed to create test database: %v", err)
+	}
+	defer db.Close()
 
 	ctx := context.Background()
 	conn, err := establishConnection(ctx)
@@ -54,12 +89,24 @@ func TestInsertRow(t *testing.T) {
 	// Delete the test entry
 	_, err = conn.Exec(ctx, "DELETE FROM index_list WHERE name = $1", "Test Entry")
 	assert.NoError(t, err)
+
+	// Drop the test database
+	_, err = db.Exec("DROP DATABASE testdb")
+	if err != nil {
+		t.Fatalf("Failed to drop test database: %v", err)
+	}
 }
 
 func TestQueryRow(t *testing.T) {
 	// Set a mock DATABASE_URL for testing
-	os.Setenv("DATABASE_URL", "postgres://gitpod@localhost:5432/semantifly")
+	os.Setenv("DATABASE_URL", "postgres://gitpod@localhost:5432/testdb")
 	defer os.Unsetenv("DATABASE_URL")
+
+	db, err := createTestingDatabase()
+	if err != nil {
+		t.Fatalf("Failed to create test database: %v", err)
+	}
+	defer db.Close()
 
 	ctx := context.Background()
 	conn, err := establishConnection(ctx)
@@ -95,4 +142,10 @@ func TestQueryRow(t *testing.T) {
 	// Delete the test entry
 	_, err = conn.Exec(ctx, "DELETE FROM index_list WHERE name = $1", "Test Entry")
 	assert.NoError(t, err)
+
+	// Drop the test database
+	_, err = db.Exec("DROP DATABASE testdb")
+	if err != nil {
+		t.Fatalf("Failed to drop test database: %v", err)
+	}
 }
