@@ -2,7 +2,9 @@ package search
 
 import (
 	"fmt"
-	"strings"
+
+	"github.com/bzick/tokenizer"
+	"github.com/kljensen/snowball"
 
 	fetch "accretional.com/semantifly/fetcher"
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
@@ -12,18 +14,43 @@ import (
 // tokenizing the content, and populating the WordOccurrences map with word frequencies.
 // It takes a pointer to an IndexListEntry as input and returns an error if any issues occur
 // during content fetching or processing.
-func CreateSearchDictionary(ile *pb.IndexListEntry) error {
 
+func CreateSearchDictionary(ile *pb.IndexListEntry) error {
 	content, err := fetch.FetchFromSource(ile.SourceType, ile.URI)
 	if err != nil {
-		return fmt.Errorf("failed to read source file: %w", err)
+		return fmt.Errorf("failed to open source file: %w", err)
 	}
 
-	// Create and populate the word_occurrences map
+	if len(content) == 0 {
+		return nil
+	}
+
+	fileContent := string(content)
+
 	ile.WordOccurrences = make(map[string]int32)
-	tokens := strings.Fields(strings.ToLower(string(content)))
-	for _, token := range tokens {
-		ile.WordOccurrences[token]++
+	ile.StemmedWordOccurrences = make(map[string]int32)
+
+	parser := tokenizer.New()
+	parser.AllowKeywordUnderscore()
+
+	// parse and tokenize file content
+	stream := parser.ParseString(fileContent)
+	defer stream.Close()
+
+	for stream.IsValid() {
+		token := stream.CurrentToken()
+		if token.IsNumber() {
+			ile.WordOccurrences[token.ValueString()]++
+			ile.StemmedWordOccurrences[token.ValueString()]++
+		} else if token.IsKeyword() || token.IsString() {
+			stemmedWord, err := snowball.Stem(token.ValueString(), "english", true)
+			if err != nil {
+				return fmt.Errorf("failed to stem word: %w", err)
+			}
+			ile.WordOccurrences[token.ValueString()]++
+			ile.StemmedWordOccurrences[stemmedWord]++
+		}
+		stream.GoNext()
 	}
 
 	return nil

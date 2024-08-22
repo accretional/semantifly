@@ -2,10 +2,11 @@ package subcommands
 
 import (
 	"fmt"
-	"math"
 	"os"
 	"path"
 	"sort"
+
+	"github.com/kljensen/snowball"
 
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 	"google.golang.org/protobuf/proto"
@@ -23,7 +24,7 @@ type fileOccurrence struct {
 }
 
 type occurrenceList []fileOccurrence
-type searchMap map[string]occurrenceList // Search Map maps search terms to TermMaps
+type searchMap map[string]occurrenceList // Search Map maps search terms to the list of their occurrences in files
 
 // LexicalSearch performs a search in the index for the specified term and returns the top N results ranked by the frequency of the term.
 func LexicalSearch(args LexicalSearchArgs) ([]fileOccurrence, error) {
@@ -60,15 +61,59 @@ func LexicalSearch(args LexicalSearchArgs) ([]fileOccurrence, error) {
 		}
 	}
 
-	for _, occList := range newSearchMap {
-		sort.Slice(occList, func(i, j int) bool {
-			return occList[i].Occurrence > occList[j].Occurrence
+	newStemmedSearchMap := make(searchMap)
+	for _, entry := range index.Entries {
+		for word, occ := range entry.StemmedWordOccurrences {
+			newFileOcc := fileOccurrence{
+				FileName:   entry.Name,
+				Occurrence: occ,
+			}
+			if val, ok := newStemmedSearchMap[word]; ok {
+				newStemmedSearchMap[word] = append(val, newFileOcc)
+			} else {
+				newOccList := []fileOccurrence{newFileOcc}
+				newStemmedSearchMap[word] = newOccList
+			}
+		}
+	}
+
+	term := args.SearchTerm
+	stemmedTerm, err := snowball.Stem(term, "english", true)
+	if err != nil {
+		return nil, fmt.Errorf("failed to stem word: %w", err)
+	}
+
+	stemmedResults := newStemmedSearchMap[stemmedTerm]
+	nonStemResults := newSearchMap[term]
+
+	// combine stemmed and non-stemmed occurrence numbers to help prioritize files with exact matches
+	resultMap := make(map[string]int32)
+	for _, result := range stemmedResults {
+		resultMap[result.FileName] += result.Occurrence
+	}
+	for _, result := range nonStemResults {
+		resultMap[result.FileName] += result.Occurrence
+	}
+
+	var combinedResults []fileOccurrence
+	for fileName, occurrence := range resultMap {
+		combinedResults = append(combinedResults, fileOccurrence{
+			FileName:   fileName,
+			Occurrence: occurrence,
 		})
 	}
 
-	resultsLen := len(newSearchMap[args.SearchTerm])
-	amountWanted := int(math.Min(float64(args.TopN), float64(resultsLen)))
-	return newSearchMap[args.SearchTerm][:amountWanted], nil
+	// sort result by descending occurence
+	sort.Slice(combinedResults, func(i, j int) bool {
+		return combinedResults[i].Occurrence > combinedResults[j].Occurrence
+	})
+
+	if len(combinedResults) > args.TopN {
+		combinedResults = combinedResults[:args.TopN]
+	}
+	PrintSearchResults(combinedResults)
+
+	return combinedResults, nil
 }
 
 func PrintSearchResults(results []fileOccurrence) {

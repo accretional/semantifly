@@ -20,6 +20,7 @@ message IndexListEntry {
 	string content = 7;
     // Map that stores the count of each word
     map<string, int32> word_occurrences = 8;
+    map<string, int32> stemmed_word_occurrences = 9;
 }
 
 // Roughly corresponding to file extension, how to parse/encode the file.
