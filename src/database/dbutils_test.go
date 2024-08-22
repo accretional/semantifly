@@ -39,7 +39,8 @@ func setupPostgres() error {
 func createTestingDatabase() (*pg.DB, error) {
 	// Connect to the default "postgres" database
 	db := pg.Connect(&pg.Options{
-		User:     "gitpod",
+		User:     "postgres",
+		Password: "postgres",
 		Addr:     "localhost:5432",
 		Database: "postgres",
 	})
@@ -62,7 +63,8 @@ func createTestingDatabase() (*pg.DB, error) {
 
 	// Connect to the newly created database
 	testDB := pg.Connect(&pg.Options{
-		User:     "gitpod",
+		User:     "postgres",
+		Password: "postgres",
 		Addr:     "localhost:5432",
 		Database: "testdb",
 	})
@@ -73,7 +75,8 @@ func createTestingDatabase() (*pg.DB, error) {
 func removeTestingDatabase() error {
 	// Connect to the default "postgres" database to drop the test database
 	defaultDB := pg.Connect(&pg.Options{
-		User:     "gitpod",
+		User:     "postgres",
+		Password: "postgres",
 		Addr:     "localhost:5432",
 		Database: "postgres",
 	})
@@ -95,7 +98,7 @@ func TestEstablishConnection(t *testing.T) {
 	}
 
 	// Set a mock DATABASE_URL for testing
-	os.Setenv("DATABASE_URL", "postgres://gitpod@localhost:5432/testdb")
+	os.Setenv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/testdb")
 	defer os.Unsetenv("DATABASE_URL")
 
 	db, err := createTestingDatabase()
@@ -120,7 +123,7 @@ func TestInsertRow(t *testing.T) {
 	}
 
 	// Set a mock DATABASE_URL for testing
-	os.Setenv("DATABASE_URL", "postgres://gitpod@localhost:5432/testdb")
+	os.Setenv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/testdb")
 	defer os.Unsetenv("DATABASE_URL")
 
 	db, err := createTestingDatabase()
@@ -166,7 +169,7 @@ func TestQueryRow(t *testing.T) {
 	}
 
 	// Set a mock DATABASE_URL for testing
-	os.Setenv("DATABASE_URL", "postgres://gitpod@localhost:5432/testdb")
+	os.Setenv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/testdb")
 	defer os.Unsetenv("DATABASE_URL")
 
 	db, err := createTestingDatabase()
