@@ -67,6 +67,7 @@ func TestAddSubcommand(t *testing.T) {
 		t.Fatalf("Failed to create temporary file: %v", err)
 	}
 	defer os.Remove(tempFile)
+	defer os.Remove("index.list")
 
 	t.Run("Help", func(t *testing.T) {
 		if err := runAndCheckStderrContains("add", "Usage of add:", []string{"--help"}); err != nil {
@@ -99,6 +100,7 @@ func TestGetSubcommand(t *testing.T) {
 		t.Fatalf("Failed to create temporary file: %v", err)
 	}
 	defer os.Remove(tempFile)
+	defer os.Remove("index.list")
 
 	if err := runAndCheckStdoutContains("add", "added successfully", []string{tempFile}); err != nil {
 		t.Fatalf("Failed to add file to index: %v", err)
@@ -124,6 +126,7 @@ func TestUpdateSubcommand(t *testing.T) {
 		t.Fatalf("Failed to create temporary file: %v", err)
 	}
 	defer os.Remove(tempFile)
+	defer os.Remove("index.list")
 
 	updatedTempFile, err := createTempFile("This is an updated test file for semantifly subcommands.")
 	if err != nil {
@@ -152,6 +155,7 @@ func TestDeleteSubcommand(t *testing.T) {
 		t.Fatalf("Failed to create temporary file: %v", err)
 	}
 	defer os.Remove(tempFile)
+	defer os.Remove("index.list")
 
 	runAndCheckStdoutContains("add", "added successfully", []string{tempFile})
 
