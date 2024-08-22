@@ -67,6 +67,7 @@ func TestAddSubcommand(t *testing.T) {
 		t.Fatalf("Failed to create temporary file: %v", err)
 	}
 	defer os.Remove(tempFile)
+	defer os.Remove("index.list")
 
 	t.Run("Help", func(t *testing.T) {
 		if err := runAndCheckStderrContains("add", "Usage of add:", []string{"--help"}); err != nil {
@@ -99,6 +100,7 @@ func TestGetSubcommand(t *testing.T) {
 		t.Fatalf("Failed to create temporary file: %v", err)
 	}
 	defer os.Remove(tempFile)
+	defer os.Remove("index.list")
 
 	if err := runAndCheckStdoutContains("add", "added successfully", []string{tempFile}); err != nil {
 		t.Fatalf("Failed to add file to index: %v", err)
@@ -112,7 +114,7 @@ func TestGetSubcommand(t *testing.T) {
 
 	t.Run("Get after delete", func(t *testing.T) {
 		runAndCheckStdoutContains("delete", "deleted successfully", []string{tempFile})
-		if err := runAndCheckStdoutContains("get", "not found in index file", []string{tempFile}); err != nil {
+		if err := runAndCheckStdoutContains("get", "empty index file", []string{tempFile}); err != nil {
 			t.Errorf("Failed to execute 'get' after delete: %v", err)
 		}
 	})
@@ -124,6 +126,7 @@ func TestUpdateSubcommand(t *testing.T) {
 		t.Fatalf("Failed to create temporary file: %v", err)
 	}
 	defer os.Remove(tempFile)
+	defer os.Remove("index.list")
 
 	updatedTempFile, err := createTempFile("This is an updated test file for semantifly subcommands.")
 	if err != nil {
@@ -152,6 +155,7 @@ func TestDeleteSubcommand(t *testing.T) {
 		t.Fatalf("Failed to create temporary file: %v", err)
 	}
 	defer os.Remove(tempFile)
+	defer os.Remove("index.list")
 
 	runAndCheckStdoutContains("add", "added successfully", []string{tempFile})
 
@@ -162,7 +166,7 @@ func TestDeleteSubcommand(t *testing.T) {
 	})
 
 	t.Run("Delete from empty index", func(t *testing.T) {
-		if err := runAndCheckStdoutContains("delete", "not found in index file", []string{tempFile}); err != nil {
+		if err := runAndCheckStdoutContains("delete", "empty index file", []string{tempFile}); err != nil {
 			t.Errorf("Failed to execute 'delete' on empty index: %v", err)
 		}
 	})
