@@ -86,7 +86,7 @@ func LexicalSearch(args LexicalSearchArgs) ([]fileOccurrence, error) {
 	stemmedResults := newStemmedSearchMap[stemmedTerm]
 	nonStemResults := newSearchMap[term]
 
-	// combine stemmed and non-stemmed occurrence numbers
+	// combine stemmed and non-stemmed occurrence numbers to help prioritize files with exact matches
 	resultMap := make(map[string]int32)
 	for _, result := range stemmedResults {
 		resultMap[result.FileName] += result.Occurrence
