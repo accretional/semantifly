@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"reflect"
 	"testing"
 
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
@@ -122,10 +123,16 @@ func TestDBUtils(t *testing.T) {
 	defer conn.Close(ctx)
 
 	// Test row insertion
-	testInsertRow(t, ctx, conn)
+	err = testInsertRow(ctx, conn)
+	if err != nil {
+		t.Fatalf("Failed to insert row: %v", err)
+	}
 
 	// Test query
-	testQueryRow(t, ctx, conn)
+	err = testQueryRow(ctx, conn)
+	if err != nil {
+		t.Fatalf("Failed to query row: %v", err)
+	}
 
 	// Cleanup
 	if err := removeTestingDatabase(); err != nil {
@@ -133,7 +140,7 @@ func TestDBUtils(t *testing.T) {
 	}
 }
 
-func testInsertRow(t *testing.T, ctx context.Context, conn *pgx.Conn) {
+func testInsertRow(ctx context.Context, conn *pgx.Conn) error {
 
 	index := &pb.Index{
 		Entries: []*pb.IndexListEntry{
@@ -151,14 +158,20 @@ func testInsertRow(t *testing.T, ctx context.Context, conn *pgx.Conn) {
 	}
 
 	err := insertRows(ctx, conn, index)
-	assert.NoError(t, err)
+	if err != nil {
+		return fmt.Errorf("failed to insert rows: %v", err)
+	}
 
 	// Delete the test entry
 	_, err = conn.Exec(ctx, "DELETE FROM index_list WHERE name = $1", "Test Entry")
-	assert.NoError(t, err)
+	if err != nil {
+		return fmt.Errorf("failed to delete test entry: %v", err)
+	}
+
+	return nil
 }
 
-func testQueryRow(t *testing.T, ctx context.Context, conn *pgx.Conn) {
+func testQueryRow(ctx context.Context, conn *pgx.Conn) error {
 
 	expectedEntry := &pb.IndexListEntry{
 		Name:              "Test Entry",
@@ -176,20 +189,48 @@ func testQueryRow(t *testing.T, ctx context.Context, conn *pgx.Conn) {
 	}
 
 	err := insertRows(ctx, conn, index)
-	assert.NoError(t, err)
+	if err != nil {
+		return fmt.Errorf("failed to insert rows: %v", err)
+	}
 
 	entry, err := queryRow(ctx, conn, "Test Entry")
+	if err != nil {
+		return fmt.Errorf("failed to query row: %v", err)
+	}
 
-	assert.NoError(t, err)
-	assert.NotNil(t, entry)
-	assert.Equal(t, expectedEntry.Name, entry.Name)
-	assert.Equal(t, expectedEntry.URI, entry.URI)
-	assert.Equal(t, expectedEntry.DataType, entry.DataType)
-	assert.Equal(t, expectedEntry.SourceType, entry.SourceType)
-	assert.Equal(t, expectedEntry.Content, entry.Content)
-	assert.Equal(t, expectedEntry.WordOccurrences, entry.WordOccurrences)
+	if entry == nil {
+		return fmt.Errorf("entry is nil")
+	}
+
+	if expectedEntry.Name != entry.Name {
+		return fmt.Errorf("expected name %s, got %s", expectedEntry.Name, entry.Name)
+	}
+
+	if expectedEntry.URI != entry.URI {
+		return fmt.Errorf("expected URI %s, got %s", expectedEntry.URI, entry.URI)
+	}
+
+	if expectedEntry.DataType != entry.DataType {
+		return fmt.Errorf("expected DataType %v, got %v", expectedEntry.DataType, entry.DataType)
+	}
+
+	if expectedEntry.SourceType != entry.SourceType {
+		return fmt.Errorf("expected SourceType %v, got %v", expectedEntry.SourceType, entry.SourceType)
+	}
+
+	if expectedEntry.Content != entry.Content {
+		return fmt.Errorf("expected Content %s, got %s", expectedEntry.Content, entry.Content)
+	}
+
+	if !reflect.DeepEqual(expectedEntry.WordOccurrences, entry.WordOccurrences) {
+		return fmt.Errorf("expected WordOccurrences %v, got %v", expectedEntry.WordOccurrences, entry.WordOccurrences)
+	}
 
 	// Delete the test entry
 	_, err = conn.Exec(ctx, "DELETE FROM index_list WHERE name = $1", "Test Entry")
-	assert.NoError(t, err)
+	if err != nil {
+		return fmt.Errorf("failed to delete test entry: %v", err)
+	}
+
+	return nil
 }
