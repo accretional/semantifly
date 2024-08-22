@@ -7,7 +7,6 @@ import (
 	"path"
 	"sort"
 
-	"github.com/bzick/tokenizer"
 	"github.com/kljensen/snowball"
 
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
@@ -27,62 +26,6 @@ type fileOccurrence struct {
 
 type occurrenceList []fileOccurrence
 type searchMap map[string]occurrenceList // Search Map maps search terms to TermMaps
-
-func buildDictionary(content *string) (map[string]int32, error) {
-	// check for nil pointer
-	wordMap := make(map[string]int32)
-	if content == nil {
-		return wordMap, nil
-	} else if *content == "" {
-		return wordMap, nil
-	}
-
-	parser := tokenizer.New()
-	parser.AllowKeywordUnderscore()
-	fileContent := *content
-
-	// parse file content
-	stream := parser.ParseString(fileContent)
-	defer stream.Close()
-
-	for stream.IsValid() {
-		token := stream.CurrentToken()
-		if token.IsNumber() {
-			wordMap[token.ValueString()]++
-		} else if token.IsKeyword() || token.IsString() {
-			stemmedWord, err := snowball.Stem(token.ValueString(), "english", true)
-			if err != nil {
-				return nil, fmt.Errorf("failed to stem word: %w", err)
-			}
-			wordMap[stemmedWord]++
-		}
-		stream.GoNext()
-	}
-
-	return wordMap, nil
-}
-
-func createSearchDictionary(ile *pb.IndexListEntry) error {
-	srcFile, err := os.Open(ile.URI)
-
-	if err != nil {
-		return fmt.Errorf("failed to open source file: %w", err)
-	}
-	defer srcFile.Close()
-
-	content, err := io.ReadAll(srcFile)
-	if err != nil {
-		return fmt.Errorf("failed to read source file: %w", err)
-	}
-
-	fileContent := string(content)
-
-	ile.WordOccurrences, err = buildDictionary(&fileContent)
-	if err != nil {
-		return fmt.Errorf("failed to build word occurence map: %w", err)
-	}
-	return nil
-}
 
 // LexicalSearch performs a search in the index for the specified term and returns the top N results ranked by the frequency of the term.
 func LexicalSearch(args LexicalSearchArgs) ([]fileOccurrence, error) {
