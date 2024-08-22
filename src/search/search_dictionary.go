@@ -33,7 +33,7 @@ func CreateSearchDictionary(ile *pb.IndexListEntry) error {
 	parser := tokenizer.New()
 	parser.AllowKeywordUnderscore()
 
-	// parse file content
+	// parse and tokenize file content
 	stream := parser.ParseString(fileContent)
 	defer stream.Close()
 
