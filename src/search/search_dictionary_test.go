@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-func TestBuildDictionary(t *testing.T) {
+func TestBuildDictionaryWithStemming(t *testing.T) {
 	tests := []struct {
 		name        string
 		input       string
@@ -76,7 +76,7 @@ func TestBuildDictionary(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := buildDictionary(&tt.input)
+			result, err := buildDictionary(&tt.input, true)
 			if (err != nil) != tt.expectError {
 				t.Errorf("buildDictionary() error = %v, expectError %v", err, tt.expectError)
 				return

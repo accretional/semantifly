@@ -16,7 +16,7 @@ import (
 // It takes a pointer to an IndexListEntry as input and returns an error if any issues occur
 // during content fetching or processing.
 
-func buildDictionary(content *string) (map[string]int32, error) {
+func buildDictionary(content *string, stem bool) (map[string]int32, error) {
 	// check for nil pointer
 	wordMap := make(map[string]int32)
 	if content == nil {
@@ -65,7 +65,8 @@ func CreateSearchDictionary(ile *pb.IndexListEntry) error {
 
 	fileContent := string(content)
 
-	ile.WordOccurrences, err = buildDictionary(&fileContent)
+	// build stemmed dictionary
+	ile.WordOccurrences, err = buildDictionary(&fileContent, true)
 	if err != nil {
 		return fmt.Errorf("failed to build word occurence map: %w", err)
 	}
