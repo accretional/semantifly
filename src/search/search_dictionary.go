@@ -2,12 +2,11 @@ package search
 
 import (
 	"fmt"
-	"io"
-	"os"
 
 	"github.com/bzick/tokenizer"
 	"github.com/kljensen/snowball"
 
+	fetch "accretional.com/semantifly/fetcher"
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 )
 
@@ -17,19 +16,12 @@ import (
 // during content fetching or processing.
 
 func CreateSearchDictionary(ile *pb.IndexListEntry) error {
-	srcFile, err := os.Open(ile.URI)
-
+	content, err := fetch.FetchFromSource(ile.SourceType, ile.URI)
 	if err != nil {
 		return fmt.Errorf("failed to open source file: %w", err)
 	}
-	defer srcFile.Close()
 
-	content, err := io.ReadAll(srcFile)
-	if err != nil {
-		return fmt.Errorf("failed to read source file: %w", err)
-	}
-
-	if content == nil || len(content) == 0 {
+	if len(content) == 0 {
 		return nil
 	}
 
