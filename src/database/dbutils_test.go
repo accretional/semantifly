@@ -10,6 +10,7 @@ import (
 
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 	"github.com/go-pg/pg/v10"
+	"github.com/jackc/pgx/v5"
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -30,7 +31,7 @@ func setupPostgres() error {
 
 	err = cmd.Run()
 	if err != nil {
-		return fmt.Errorf("Failed to setup PostgreSQL server.")
+		return fmt.Errorf("Failed to setup PostgreSQL server: %v", err)
 	}
 
 	return nil
@@ -82,8 +83,14 @@ func removeTestingDatabase() error {
 	})
 	defer defaultDB.Close()
 
+	// Terminate all connections to the test database
+	_, err := defaultDB.Exec("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'testdb'")
+	if err != nil {
+		return fmt.Errorf("Failed to terminate connections to test database: %v", err)
+	}
+
 	// Drop the test database
-	_, err := defaultDB.Exec("DROP DATABASE testdb")
+	_, err = defaultDB.Exec("DROP DATABASE IF EXISTS testdb")
 	if err != nil {
 		return fmt.Errorf("Failed to drop test database: %v", err)
 	}
@@ -91,7 +98,7 @@ func removeTestingDatabase() error {
 	return nil
 }
 
-func TestEstablishConnection(t *testing.T) {
+func TestDBUtils(t *testing.T) {
 
 	if err := setupPostgres(); err != nil {
 		t.Fatalf("Failed to setup Postgres server: %v", err)
@@ -107,35 +114,26 @@ func TestEstablishConnection(t *testing.T) {
 	}
 	defer db.Close()
 
+	// Test connection
 	ctx := context.Background()
 	conn, err := establishConnection(ctx)
-	assert.NoError(t, err)
-	assert.NotNil(t, conn)
 
-	conn.Close(ctx)
-	removeTestingDatabase()
-}
-
-func TestInsertRow(t *testing.T) {
-
-	if err := setupPostgres(); err != nil {
-		t.Fatalf("Failed to setup Postgres server: %v", err)
-	}
-
-	// Set a mock DATABASE_URL for testing
-	os.Setenv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/testdb")
-	defer os.Unsetenv("DATABASE_URL")
-
-	db, err := createTestingDatabase()
-	if err != nil {
-		t.Fatalf("Failed to create test database: %v", err)
-	}
-	defer db.Close()
-
-	ctx := context.Background()
-	conn, err := establishConnection(ctx)
 	assert.NoError(t, err)
 	defer conn.Close(ctx)
+
+	// Test row insertion
+	testInsertRow(t, ctx, conn)
+
+	// Test query
+	testQueryRow(t, ctx, conn)
+
+	// Cleanup
+	if err := removeTestingDatabase(); err != nil {
+		t.Fatalf("Failed to remove test database: %v", err)
+	}
+}
+
+func testInsertRow(t *testing.T, ctx context.Context, conn *pgx.Conn) {
 
 	index := &pb.Index{
 		Entries: []*pb.IndexListEntry{
@@ -152,36 +150,15 @@ func TestInsertRow(t *testing.T) {
 		},
 	}
 
-	err = insertRows(ctx, conn, index)
+	err := insertRows(ctx, conn, index)
 	assert.NoError(t, err)
 
 	// Delete the test entry
 	_, err = conn.Exec(ctx, "DELETE FROM index_list WHERE name = $1", "Test Entry")
 	assert.NoError(t, err)
-
-	removeTestingDatabase()
 }
 
-func TestQueryRow(t *testing.T) {
-
-	if err := setupPostgres(); err != nil {
-		t.Fatalf("Failed to setup Postgres server: %v", err)
-	}
-
-	// Set a mock DATABASE_URL for testing
-	os.Setenv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/testdb")
-	defer os.Unsetenv("DATABASE_URL")
-
-	db, err := createTestingDatabase()
-	if err != nil {
-		t.Fatalf("Failed to create test database: %v", err)
-	}
-	defer db.Close()
-
-	ctx := context.Background()
-	conn, err := establishConnection(ctx)
-	assert.NoError(t, err)
-	defer conn.Close(ctx)
+func testQueryRow(t *testing.T, ctx context.Context, conn *pgx.Conn) {
 
 	expectedEntry := &pb.IndexListEntry{
 		Name:              "Test Entry",
@@ -198,7 +175,7 @@ func TestQueryRow(t *testing.T) {
 		Entries: []*pb.IndexListEntry{expectedEntry},
 	}
 
-	err = insertRows(ctx, conn, index)
+	err := insertRows(ctx, conn, index)
 	assert.NoError(t, err)
 
 	entry, err := queryRow(ctx, conn, "Test Entry")
@@ -215,6 +192,4 @@ func TestQueryRow(t *testing.T) {
 	// Delete the test entry
 	_, err = conn.Exec(ctx, "DELETE FROM index_list WHERE name = $1", "Test Entry")
 	assert.NoError(t, err)
-
-	removeTestingDatabase()
 }
