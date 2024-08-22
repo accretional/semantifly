@@ -2,7 +2,6 @@ package subcommands
 
 import (
 	"fmt"
-	"io"
 	"math"
 	"os"
 	"path"

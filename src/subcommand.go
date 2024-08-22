@@ -126,7 +126,7 @@ func CommandReadRun() {
 	case "add":
 		cmd := flag.NewFlagSet("add", flag.ExitOnError)
 		dataType := cmd.String("type", "text", "The type of the input data")
-		sourceType := cmd.String("source-type", "local_file", "How to access the content")
+		sourceType := cmd.String("source-type", "", "How to access the content")
 		makeLocalCopy := cmd.Bool("copy", false, "Whether to copy and use the file as it is now, or dynamically access it")
 		indexPath := cmd.String("index-path", "", "Path to the index file")
 
@@ -144,6 +144,14 @@ func CommandReadRun() {
 		}
 
 		cmd.Parse(reorderedArgs)
+
+		if *sourceType == "" {
+			sourceTypeStr, err := inferSourceType(cmd.Args())
+			if err != nil {
+				printCmdErr(fmt.Sprintf("Failed to infer source type from URIs: %v\n", err))
+			}
+			*sourceType = sourceTypeStr
+		}
 
 		args := subcommands.AddArgs{
 			IndexPath:  *indexPath,
@@ -288,4 +296,18 @@ func CommandReadRun() {
 
 func loadIndex(indexDir string) {
 	fmt.Println("loadIndex in commands.go is unimplemented")
+}
+
+func inferSourceType(uris []string) (string, error) {
+	sourceTypeStr := "local_file"
+
+	for _, u := range uris {
+		if strings.HasPrefix(u, "http://") || strings.HasPrefix(u, "https://") {
+			sourceTypeStr = "webpage"
+		} else if sourceTypeStr == "webpage" {
+			return "", fmt.Errorf("inconsistent URI source types")
+		}
+	}
+
+	return sourceTypeStr, nil
 }
