@@ -111,7 +111,6 @@ func LexicalSearch(args LexicalSearchArgs) ([]fileOccurrence, error) {
 	if len(combinedResults) > args.TopN {
 		combinedResults = combinedResults[:args.TopN]
 	}
-	PrintSearchResults(combinedResults)
 
 	return combinedResults, nil
 }
