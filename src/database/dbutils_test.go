@@ -7,7 +7,9 @@ import (
 	"os"
 	"os/exec"
 	"reflect"
+	"strings"
 	"testing"
+	"time"
 
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 	"github.com/go-pg/pg/v10"
@@ -100,6 +102,8 @@ func removeTestingDatabase() error {
 }
 
 func TestDBUtils(t *testing.T) {
+	const maxRetries = 3
+	var err error
 
 	if err := setupPostgres(); err != nil {
 		t.Fatalf("Failed to setup Postgres server: %v", err)
@@ -109,9 +113,17 @@ func TestDBUtils(t *testing.T) {
 	os.Setenv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/testdb")
 	defer os.Unsetenv("DATABASE_URL")
 
-	db, err := createTestingDatabase()
+	var db *pg.DB
+	for i := 0; i < maxRetries; i++ {
+		db, err = createTestingDatabase()
+		if err == nil || !strings.Contains(err.Error(), "connection reset by peer") {
+			break
+		}
+		t.Logf("Failed to create test database: Connection Reset by peer. Retrying...")
+		time.Sleep(time.Second * 2)
+	}
 	if err != nil {
-		t.Fatalf("Failed to create test database: %v", err)
+		t.Fatalf("Failed to create test database after %d attempts: %v", maxRetries, err)
 	}
 	defer db.Close()
 
