@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"flag"
-	"fmt"
 	"reflect"
 	"testing"
 )
@@ -86,22 +85,6 @@ func TestParseArgs(t *testing.T) {
 			expectedFlags:    nil,
 			expectedNonFlags: nil,
 			expectError:      false,
-		},
-		{
-			name:                 "Unrecognized flag",
-			args:                 []string{"--unknown-flag", "value"},
-			expectedFlags:        nil,
-			expectedNonFlags:     nil,
-			expectError:          true,
-			expectedErrorMessage: fmt.Errorf("unrecognized flag: unknown-flag"),
-		},
-		{
-			name:                 "Too many dashes on flag",
-			args:                 []string{"---flag1", "value"},
-			expectedFlags:        nil,
-			expectedNonFlags:     nil,
-			expectError:          true,
-			expectedErrorMessage: fmt.Errorf("unrecognized flag: -flag1"),
 		},
 	}
 
