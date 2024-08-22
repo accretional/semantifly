@@ -112,7 +112,7 @@ func TestGetSubcommand(t *testing.T) {
 
 	t.Run("Get after delete", func(t *testing.T) {
 		runAndCheckStdoutContains("delete", "deleted successfully", []string{tempFile})
-		if err := runAndCheckStdoutContains("get", "empty index file", []string{tempFile}); err != nil {
+		if err := runAndCheckStdoutContains("get", "not found in index file", []string{tempFile}); err != nil {
 			t.Errorf("Failed to execute 'get' after delete: %v", err)
 		}
 	})
@@ -162,7 +162,7 @@ func TestDeleteSubcommand(t *testing.T) {
 	})
 
 	t.Run("Delete from empty index", func(t *testing.T) {
-		if err := runAndCheckStdoutContains("delete", "empty index file", []string{tempFile}); err != nil {
+		if err := runAndCheckStdoutContains("delete", "not found in index file", []string{tempFile}); err != nil {
 			t.Errorf("Failed to execute 'delete' on empty index: %v", err)
 		}
 	})
