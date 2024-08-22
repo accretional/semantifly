@@ -145,7 +145,7 @@ func testInsertRow(t *testing.T, ctx context.Context, conn *pgx.Conn) {
 				FirstAddedTime:    timestamppb.Now(),
 				LastRefreshedTime: timestamppb.Now(),
 				Content:           "Test Content",
-				WordOccurrences:   map[string]int32{"test": 1},
+				WordOccurrences:   map[string]int32{"test": 1, "content": 1},
 			},
 		},
 	}
@@ -168,7 +168,7 @@ func testQueryRow(t *testing.T, ctx context.Context, conn *pgx.Conn) {
 		FirstAddedTime:    timestamppb.Now(),
 		LastRefreshedTime: timestamppb.Now(),
 		Content:           "Test Content",
-		WordOccurrences:   map[string]int32{"test": 1},
+		WordOccurrences:   map[string]int32{"test": 1, "content": 1},
 	}
 
 	index := &pb.Index{
