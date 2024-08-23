@@ -194,7 +194,10 @@ func executeAdd(args []string) {
 		DataURIs:   cmd.Args(),
 	}
 
-	subcommands.Add(addArgs)
+	err = subcommands.Add(addArgs)
+	if err != nil {
+		fmt.Printf("Error occurred during add subcommand: %v", err)
+	}
 }
 
 func executeDelete(args []string) {
@@ -222,7 +225,10 @@ func executeDelete(args []string) {
 		DataURIs:   cmd.Args(),
 	}
 
-	subcommands.Delete(deleteArgs)
+	err = subcommands.Delete(deleteArgs)
+	if err != nil {
+		fmt.Printf("Error occurred during delete subcommand: %v", err)
+	}
 }
 
 func executeGet(args []string) {
@@ -248,7 +254,10 @@ func executeGet(args []string) {
 		Name:      cmd.Args()[0],
 	}
 
-	subcommands.Get(getArgs)
+	_, err = subcommands.Get(getArgs)
+	if err != nil {
+		fmt.Printf("Error occurred during get subcommand: %v", err)
+	}
 }
 
 func executeUpdate(args []string) {
@@ -281,7 +290,10 @@ func executeUpdate(args []string) {
 		DataURI:    cmd.Args()[1],
 	}
 
-	subcommands.Update(updateArgs)
+	err = subcommands.Update(updateArgs)
+	if err != nil {
+		fmt.Printf("Error occurred during update subcommand: %v", err)
+	}
 }
 
 func executeSearch(args []string) {

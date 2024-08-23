@@ -24,13 +24,12 @@ type DeleteArgs struct {
 //   - If there is an error searching for a URI in the index, an error message is printed and the URI is skipped.
 //   - If there is an error deleting a URI from the index, an error message is printed and the URI is skipped.
 //   - If there is an error deleting the associated data file, an error message is printed.
-func Delete(d DeleteArgs) {
+func Delete(d DeleteArgs) error {
 	indexFilePath := path.Join(d.IndexPath, indexFile)
 
 	indexMap, err := readIndex(indexFilePath, false)
 	if err != nil {
-		fmt.Printf("Failed to read the index file: %v", err)
-		return
+		return fmt.Errorf("failed to read the index file: %v", err)
 	}
 
 	for _, uri := range d.DataURIs {
@@ -52,9 +51,10 @@ func Delete(d DeleteArgs) {
 	}
 
 	if err := writeIndex(indexFilePath, indexMap); err != nil {
-		fmt.Printf("Failed to write to the index file: %v", err)
-		return
+		return fmt.Errorf("failed to write to the index file: %v", err)
 	}
+
+	return nil
 }
 
 // deleteCopy deletes a copied file with the given name from the specified index path.

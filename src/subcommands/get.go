@@ -12,20 +12,19 @@ type GetArgs struct {
 	Name      string
 }
 
-func Get(g GetArgs) {
+func Get(g GetArgs) (string, error) {
 	indexFilePath := path.Join(g.IndexPath, indexFile)
 
 	indexMap, err := readIndex(indexFilePath, false)
 	if err != nil {
-		fmt.Printf("Failed to read the index file: %v", err)
-		return
+		return "", fmt.Errorf("failed to read the index file: %v", err)
 	}
 
 	targetEntry := indexMap[g.Name]
 
 	if targetEntry == nil {
 		fmt.Printf("entry '%s' not found in index file %s\n", g.Name, indexFilePath)
-		return
+		return "", fmt.Errorf("entry '%s' not found in index file %s", g.Name, indexFilePath)
 	}
 
 	if targetEntry.Content != "" {
@@ -34,16 +33,18 @@ func Get(g GetArgs) {
 		content, err := fetchFromCopy(g.IndexPath, g.Name)
 		if content == nil {
 			if err != nil {
-				fmt.Printf("Failed to read content from copy: %v. Fetching from the source.\n", err)
+				fmt.Printf("failed to read content from copy: %v. Fetching from the source.\n", err)
 			}
 
 			content, err = fetch.FetchFromSource(targetEntry.SourceType, targetEntry.URI)
 			if err != nil {
-				fmt.Printf("Failed to read content from source: %v.\n", err)
-				return
+				return "", fmt.Errorf("failed to read content from source: %v", err)
 			}
 		}
 
 		fmt.Println(string(content))
+		return string(content), nil
 	}
+
+	return targetEntry.Content, nil
 }

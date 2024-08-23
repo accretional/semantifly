@@ -1,0 +1,79 @@
+syntax = "proto3";
+
+package semantifly;
+
+option go_package = "accretional.com/semantifly/proto";
+
+service Semantifly {
+  rpc Add(AddRequest) returns (AddResponse) {}
+  rpc Delete(DeleteRequest) returns (DeleteResponse) {}
+  rpc Get(GetRequest) returns (GetResponse) {}
+  rpc Update(UpdateRequest) returns (UpdateResponse) {}
+  rpc Search(SearchRequest) returns (SearchResponse) {}
+}
+
+message AddRequest {
+  string index_path = 1;
+  string data_type = 2;
+  string source_type = 3;
+  bool make_copy = 4;
+  repeated string data_uris = 5;
+}
+
+message AddResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message DeleteRequest {
+  string index_path = 1;
+  bool delete_copy = 2;
+  repeated string data_uris = 3;
+}
+
+message DeleteResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message GetRequest {
+  string index_path = 1;
+  string name = 2;
+}
+
+message GetResponse {
+  bool success = 1;
+  string content = 2;
+  string message = 3;
+}
+
+message UpdateRequest {
+  string index_path = 1;
+  string name = 2;
+  string data_type = 3;
+  string source_type = 4;
+  string update_copy = 5;
+  string data_uri = 6;
+}
+
+message UpdateResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message SearchRequest {
+  string index_path = 1;
+  string search_term = 2;
+  int32 top_n = 3;
+}
+
+message SearchResponse {
+  bool success = 1;
+  repeated SearchResult results = 2;
+  string message = 3;
+}
+
+message SearchResult {
+  string name = 1;
+  float score = 2;
+}

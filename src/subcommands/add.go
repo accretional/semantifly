@@ -5,8 +5,8 @@ import (
 	"path"
 
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
-	"google.golang.org/protobuf/types/known/timestamppb"
 	search "accretional.com/semantifly/search"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type AddArgs struct {
@@ -17,25 +17,22 @@ type AddArgs struct {
 	DataURIs   []string
 }
 
-func Add(a AddArgs) {
+func Add(a AddArgs) error {
 
 	dataType, err := parseDataType(a.DataType)
 	if err != nil {
-		fmt.Printf("Error in parsing DataType: %v\n", err)
-		return
+		return fmt.Errorf("Error in parsing DataType: %v\n", err)
 	}
 
 	sourceType, err := parseSourceType(a.SourceType)
 	if err != nil {
-		fmt.Printf("Error in parsing SourceType: %v\n", err)
-		return
+		return fmt.Errorf("Error in parsing SourceType: %v\n", err)
 	}
 
 	indexFilePath := path.Join(a.IndexPath, indexFile)
 	indexMap, err := readIndex(indexFilePath, true)
 	if err != nil {
-		fmt.Printf("Failed to read the index file: %v", err)
-		return
+		return fmt.Errorf("Failed to read the index file: %v", err)
 	}
 
 	for _, u := range a.DataURIs {
@@ -72,7 +69,8 @@ func Add(a AddArgs) {
 	}
 
 	if err := writeIndex(indexFilePath, indexMap); err != nil {
-		fmt.Printf("Failed to write to the index file: %v", err)
-		return
+		return fmt.Errorf("Failed to write to the index file: %v", err)
 	}
+
+	return nil
 }

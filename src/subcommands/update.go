@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"path"
 
+	fetch "accretional.com/semantifly/fetcher"
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
-	fetch "accretional.com/semantifly/fetcher"
 )
 
 type UpdateArgs struct {
@@ -18,37 +18,33 @@ type UpdateArgs struct {
 	DataURI    string
 }
 
-func Update(u UpdateArgs) {
+func Update(u UpdateArgs) error {
 	indexFilePath := path.Join(u.IndexPath, indexFile)
 
 	indexMap, err := readIndex(indexFilePath, false)
 	if err != nil {
-		fmt.Printf("Failed to read the index file: %v", err)
-		return
+		return fmt.Errorf("failed to read the index file: %v", err)
 	}
 
 	if err := updateIndex(indexMap, &u); err != nil {
-		fmt.Printf("Failed to update the index entry %s: %v", u.Name, err)
+		return fmt.Errorf("failed to update the index entry %s: %v", u.Name, err)
 	}
 
 	if err := writeIndex(indexFilePath, indexMap); err != nil {
-		fmt.Printf("Failed to write to the index file: %v", err)
-		return
+		return fmt.Errorf("failed to write to the index file: %v", err)
 	}
 
 	if u.UpdateCopy == "true" {
 
 		sourceType, err := parseSourceType(u.SourceType)
 		if err != nil {
-			fmt.Printf("Invalid source type: %v", err)
-			return
+			return fmt.Errorf("invalid source type: %v", err)
 		}
 
 		content, err := fetch.FetchFromSource(sourceType, u.DataURI)
 
 		if err != nil {
-			fmt.Printf("Failed to validate the URI %s: %v\n", u, err)
-			return
+			return fmt.Errorf("failed to validate the URI %s: %v\n", u, err)
 		}
 
 		ile := &pb.IndexListEntry{
@@ -60,12 +56,12 @@ func Update(u UpdateArgs) {
 		}
 
 		if err := makeCopy(u.IndexPath, ile); err != nil {
-			fmt.Printf("Failed to update the copy of the source file: %v", err)
-			return
+			return fmt.Errorf("failed to update the copy of the source file: %v", err)
 		}
 	}
 
 	fmt.Printf("Index %s updated successfully to URI %s\n", u.Name, u.DataURI)
+	return nil
 }
 
 func updateIndex(indexMap map[string]*pb.IndexListEntry, u *UpdateArgs) error {
