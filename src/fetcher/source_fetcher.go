@@ -35,8 +35,6 @@ func FetchFromSource(sourceType pb.SourceType, uri string) ([]byte, error) {
 }
 
 func fetchFromFile(uri string) ([]byte, error) {
-	fmt.Println("uri")
-	fmt.Println(uri)
 	f, err := os.Stat(uri)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {

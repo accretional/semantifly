@@ -17,12 +17,17 @@ message AddRequest {
   string data_type = 2;
   string source_type = 3;
   bool make_copy = 4;
-  repeated FileContent files = 5;
+  repeated string data_uris = 5;
 }
 
 message FileContent {
   string name = 1;
   bytes content = 2;
+}
+
+message AddResponse {
+  bool success = 1;
+  string message = 2;
 }
 
 message DeleteRequest {
