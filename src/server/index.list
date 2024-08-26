@@ -1,428 +1,0 @@
-
-±
-5/workspace/semantifly/src/search/search_dictionary.go5/workspace/semantifly/src/search/search_dictionary.go*ôÊ³¶½ƒà–B
-
-importB
-pointerB
-orB
-
-SourceTypeB
-ValueStringB
-stemmedWordB
-0B
-
-githubB	
-bzickB
-byB
-mapB	
-inputB
-ifB
-
-ErrorfB	
-tokenB
-
-tokenizingB
-makeB	
-CloseB
-elseB
-IsStringB
-stemB
-kljensenB	
-protoB
-itsB
-
-issuesB	
-occurB
-fileB
-StemB
-	tokenizerB
-andB
-frequenciesB
-toB	
-deferB
-fmtB
-createSearchDictionaryB
-theB
-aB
-
-processingB
-funcB
-wB
-fetcherB
-
-sourceB	
-parseB
-
-streamB
-
-GoNextB
-packageB
-comB
-snowballB
-contentB
-withB
-ItB	
-takesB
-IsNumberB
-returnsB	
-errorB
-ile	B
-nilB
-lenB
-AllowKeywordUnderscoreB
-forB
-
-searchB	
-fetchB
-accretionalB
-CreateSearchDictionaryB
-
-stringB
-
-parserB
-IsValidB
-fromB
-
-duringB
-errB
-IndexListEntryB
-wordB
-asB
-FetchFromSourceB
-
-returnB
-openB
-32B
-StemmedWordOccurrencesB
-anB
-fetchingB
-WordOccurrencesB
-URIB
-englishB
-trueB
-	processesB
-
-populatingB
-anyB
-intB
-NewB
-tokenizeB
-
-semantiflyB
-pbB
-
-failedB
-fileContentB
-ParseStringB
-CurrentTokenB
-	IsKeywordJ
-fetcherJ
-errJ
-uriJ
-
-packagJ
-processJ	
-occurJ
-fileJ
-englishJ	
-tokenJ
-failJ
-lenJ
-0J
-isvalidJ
-pbJ	
-protoJ
-itJ
-theJ	
-populJ
-nilJ	
-isstrJ
-
-searchJ
-
-semantifliJ
-funcJ
-openJ
-stemmedwordoccurrJ	
-closeJ
-
-isnumbJ
-
-githubJ
-createsearchdictionariJ
-wordJ
-asJ
-aniJ
-makeJ
-newJ
-snowbalJ
-
-gonextJ	
-fetchJ
-withJ
-toJ
-wJ
-mapJ
-filecontJ
-intJ
-forJ
-dureJ
-fetchfromsourcJ
-
-errorfJ
-
-streamJ	
-errorJ	
-inputJ
-	sourcetypJ
-currenttokenJ
-fmtJ	
-bzickJ
-kljensenJ
-indexlistentriJ
-contentJ
-frequencJ
-pointerJ
-issuJ
-comJ
-ile	J
-
-stringJ
-orJ
-anJ
-fromJ
-aJ
-
-returnJ
-32J	
-deferJ
-elsJ
-
-accretJ
-parsJ
-valuestrJ
-stemmedwordJ
-trueJ
-byJ
-takeJ
-ifJ
-parsestrJ
-
-importJ
-andJ
-
-wordoccurrJ
-
-parserJ
-allowkeywordunderscorJ
-	iskeywordJ
-stemJ	
-sourc
-ý
-,/workspace/semantifly/src/subcommands/add.go,/workspace/semantifly/src/subcommands/add.go*ÖÊ³¶­›€öB
-
-returnB
-JoinB	
-knownB
-IndexListEntryB
-timestamppbB
-	readIndexB
-withoutB
-trueB	
-typesB
-
-PrintfB
-forB
-withB
-nilB
-ifB
-
-structB
-pathB
-parseSourceTypeB
-refreshB
-indexFilePathB
-DataTypeB
-accretionalB
-sB
-orgB
-URIB
-hasB
-parsingB
-toB	
-addedB
-
-searchB
-AddArgsB
-FirstAddedTimeB
-nB
-uB
-aB
-
-semantiflyB
-makeCopyB
-packageB	
-writeB	
-IndexB
-
-SourceTypeB
-fmt	B	
-protoB	
-rangeB
-
-FailedB
-subcommandsB
-	IndexPathB
-NowB
-inB
-
-writeIndexB
-CreateSearchDictionaryB	
-ErrorB
-dataTypeB
-makeB
-boolB
-
-stringB
-funcB
-	indexFileB
-
-googleB
-pbB
-
-ErrorfB
-
-sourceTypeB
-
-failedB
-typeB
-errB
-
-importB
-continueB
-successfullyB
-beenB
-
-dictionaryB
-indexMapB
-alreadyB
-fileB
-MakeCopyB
-DataURIsB	
-errorB
-NameB
-
-golangB
-AddB
-_B
-readB
-comB
-
-createB
-protobufB
-copyB
-vB
-FileB
-theB
-parseDataTypeB
-ileB	
-indexB
-SkippingJ
-trueJ
-createsearchdictionariJ
-
-dictionariJ
-pbJ
-orgJ
-parsJ
-successJ
-
-semantifliJ
-indexmapJ
-ileJ
-toJ
-	sourcetypJ
-rangJ
-fmt	J
-makecopiJ
-datauriJ
-pathJ
-makeJ
-errJ
-failJ
-adJ
-
-addargJ
-indexfilJ	
-creatJ
-nowJ
-sJ
-skipJ
-
-printfJ
-
-accretJ
-timestamppbJ	
-knownJ
-indexlistentriJ
-
-stringJ
-indexfilepathJ
-uriJ	
-indexJ
-firstaddedtimJ
-theJ
-joinJ
-hasJ
-funcJ	
-errorJ
-
-structJ
-inJ
-forJ
-ifJ
-alreadiJ
-nJ
-aJ
-
-errorfJ
-parsedatatypJ
-protobufJ
-beenJ
-
-searchJ
-boolJ
-nameJ
-withJ
-nilJ
-	indexpathJ
-datatypJ	
-writeJ
-addJ
-
-returnJ
-refreshJ
-parsesourcetypJ
-
-importJ
-uJ
-continuJ	
-protoJ
-fileJ
-_J
-
-packagJ
-
-writeindexJ
-copiJ
-readJ	
-googlJ
-vJ
-	readindexJ
-
-subcommandJ
-comJ
-
-golangJ
-typeJ
-without
