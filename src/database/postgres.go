@@ -62,7 +62,7 @@ func initializeDatabaseSchema(ctx context.Context, conn PgxIface) error {
         return fmt.Errorf("failed to create indexes: %w", err)
     }
 
-    // Create materialized view if not exists
+    // Create materialized view
     _, err = tx.Exec(ctx, `
         CREATE MATERIALIZED VIEW IF NOT EXISTS mv_index_list AS
         SELECT * FROM index_list
@@ -81,6 +81,13 @@ func initializeDatabaseSchema(ctx context.Context, conn PgxIface) error {
     return nil
 }
 
+
+// insertRows inserts or updates rows in the index_list table and refreshes the materialized view.
+//
+// Parameters:
+//   - ctx: The context for database operations.
+//   - conn: A PgxIface interface for database connection.
+//   - index: A pointer to a pb.Index struct containing the entries to be inserted or updated.
 func insertRows(ctx context.Context, conn PgxIface, index *pb.Index) error {
     tx, err := conn.Begin(ctx)
     if err != nil {
@@ -135,6 +142,17 @@ func insertRows(ctx context.Context, conn PgxIface, index *pb.Index) error {
     return nil
 }
 
+
+// queryRow retrieves a single row from the index_list table based on the provided name.
+// It returns a pointer to a pb.IndexListEntry struct containing the row data, or an error if the query fails.
+//
+// Parameters:
+//   - ctx: The context for database operations.
+//   - conn: A PgxIface interface for database connection.
+//   - name: The name of the index entry to retrieve.
+//
+// Returns:
+//   - *pb.IndexListEntry: A pointer to the retrieved index entry.
 func queryRow(ctx context.Context, conn PgxIface, name string) (*pb.IndexListEntry, error) {
 	tx, err := conn.Begin(ctx)
 	if err != nil {
