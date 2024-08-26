@@ -160,7 +160,29 @@ func appendToIndexLog(indexLog string) {
 	}
 }
 
-func convertToAbsPath()
+func convertToAbsPath(filePath string) (string, error) {
+	absIndexPath, err := filepath.Abs(filePath)
+	if err != nil {
+		return "", fmt.Errorf("error converting index path to absolute: %v", err)
+	}
+	return absIndexPath, nil
+}
+
+func convertUrisToAbsPath(originalArgs []string, isLocalFile bool) ([]string, error) {
+	if !isLocalFile {
+		return originalArgs, nil
+	}
+
+	absolutePaths := make([]string, len(originalArgs))
+	for i, path := range originalArgs {
+		absPath, err := filepath.Abs(path)
+		if err != nil {
+			return make([]string, 0), fmt.Errorf("Error converting path to absolute: %v", err)
+		}
+		absolutePaths[i] = absPath
+	}
+	return absolutePaths, nil
+}
 
 func executeAdd(args []string) {
 	cmd := flag.NewFlagSet("add", flag.ExitOnError)
@@ -183,6 +205,11 @@ func executeAdd(args []string) {
 		return
 	}
 
+	*indexPath, err = convertToAbsPath(*indexPath)
+	if err != nil {
+		printCmdErr(err.Error())
+	}
+
 	if *sourceType == "" {
 		sourceTypeStr, err := inferSourceType(cmd.Args())
 		if err != nil {
@@ -191,30 +218,17 @@ func executeAdd(args []string) {
 		*sourceType = sourceTypeStr
 	}
 
-	// Convert relative paths to absolute paths
-	absolutePaths := make([]string, len(cmd.Args()))
-	for i, path := range cmd.Args() {
-		absPath, err := filepath.Abs(path)
-		if err != nil {
-			printCmdErr(fmt.Sprintf("Error converting path to absolute: %v", err))
-			return
-		}
-		absolutePaths[i] = absPath
-	}
-
-	absIndexPath, err := filepath.Abs(*indexPath)
+	dataUris, err := convertUrisToAbsPath(cmd.Args(), *sourceType == "local_file")
 	if err != nil {
-		printCmdErr(fmt.Sprintf("Error converting index path to absolute: %v", err))
-		return
+		printCmdErr(err.Error())
 	}
-	*indexPath = absIndexPath
 
 	addArgs := &pb.AddRequest{
 		IndexPath:  *indexPath,
 		DataType:   *dataType,
 		SourceType: *sourceType,
 		MakeCopy:   *makeLocalCopy,
-		DataUris:   absolutePaths,
+		DataUris:   dataUris,
 	}
 
 	res, err := grpcclient.Add(addArgs)
@@ -224,6 +238,7 @@ func executeAdd(args []string) {
 	}
 	fmt.Println(res.Message)
 }
+
 func executeDelete(args []string) {
 	cmd := flag.NewFlagSet("delete", flag.ExitOnError)
 	deleteLocalCopy := cmd.Bool("copy", false, "Whether to delete the copy made")
@@ -243,10 +258,26 @@ func executeDelete(args []string) {
 		return
 	}
 
+	// Convert relative paths to absolute paths
+	absolutePaths := make([]string, len(cmd.Args()))
+	for i, path := range cmd.Args() {
+		absPath, err := filepath.Abs(path)
+		if err != nil {
+			printCmdErr(fmt.Sprintf("Error converting path to absolute: %v", err))
+			return
+		}
+		absolutePaths[i] = absPath
+	}
+
+	*indexPath, err = convertToAbsPath(*indexPath)
+	if err != nil {
+		printCmdErr(err.Error())
+	}
+
 	deleteArgs := &pb.DeleteRequest{
 		IndexPath:  *indexPath,
 		DeleteCopy: *deleteLocalCopy,
-		DataUris:   cmd.Args(),
+		DataUris:   absolutePaths,
 	}
 
 	res, err := grpcclient.Delete(deleteArgs)
@@ -273,6 +304,11 @@ func executeGet(args []string) {
 	if len(nonFlags) != 1 {
 		printCmdErr("Get subcommand requires exactly one arg.")
 		return
+	}
+
+	*indexPath, err = convertToAbsPath(*indexPath)
+	if err != nil {
+		printCmdErr(err.Error())
 	}
 
 	getArgs := &pb.GetRequest{
