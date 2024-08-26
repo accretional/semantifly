@@ -20,7 +20,6 @@ import (
 )
 
 func setupPostgres() error {
-
 	err := os.Chdir("../..")
 	if err != nil {
 		return fmt.Errorf("Failed to change directory: %v", err)
