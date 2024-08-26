@@ -39,8 +39,14 @@ func TestAdd(t *testing.T) {
 		DataURIs:   []string{testFilePath},
 	}
 
-	// Call the Add function
-	Add(args)
+	// Create a buffer to capture output
+	var buf bytes.Buffer
+
+	// Call the Add function with the buffer
+	err = Add(args, &buf)
+	if err != nil {
+		t.Fatalf("Add function returned an error: %v", err)
+	}
 
 	// Check if the index file was created
 	indexFilePath := path.Join(tempDir, indexFile)
@@ -81,6 +87,12 @@ func TestAdd(t *testing.T) {
 	if _, err := os.Stat(path.Join(copiesDir, testFilePath)); os.IsNotExist(err) {
 		t.Errorf("Data file for %s was not copied", testFilePath)
 	}
+
+	// Check the output in the buffer
+	output := buf.String()
+	if !strings.Contains(output, "added successfully") {
+		t.Errorf("Expected output to contain 'added successfully', but got '%s'", output)
+	}
 }
 
 func TestAdd_MultipleFilesSamePath(t *testing.T) {
@@ -109,18 +121,15 @@ func TestAdd_MultipleFilesSamePath(t *testing.T) {
 		DataURIs:   []string{testFilePath1, testFilePath2},
 	}
 
-	// Capture stdout
-	oldStdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	Add(args)
-
-	w.Close()
-	os.Stdout = oldStdout
-
+	// Create a buffer to capture output
 	var buf bytes.Buffer
-	io.Copy(&buf, r)
+
+	// Call the Add function with the buffer
+	err = Add(args, &buf)
+	if err != nil {
+		t.Fatalf("Add function returned an error: %v", err)
+	}
+
 	output := buf.String()
 
 	// Checking if the second entry was skipped
@@ -147,7 +156,6 @@ func TestAdd_MultipleFilesSamePath(t *testing.T) {
 }
 
 func TestAdd_Webpage(t *testing.T) {
-
 	// Create a temporary directory for testing
 	tempDir, err := os.MkdirTemp("", "add_test")
 	if err != nil {
@@ -167,8 +175,14 @@ func TestAdd_Webpage(t *testing.T) {
 		DataURIs:   []string{testWebpageURL},
 	}
 
-	// Call the Add function
-	Add(args)
+	// Create a buffer to capture output
+	var buf bytes.Buffer
+
+	// Call the Add function with the buffer
+	err = Add(args, &buf)
+	if err != nil {
+		t.Fatalf("Add function returned an error: %v", err)
+	}
 
 	// Check if the index file was created
 	indexFilePath := path.Join(tempDir, indexFile)
@@ -241,5 +255,11 @@ func TestAdd_Webpage(t *testing.T) {
 	// Validating the contents of the copy file
 	if ile.Content != string(webpageContent) {
 		t.Errorf("Failed to validate webpage copy: Expected \"%s\", got \"%s\"", webpageContent, ile.Content)
+	}
+
+	// Check the output in the buffer
+	output := buf.String()
+	if !strings.Contains(output, "added successfully") {
+		t.Errorf("Expected output to contain 'added successfully', but got '%s'", output)
 	}
 }

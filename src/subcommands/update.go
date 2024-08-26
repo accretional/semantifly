@@ -2,6 +2,7 @@ package subcommands
 
 import (
 	"fmt"
+	"io"
 	"path"
 
 	fetch "accretional.com/semantifly/fetcher"
@@ -18,7 +19,7 @@ type UpdateArgs struct {
 	DataURI    string
 }
 
-func Update(u UpdateArgs) error {
+func Update(u UpdateArgs, w io.Writer) error {
 	indexFilePath := path.Join(u.IndexPath, indexFile)
 
 	indexMap, err := readIndex(indexFilePath, false)
@@ -60,7 +61,7 @@ func Update(u UpdateArgs) error {
 		}
 	}
 
-	fmt.Printf("Index %s updated successfully to URI %s\n", u.Name, u.DataURI)
+	fmt.Fprintf(w, "Index %s updated successfully to URI %s\n", u.Name, u.DataURI)
 	return nil
 }
 

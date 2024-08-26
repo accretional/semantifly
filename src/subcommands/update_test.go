@@ -1,9 +1,11 @@
 package subcommands
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path"
+	"strings"
 	"testing"
 
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
@@ -26,8 +28,8 @@ func TestUpdate(t *testing.T) {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
-	// Set up test arguments
-	args := AddArgs{
+	// Set up test arguments for Add
+	addArgs := AddArgs{
 		IndexPath:  tempDir,
 		DataType:   "text",
 		SourceType: "local_file",
@@ -35,8 +37,14 @@ func TestUpdate(t *testing.T) {
 		DataURIs:   []string{testFilePath},
 	}
 
+	// Create a buffer for Add output
+	var addBuf bytes.Buffer
+
 	// Call the Add function
-	Add(args)
+	err = Add(addArgs, &addBuf)
+	if err != nil {
+		t.Fatalf("Add function returned an error: %v", err)
+	}
 
 	// Check if the index file was created
 	indexFilePath := path.Join(tempDir, indexFile)
@@ -49,10 +57,10 @@ func TestUpdate(t *testing.T) {
 	updatedContent := "test content - updated"
 	err = os.WriteFile(updatedFilePath, []byte(updatedContent), 0644)
 	if err != nil {
-		t.Fatalf("Failed to create test file: %v", err)
+		t.Fatalf("Failed to create updated test file: %v", err)
 	}
 
-	// Set up test arguments
+	// Set up test arguments for Update
 	updateArgs := UpdateArgs{
 		IndexPath:  tempDir,
 		Name:       testFilePath,
@@ -60,8 +68,20 @@ func TestUpdate(t *testing.T) {
 		DataURI:    updatedFilePath,
 	}
 
-	// Call the Add function
-	Update(updateArgs)
+	// Create a buffer for Update output
+	var updateBuf bytes.Buffer
+
+	// Call the Update function
+	err = Update(updateArgs, &updateBuf)
+	if err != nil {
+		t.Fatalf("Update function returned an error: %v", err)
+	}
+
+	// Check the output in the buffer
+	updateOutput := updateBuf.String()
+	if !strings.Contains(updateOutput, "updated successfully") {
+		t.Errorf("Expected output to contain 'updated successfully', but got '%s'", updateOutput)
+	}
 
 	// Read the index file
 	indexMap, err := readIndex(indexFilePath, false)
@@ -71,14 +91,14 @@ func TestUpdate(t *testing.T) {
 
 	// Check if the test file was updated in the index
 	if entry, exists := indexMap[testFilePath]; !exists {
-		t.Errorf("Test file was not added to the index")
+		t.Errorf("Test file was not found in the index")
 	} else {
 		// Verify the entry details
 		if entry.Name != testFilePath {
 			t.Errorf("Expected Name %s, got %s", testFilePath, entry.Name)
 		}
 		if entry.URI != updatedFilePath {
-			t.Errorf("Expected URI %s, got %s", testFilePath, entry.URI)
+			t.Errorf("Expected URI %s, got %s", updatedFilePath, entry.URI)
 		}
 		if entry.DataType != pb.DataType_TEXT {
 			t.Errorf("Expected DataType %v, got %v", pb.DataType_TEXT, entry.DataType)

@@ -13,7 +13,7 @@ import (
 
 // Main is run before every test to set up the testing folder & semantifly
 func TestMain(m *testing.M) {
-	err := os.Chdir("..")
+	err := os.Chdir("../..")
 	if err != nil {
 		fmt.Printf("Failed to change directory: %v\n", err)
 		os.Exit(1)

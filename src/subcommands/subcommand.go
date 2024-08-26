@@ -160,6 +160,8 @@ func appendToIndexLog(indexLog string) {
 	}
 }
 
+func convertToAbsPath()
+
 func executeAdd(args []string) {
 	cmd := flag.NewFlagSet("add", flag.ExitOnError)
 	dataType := cmd.String("type", "text", "The type of the input data")
@@ -200,15 +202,12 @@ func executeAdd(args []string) {
 		absolutePaths[i] = absPath
 	}
 
-	// Convert indexPath to absolute path if it's not empty
-	if *indexPath != "" {
-		absIndexPath, err := filepath.Abs(*indexPath)
-		if err != nil {
-			printCmdErr(fmt.Sprintf("Error converting index path to absolute: %v", err))
-			return
-		}
-		*indexPath = absIndexPath
+	absIndexPath, err := filepath.Abs(*indexPath)
+	if err != nil {
+		printCmdErr(fmt.Sprintf("Error converting index path to absolute: %v", err))
+		return
 	}
+	*indexPath = absIndexPath
 
 	addArgs := &pb.AddRequest{
 		IndexPath:  *indexPath,

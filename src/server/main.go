@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"log"
 	"net"
@@ -15,6 +16,8 @@ type server struct {
 }
 
 func (s *server) Add(ctx context.Context, req *pb.AddRequest) (*pb.AddResponse, error) {
+	var buf bytes.Buffer
+
 	args := subcommands.AddArgs{
 		IndexPath:  req.IndexPath,
 		DataType:   req.DataType,
@@ -23,41 +26,46 @@ func (s *server) Add(ctx context.Context, req *pb.AddRequest) (*pb.AddResponse, 
 		DataURIs:   req.DataUris,
 	}
 
-	err := subcommands.Add(args)
+	err := subcommands.Add(args, &buf)
 	if err != nil {
 		return &pb.AddResponse{Success: false, Message: err.Error()}, nil
 	}
-	return &pb.AddResponse{Success: true, Message: "Data added successfully"}, nil
+	return &pb.AddResponse{Success: true, Message: buf.String()}, nil
 }
 
 func (s *server) Delete(ctx context.Context, req *pb.DeleteRequest) (*pb.DeleteResponse, error) {
+	var buf bytes.Buffer
+
 	args := subcommands.DeleteArgs{
 		IndexPath:  req.IndexPath,
 		DeleteCopy: req.DeleteCopy,
 		DataURIs:   req.DataUris,
 	}
 
-	err := subcommands.Delete(args)
+	err := subcommands.Delete(args, &buf)
 	if err != nil {
 		return &pb.DeleteResponse{Success: false, Message: err.Error()}, nil
 	}
-	return &pb.DeleteResponse{Success: true, Message: "Data deleted successfully"}, nil
+	return &pb.DeleteResponse{Success: true, Message: buf.String()}, nil
 }
 
 func (s *server) Get(ctx context.Context, req *pb.GetRequest) (*pb.GetResponse, error) {
+	var buf bytes.Buffer
+
 	args := subcommands.GetArgs{
 		IndexPath: req.IndexPath,
 		Name:      req.Name,
 	}
 
-	content, err := subcommands.Get(args)
+	content, err := subcommands.Get(args, &buf)
 	if err != nil {
 		return &pb.GetResponse{Success: false, Message: err.Error()}, nil
 	}
-	return &pb.GetResponse{Success: true, Content: content}, nil
+	return &pb.GetResponse{Success: true, Content: content, Message: buf.String()}, nil
 }
 
 func (s *server) Update(ctx context.Context, req *pb.UpdateRequest) (*pb.UpdateResponse, error) {
+	var buf bytes.Buffer
 	args := subcommands.UpdateArgs{
 		IndexPath:  req.IndexPath,
 		Name:       req.Name,
@@ -67,11 +75,11 @@ func (s *server) Update(ctx context.Context, req *pb.UpdateRequest) (*pb.UpdateR
 		DataURI:    req.DataUri,
 	}
 
-	err := subcommands.Update(args)
+	err := subcommands.Update(args, &buf)
 	if err != nil {
 		return &pb.UpdateResponse{Success: false, Message: err.Error()}, nil
 	}
-	return &pb.UpdateResponse{Success: true, Message: "Data updated successfully"}, nil
+	return &pb.UpdateResponse{Success: true, Message: buf.String()}, nil
 }
 
 func (s *server) LexicalSearch(ctx context.Context, req *pb.LexicalSearchRequest) (*pb.LexicalSearchResponse, error) {
