@@ -18,6 +18,47 @@ type entryWithScore struct {
     score float64
 }
 
+func searchIndexByWord(ctx context.Context, conn PgxIface, query string, k int) (*pb.Index, error) {
+	entries, err := fetchEntriesByWordFrequency(ctx, conn, query, k)
+	if err != nil {
+		return nil, err
+	}
+
+	return &pb.Index{Entries: entries}, nil
+}
+
+func fetchEntriesByWordFrequency(ctx context.Context, conn PgxIface, word string, k int) ([]*pb.IndexListEntry, error) {
+	sqlQuery := `
+        SELECT 
+            name, uri, data_type, source_type, first_added_time, last_refreshed_time, content, word_occurrences,
+            (word_occurrences->$1)::int AS word_frequency
+        FROM mv_index_list
+        WHERE word_occurrences ? $1
+        ORDER BY (word_occurrences->$1)::int DESC
+        LIMIT $2
+    `
+
+	rows, err := conn.Query(ctx, sqlQuery, word, k)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute query: %w", err)
+	}
+	defer rows.Close()
+
+	var entries []*pb.IndexListEntry
+	for rows.Next() {
+		entry, err := scanRow(rows)
+		if err != nil {
+			return nil, err
+		}
+		entries = append(entries, entry.entry)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating rows: %w", err)
+	}
+
+	return entries, nil
+}
 
 // searchIndexForTopMatches searches the index for entries matching the given query and returns the top k matches.
 // It fetches matching entries from the database, scores and sorts them based on relevance to the query,
@@ -31,7 +72,7 @@ type entryWithScore struct {
 //
 // Returns:
 //   - *pb.Index: Protobuf Index message containing the top k matching entries
-func searchIndexForTopMatches(ctx context.Context, conn PgxIface, query string, k int) (*pb.Index, error) {
+func searchIndexByPhrase(ctx context.Context, conn PgxIface, query string, k int) (*pb.Index, error) {
     entries, err := fetchMatchingEntries(ctx, conn, query)
     if err != nil {
         return nil, err

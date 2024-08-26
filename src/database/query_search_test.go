@@ -83,7 +83,7 @@ func TestSearchIndexForTopMatches(t *testing.T) {
 		t.Fatalf("Failed to insert rows: %v", err)
 	}
 
-	queryIndex, err := searchIndexForTopMatches(ctx, conn, "Test the content", 3)
+	queryIndex, err := searchIndexByPhrase(ctx, conn, "Test the content", 3)
 	if err != nil {
 		t.Fatalf("Failed to query row: %v", err)
 	}
