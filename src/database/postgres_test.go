@@ -21,19 +21,6 @@ import (
 
 func setupPostgres() error {
 
-	db := pg.Connect(&pg.Options{
-        User:     "postgres",
-        Password: "postgres",
-        Addr:     "localhost:5432",
-        Database: "postgres",
-    })
-    defer db.Close()
-
-    if _, err := db.Exec("SELECT 1"); err == nil {
-		// Connection is already made
-		return nil
-	}
-
 	err := os.Chdir("../..")
 	if err != nil {
 		return fmt.Errorf("Failed to change directory: %v", err)
