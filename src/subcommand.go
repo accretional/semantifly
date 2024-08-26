@@ -7,7 +7,8 @@ import (
 	"path"
 	"strings"
 
-	"accretional.com/semantifly/subcommands"
+	"accretional.com/semantifly/grpcclient"
+	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 )
 
 type SubcommandInfo struct {
@@ -49,6 +50,7 @@ func CommandReadRun() {
 	}
 
 	setupSemantifly()
+	grpcclient.Init()
 
 	cmdName := os.Args[1]
 	args := os.Args[2:]
@@ -186,18 +188,20 @@ func executeAdd(args []string) {
 		*sourceType = sourceTypeStr
 	}
 
-	addArgs := subcommands.AddArgs{
+	addArgs := &pb.AddRequest{
 		IndexPath:  *indexPath,
 		DataType:   *dataType,
 		SourceType: *sourceType,
 		MakeCopy:   *makeLocalCopy,
-		DataURIs:   cmd.Args(),
+		DataUris:   cmd.Args(),
 	}
 
-	err = subcommands.Add(addArgs)
+	res, err := grpcclient.Add(addArgs)
 	if err != nil {
 		fmt.Printf("Error occurred during add subcommand: %v", err)
+		return
 	}
+	fmt.Println(res.Message)
 }
 
 func executeDelete(args []string) {
@@ -219,16 +223,18 @@ func executeDelete(args []string) {
 		return
 	}
 
-	deleteArgs := subcommands.DeleteArgs{
+	deleteArgs := &pb.DeleteRequest{
 		IndexPath:  *indexPath,
 		DeleteCopy: *deleteLocalCopy,
-		DataURIs:   cmd.Args(),
+		DataUris:   cmd.Args(),
 	}
 
-	err = subcommands.Delete(deleteArgs)
+	res, err := grpcclient.Delete(deleteArgs)
 	if err != nil {
 		fmt.Printf("Error occurred during delete subcommand: %v", err)
+		return
 	}
+	fmt.Println(res.Message)
 }
 
 func executeGet(args []string) {
@@ -249,15 +255,17 @@ func executeGet(args []string) {
 		return
 	}
 
-	getArgs := subcommands.GetArgs{
+	getArgs := &pb.GetRequest{
 		IndexPath: *indexPath,
 		Name:      cmd.Args()[0],
 	}
 
-	_, err = subcommands.Get(getArgs)
+	res, err := grpcclient.Get(getArgs)
 	if err != nil {
 		fmt.Printf("Error occurred during get subcommand: %v", err)
+		return
 	}
+	fmt.Println(res.Message)
 }
 
 func executeUpdate(args []string) {
@@ -281,19 +289,21 @@ func executeUpdate(args []string) {
 		return
 	}
 
-	updateArgs := subcommands.UpdateArgs{
+	updateArgs := &pb.UpdateRequest{
 		IndexPath:  *indexPath,
 		Name:       cmd.Args()[0],
 		DataType:   *dataType,
 		SourceType: *sourceType,
 		UpdateCopy: *makeLocalCopy,
-		DataURI:    cmd.Args()[1],
+		DataUri:    cmd.Args()[1],
 	}
 
-	err = subcommands.Update(updateArgs)
+	res, err := grpcclient.Update(updateArgs)
 	if err != nil {
 		fmt.Printf("Error occurred during update subcommand: %v", err)
+		return
 	}
+	fmt.Println(res.Message)
 }
 
 func executeSearch(args []string) {
@@ -315,19 +325,18 @@ func executeSearch(args []string) {
 		return
 	}
 
-	searchArgs := subcommands.LexicalSearchArgs{
+	searchArgs := &pb.LexicalSearchRequest{
 		IndexPath:  *indexPath,
 		SearchTerm: cmd.Args()[0],
-		TopN:       *topN,
+		TopN:       int32(*topN),
 	}
 
-	searchResults, err := subcommands.LexicalSearch(searchArgs)
+	res, err := grpcclient.LexicalSearch(searchArgs)
 	if err != nil {
 		printCmdErr(fmt.Sprintf("Error during search: %v", err))
 		return
 	}
-
-	subcommands.PrintSearchResults(searchResults)
+	fmt.Println(res.Message)
 }
 
 func inferSourceType(uris []string) (string, error) {

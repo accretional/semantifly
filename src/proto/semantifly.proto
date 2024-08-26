@@ -9,7 +9,7 @@ service Semantifly {
   rpc Delete(DeleteRequest) returns (DeleteResponse) {}
   rpc Get(GetRequest) returns (GetResponse) {}
   rpc Update(UpdateRequest) returns (UpdateResponse) {}
-  rpc Search(SearchRequest) returns (SearchResponse) {}
+  rpc LexicalSearch(LexicalSearchRequest) returns (LexicalSearchResponse) {}
 }
 
 message AddRequest {
@@ -61,19 +61,19 @@ message UpdateResponse {
   string message = 2;
 }
 
-message SearchRequest {
+message LexicalSearchRequest {
   string index_path = 1;
   string search_term = 2;
   int32 top_n = 3;
 }
 
-message SearchResponse {
+message LexicalSearchResponse {
   bool success = 1;
-  repeated SearchResult results = 2;
+  repeated LexicalSearchResult results = 2;
   string message = 3;
 }
 
-message SearchResult {
+message LexicalSearchResult {
   string name = 1;
-  float score = 2;
+  float occurrences = 2;
 }

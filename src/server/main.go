@@ -5,13 +5,13 @@ import (
 	"log"
 	"net"
 
-	pb "accretional.com/semantifly/proto"
+	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 	"accretional.com/semantifly/subcommands"
 	"google.golang.org/grpc"
 )
 
 type server struct {
-	pb.UnimplementedSemantiplyServer
+	pb.UnimplementedSemantiflyServer
 }
 
 func (s *server) Add(ctx context.Context, req *pb.AddRequest) (*pb.AddResponse, error) {
@@ -74,7 +74,7 @@ func (s *server) Update(ctx context.Context, req *pb.UpdateRequest) (*pb.UpdateR
 	return &pb.UpdateResponse{Success: true, Message: "Data updated successfully"}, nil
 }
 
-func (s *server) Search(ctx context.Context, req *pb.SearchRequest) (*pb.SearchResponse, error) {
+func (s *server) LexicalSearch(ctx context.Context, req *pb.LexicalSearchRequest) (*pb.LexicalSearchResponse, error) {
 	args := subcommands.LexicalSearchArgs{
 		IndexPath:  req.IndexPath,
 		SearchTerm: req.SearchTerm,
@@ -83,18 +83,18 @@ func (s *server) Search(ctx context.Context, req *pb.SearchRequest) (*pb.SearchR
 
 	results, err := subcommands.LexicalSearch(args)
 	if err != nil {
-		return &pb.SearchResponse{Success: false, Message: err.Error()}, nil
+		return &pb.LexicalSearchResponse{Success: false, Message: err.Error()}, nil
 	}
 
-	pbResults := make([]*pb.SearchResult, len(results))
+	pbResults := make([]*pb.LexicalSearchResult, len(results))
 	for i, result := range results {
-		pbResults[i] = &pb.SearchResult{
+		pbResults[i] = &pb.LexicalSearchResult{
 			Name:        result.FileName,
 			Occurrences: float32(result.Occurrence),
 		}
 	}
 
-	return &pb.SearchResponse{Success: true, Results: pbResults}, nil
+	return &pb.LexicalSearchResponse{Success: true, Results: pbResults}, nil
 }
 
 func main() {
@@ -103,7 +103,7 @@ func main() {
 		log.Fatalf("failed to listen: %v", err)
 	}
 	s := grpc.NewServer()
-	pb.RegisterSemantiplyServer(s, &server{})
+	pb.RegisterSemantiflyServer(s, &server{})
 	log.Printf("server listening at %v", lis.Addr())
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
