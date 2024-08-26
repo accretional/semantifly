@@ -101,7 +101,7 @@ func removeTestingDatabase() error {
 	return nil
 }
 
-func TestDBUtils(t *testing.T) {
+func TestPostgres(t *testing.T) {
 	const maxRetries = 3
 	var err error
 
@@ -133,6 +133,12 @@ func TestDBUtils(t *testing.T) {
 
 	assert.NoError(t, err)
 	defer conn.Close(ctx)
+
+	// Test database table initialisation
+	err = initializeTables(ctx, conn)
+	if err != nil {
+		t.Fatalf("Failed to initialise the database tables: %v", err)
+	}
 
 	// Test row insertion
 	err = testInsertRow(ctx, conn)
