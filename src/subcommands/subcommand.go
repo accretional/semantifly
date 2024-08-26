@@ -1,10 +1,11 @@
-package main
+package subcommands
 
 import (
 	"flag"
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"accretional.com/semantifly/grpcclient"
@@ -188,12 +189,33 @@ func executeAdd(args []string) {
 		*sourceType = sourceTypeStr
 	}
 
+	// Convert relative paths to absolute paths
+	absolutePaths := make([]string, len(cmd.Args()))
+	for i, path := range cmd.Args() {
+		absPath, err := filepath.Abs(path)
+		if err != nil {
+			printCmdErr(fmt.Sprintf("Error converting path to absolute: %v", err))
+			return
+		}
+		absolutePaths[i] = absPath
+	}
+
+	// Convert indexPath to absolute path if it's not empty
+	if *indexPath != "" {
+		absIndexPath, err := filepath.Abs(*indexPath)
+		if err != nil {
+			printCmdErr(fmt.Sprintf("Error converting index path to absolute: %v", err))
+			return
+		}
+		*indexPath = absIndexPath
+	}
+
 	addArgs := &pb.AddRequest{
 		IndexPath:  *indexPath,
 		DataType:   *dataType,
 		SourceType: *sourceType,
 		MakeCopy:   *makeLocalCopy,
-		DataUris:   cmd.Args(),
+		DataUris:   absolutePaths,
 	}
 
 	res, err := grpcclient.Add(addArgs)
@@ -203,7 +225,6 @@ func executeAdd(args []string) {
 	}
 	fmt.Println(res.Message)
 }
-
 func executeDelete(args []string) {
 	cmd := flag.NewFlagSet("delete", flag.ExitOnError)
 	deleteLocalCopy := cmd.Bool("copy", false, "Whether to delete the copy made")

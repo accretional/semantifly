@@ -1,5 +1,7 @@
 package main
 
+import "accretional.com/semantifly/subcommands"
+
 func main() {
-	CommandReadRun()
+	subcommands.CommandReadRun()
 }

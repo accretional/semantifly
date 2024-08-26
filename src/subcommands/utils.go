@@ -94,6 +94,8 @@ func writeIndex(indexFilePath string, indexMap map[string]*pb.IndexListEntry) er
 //   - indexPath: The base path where the copy will be stored.
 //   - ile: Pointer to the IndexListEntry to be copied.
 func makeCopy(indexPath string, ile *pb.IndexListEntry) error {
+	fmt.Println("ile copy")
+	fmt.Println(ile)
 
 	content, err := fetch.FetchFromSource(ile.SourceType, ile.URI)
 	if err != nil {
