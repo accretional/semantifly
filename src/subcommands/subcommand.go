@@ -177,7 +177,7 @@ func convertUrisToAbsPath(originalArgs []string, isLocalFile bool) ([]string, er
 	for i, path := range originalArgs {
 		absPath, err := filepath.Abs(path)
 		if err != nil {
-			return make([]string, 0), fmt.Errorf("Error converting path to absolute: %v", err)
+			return make([]string, 0), fmt.Errorf("error converting path to absolute: %v", err)
 		}
 		absolutePaths[i] = absPath
 	}
