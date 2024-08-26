@@ -48,9 +48,9 @@ func TestSearchIndexForTopMatches(t *testing.T) {
 	}
 	defer conn.Close(ctx)
 
-	err = initializeTables(ctx, conn)
+	err = initializeDatabaseSchema(ctx, conn)
 	if err != nil {
-		t.Fatalf("Failed to initialise the database tables: %v", err)
+		t.Fatalf("Failed to initialise the database schema: %v", err)
 	}
 
 	index := &pb.Index{
@@ -83,7 +83,7 @@ func TestSearchIndexForTopMatches(t *testing.T) {
 		t.Fatalf("Failed to insert rows: %v", err)
 	}
 
-	queryIndex, err := searchIndexForTopMatches(ctx, conn, "Test contents", 3)
+	queryIndex, err := searchIndexForTopMatches(ctx, conn, "Test the content", 3)
 	if err != nil {
 		t.Fatalf("Failed to query row: %v", err)
 	}

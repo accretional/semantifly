@@ -20,7 +20,20 @@ import (
 )
 
 func setupPostgres() error {
-	// Setup
+
+	db := pg.Connect(&pg.Options{
+        User:     "postgres",
+        Password: "postgres",
+        Addr:     "localhost:5432",
+        Database: "postgres",
+    })
+    defer db.Close()
+
+    if _, err := db.Exec("SELECT 1"); err == nil {
+		// Connection is already made
+		return nil
+	}
+
 	err := os.Chdir("../..")
 	if err != nil {
 		return fmt.Errorf("Failed to change directory: %v", err)
@@ -135,9 +148,9 @@ func TestPostgres(t *testing.T) {
 	defer conn.Close(ctx)
 
 	// Test database table initialisation
-	err = initializeTables(ctx, conn)
+	err = initializeDatabaseSchema(ctx, conn)
 	if err != nil {
-		t.Fatalf("Failed to initialise the database tables: %v", err)
+		t.Fatalf("Failed to initialise the database schema: %v", err)
 	}
 
 	// Test row insertion

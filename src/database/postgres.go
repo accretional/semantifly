@@ -28,7 +28,7 @@ func establishConnection(ctx context.Context) (*pgx.Conn, error) {
 	return conn, nil
 }
 
-func initializeTables(ctx context.Context, conn PgxIface) error {
+func initializeDatabaseSchema(ctx context.Context, conn PgxIface) error {
     tx, err := conn.Begin(ctx)
     if err != nil {
         return fmt.Errorf("unable to connect to database: %w", err)
