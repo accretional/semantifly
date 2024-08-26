@@ -18,9 +18,11 @@ require (
 )
 
 require (
+	github.com/bzick/tokenizer v1.4.0
 	github.com/go-pg/zerochecker v0.2.0 // indirect
 	github.com/jackc/pgx/v5 v5.6.0
 	github.com/jinzhu/inflection v1.0.0 // indirect
+	github.com/kljensen/snowball v0.10.0
 	github.com/stretchr/testify v1.9.0
 	github.com/tmthrgd/go-hex v0.0.0-20190904060850-447a3041c3bc // indirect
 	github.com/vmihailenco/bufpool v0.1.11 // indirect

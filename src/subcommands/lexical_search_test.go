@@ -25,16 +25,19 @@ func TestLexicalSearch(t *testing.T) {
 	mockIndex := &pb.Index{
 		Entries: []*pb.IndexListEntry{
 			{
-				Name:            "file1.txt",
-				WordOccurrences: map[string]int32{"test": 5, "search": 3, "hill": 2},
+				Name:                   "file1.txt",
+				WordOccurrences:        map[string]int32{"test": 2, "search": 3, "searching": 2},
+				StemmedWordOccurrences: map[string]int32{"test": 2, "search": 5},
 			},
 			{
-				Name:            "file2.txt",
-				WordOccurrences: map[string]int32{"test": 2, "search": 7},
+				Name:                   "file2.txt",
+				WordOccurrences:        map[string]int32{"test": 5, "search": 5},
+				StemmedWordOccurrences: map[string]int32{"test": 5, "search": 5},
 			},
 			{
-				Name:            "file3.txt",
-				WordOccurrences: map[string]int32{"other": 1},
+				Name:                   "file3.txt",
+				WordOccurrences:        map[string]int32{"other": 1},
+				StemmedWordOccurrences: map[string]int32{"other": 1},
 			},
 		},
 	}
@@ -60,14 +63,14 @@ func TestLexicalSearch(t *testing.T) {
 			name:       "Search for 'test'",
 			args:       LexicalSearchArgs{IndexPath: tempDir, SearchTerm: "test", TopN: 2},
 			wantLen:    2,
-			wantFirst:  "file1.txt",
-			wantOccurs: 5,
+			wantFirst:  "file2.txt",
+			wantOccurs: 10,
 		},
 		{
 			name:       "Search for 'search'",
-			args:       LexicalSearchArgs{IndexPath: tempDir, SearchTerm: "search", TopN: 1},
+			args:       LexicalSearchArgs{IndexPath: tempDir, SearchTerm: "searching", TopN: 1},
 			wantLen:    1,
-			wantFirst:  "file2.txt",
+			wantFirst:  "file1.txt",
 			wantOccurs: 7,
 		},
 		{
