@@ -135,7 +135,6 @@ func TestUpdateSubcommand(t *testing.T) {
 	defer os.Remove(updatedTempFile)
 
 	runAndCheckStdoutContains("add", "added successfully", []string{tempFile})
-
 	t.Run("Update without URI", func(t *testing.T) {
 		if err := runAndCheckStdoutContains("update", "Update subcommand requires two input args", []string{tempFile}); err != nil {
 			t.Errorf("Failed to execute 'update' without URI: %v", err)

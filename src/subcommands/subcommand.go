@@ -242,6 +242,7 @@ func executeAdd(args []string) {
 func executeDelete(args []string) {
 	cmd := flag.NewFlagSet("delete", flag.ExitOnError)
 	deleteLocalCopy := cmd.Bool("copy", false, "Whether to delete the copy made")
+	sourceType := cmd.String("source-type", "", "How to access the content")
 	indexPath := cmd.String("index-path", "", "Path to the index file")
 
 	flags, nonFlags, err := parseArgs(args, cmd)
@@ -259,14 +260,17 @@ func executeDelete(args []string) {
 	}
 
 	// Convert relative paths to absolute paths
-	absolutePaths := make([]string, len(cmd.Args()))
-	for i, path := range cmd.Args() {
-		absPath, err := filepath.Abs(path)
+	if *sourceType == "" {
+		sourceTypeStr, err := inferSourceType(cmd.Args())
 		if err != nil {
-			printCmdErr(fmt.Sprintf("Error converting path to absolute: %v", err))
-			return
+			printCmdErr(fmt.Sprintf("Failed to infer source type from URIs: %v\n", err))
 		}
-		absolutePaths[i] = absPath
+		*sourceType = sourceTypeStr
+	}
+
+	dataUris, err := convertUrisToAbsPath(cmd.Args(), *sourceType == "local_file")
+	if err != nil {
+		printCmdErr(err.Error())
 	}
 
 	*indexPath, err = convertToAbsPath(*indexPath)
@@ -277,7 +281,7 @@ func executeDelete(args []string) {
 	deleteArgs := &pb.DeleteRequest{
 		IndexPath:  *indexPath,
 		DeleteCopy: *deleteLocalCopy,
-		DataUris:   absolutePaths,
+		DataUris:   dataUris,
 	}
 
 	res, err := grpcclient.Delete(deleteArgs)
@@ -290,6 +294,7 @@ func executeDelete(args []string) {
 
 func executeGet(args []string) {
 	cmd := flag.NewFlagSet("get", flag.ExitOnError)
+	sourceType := cmd.String("source-type", "", "How to access the content")
 	indexPath := cmd.String("index-path", "", "Path to the index file")
 
 	flags, nonFlags, err := parseArgs(args, cmd)
@@ -306,6 +311,20 @@ func executeGet(args []string) {
 		return
 	}
 
+	// Convert relative paths to absolute paths
+	if *sourceType == "" {
+		sourceTypeStr, err := inferSourceType(cmd.Args())
+		if err != nil {
+			printCmdErr(fmt.Sprintf("Failed to infer source type from URIs: %v\n", err))
+		}
+		*sourceType = sourceTypeStr
+	}
+
+	dataUris, err := convertUrisToAbsPath(cmd.Args(), *sourceType == "local_file")
+	if err != nil {
+		printCmdErr(err.Error())
+	}
+
 	*indexPath, err = convertToAbsPath(*indexPath)
 	if err != nil {
 		printCmdErr(err.Error())
@@ -313,7 +332,7 @@ func executeGet(args []string) {
 
 	getArgs := &pb.GetRequest{
 		IndexPath: *indexPath,
-		Name:      cmd.Args()[0],
+		Name:      dataUris[0],
 	}
 
 	res, err := grpcclient.Get(getArgs)
@@ -345,13 +364,32 @@ func executeUpdate(args []string) {
 		return
 	}
 
+	// Convert relative paths to absolute paths
+	if *sourceType == "" {
+		sourceTypeStr, err := inferSourceType(cmd.Args())
+		if err != nil {
+			printCmdErr(fmt.Sprintf("Failed to infer source type from URIs: %v\n", err))
+		}
+		*sourceType = sourceTypeStr
+	}
+
+	dataUris, err := convertUrisToAbsPath(cmd.Args(), *sourceType == "local_file")
+	if err != nil {
+		printCmdErr(err.Error())
+	}
+
+	*indexPath, err = convertToAbsPath(*indexPath)
+	if err != nil {
+		printCmdErr(err.Error())
+	}
+
 	updateArgs := &pb.UpdateRequest{
 		IndexPath:  *indexPath,
-		Name:       cmd.Args()[0],
+		Name:       dataUris[0],
 		DataType:   *dataType,
 		SourceType: *sourceType,
 		UpdateCopy: *makeLocalCopy,
-		DataUri:    cmd.Args()[1],
+		DataUri:    dataUris[1],
 	}
 
 	res, err := grpcclient.Update(updateArgs)
