@@ -39,7 +39,7 @@ var subcommandDict = map[string]SubcommandInfo{
 		Description: "Search (lexically) for a term in the index",
 		Execute:     executeSearch,
 	},
-	"startServer": {
+	"start-server": {
 		Description: "Start GRPC server",
 		Execute:     executeStartServer,
 	},

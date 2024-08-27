@@ -3,6 +3,7 @@ package subcommands
 import (
 	"bytes"
 	"context"
+	"fmt"
 
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 )
@@ -17,6 +18,8 @@ func (s *Server) Add(ctx context.Context, req *pb.AddRequest) (*pb.AddResponse, 
 	if err != nil {
 		return &pb.AddResponse{Success: false, Message: err.Error()}, nil
 	}
+
+	fmt.Println("hello")
 	return &pb.AddResponse{Success: true, Message: buf.String()}, nil
 }
 
