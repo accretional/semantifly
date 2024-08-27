@@ -14,12 +14,12 @@ type Server struct {
 
 func (s *Server) Add(ctx context.Context, req *pb.AddRequest) (*pb.AddResponse, error) {
 	var buf bytes.Buffer
+	fmt.Println("add")
+	fmt.Println(req)
 	err := SubcommandAdd(req, &buf)
 	if err != nil {
 		return &pb.AddResponse{Success: false, Message: err.Error()}, nil
 	}
-
-	fmt.Println("hello")
 	return &pb.AddResponse{Success: true, Message: buf.String()}, nil
 }
 
@@ -34,6 +34,8 @@ func (s *Server) Delete(ctx context.Context, req *pb.DeleteRequest) (*pb.DeleteR
 
 func (s *Server) Get(ctx context.Context, req *pb.GetRequest) (*pb.GetResponse, error) {
 	var buf bytes.Buffer
+	fmt.Println("hello get")
+	fmt.Println(req)
 
 	content, err := SubcommandGet(req, &buf)
 	if err != nil {

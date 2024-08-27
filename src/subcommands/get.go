@@ -19,6 +19,8 @@ func SubcommandGet(g *pb.GetRequest, w io.Writer) (string, error) {
 
 	targetEntry := indexMap[g.Name]
 
+	fmt.Println(indexMap)
+
 	if targetEntry == nil {
 		fmt.Fprintf(w, "entry '%s' not found in index file %s\n", g.Name, indexFilePath)
 		return "", fmt.Errorf("entry '%s' not found in index file %s", g.Name, indexFilePath)
