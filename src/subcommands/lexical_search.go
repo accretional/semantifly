@@ -2,6 +2,7 @@ package subcommands
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"sort"
@@ -21,7 +22,7 @@ type occurrenceList []fileOccurrence
 type searchMap map[string]occurrenceList // Search Map maps search terms to the list of their occurrences in files
 
 // LexicalSearch performs a search in the index for the specified term and returns the top N results ranked by the frequency of the term.
-func SubcommandLexicalSearch(args *pb.LexicalSearchRequest) ([]fileOccurrence, error) {
+func SubcommandLexicalSearch(args *pb.LexicalSearchRequest, w io.Writer) ([]fileOccurrence, error) {
 	if args.TopN <= 0 {
 		return nil, fmt.Errorf("topn: %d is an invalid amount", args.TopN)
 	}
@@ -105,13 +106,13 @@ func SubcommandLexicalSearch(args *pb.LexicalSearchRequest) ([]fileOccurrence, e
 	if len(combinedResults) > int(args.TopN) {
 		combinedResults = combinedResults[:args.TopN]
 	}
-	PrintSearchResults(combinedResults)
+	PrintSearchResults(combinedResults, w)
 
 	return combinedResults, nil
 }
 
-func PrintSearchResults(results []fileOccurrence) {
+func PrintSearchResults(results []fileOccurrence, w io.Writer) {
 	for _, result := range results {
-		fmt.Printf("File: %s\nOccurrences: %d\n\n", result.FileName, result.Occurrence)
+		fmt.Fprintf(w, "File: %s\nOccurrences: %d\n\n", result.FileName, result.Occurrence)
 	}
 }

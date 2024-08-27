@@ -3,13 +3,14 @@ package subcommands
 import (
 	"flag"
 	"fmt"
+	"log"
+	"net"
 	"os"
 	"path"
-	"path/filepath"
 	"strings"
 
-	// "accretional.com/semantifly/grpcclient"
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
+	"google.golang.org/grpc"
 )
 
 type SubcommandInfo struct {
@@ -37,6 +38,10 @@ var subcommandDict = map[string]SubcommandInfo{
 	"search": {
 		Description: "Search (lexically) for a term in the index",
 		Execute:     executeSearch,
+	},
+	"startServer": {
+		Description: "Start GRPC server",
+		Execute:     executeStartServer,
 	},
 }
 
@@ -160,28 +165,42 @@ func appendToIndexLog(indexLog string) {
 	}
 }
 
-func convertToAbsPath(filePath string) (string, error) {
-	absIndexPath, err := filepath.Abs(filePath)
-	if err != nil {
-		return "", fmt.Errorf("error converting index path to absolute: %v", err)
-	}
-	return absIndexPath, nil
-}
+// func convertToAbsPath(filePath string) (string, error) {
+// 	absIndexPath, err := filepath.Abs(filePath)
+// 	if err != nil {
+// 		return "", fmt.Errorf("error converting index path to absolute: %v", err)
+// 	}
+// 	return absIndexPath, nil
+// }
 
-func convertUrisToAbsPath(originalArgs []string, isLocalFile bool) ([]string, error) {
-	if !isLocalFile {
-		return originalArgs, nil
-	}
+// func convertUrisToAbsPath(originalArgs []string, isLocalFile bool) ([]string, error) {
+// 	if !isLocalFile {
+// 		return originalArgs, nil
+// 	}
 
-	absolutePaths := make([]string, len(originalArgs))
-	for i, path := range originalArgs {
-		absPath, err := filepath.Abs(path)
-		if err != nil {
-			return make([]string, 0), fmt.Errorf("error converting path to absolute: %v", err)
+// 	absolutePaths := make([]string, len(originalArgs))
+// 	for i, path := range originalArgs {
+// 		absPath, err := filepath.Abs(path)
+// 		if err != nil {
+// 			return make([]string, 0), fmt.Errorf("error converting path to absolute: %v", err)
+// 		}
+// 		absolutePaths[i] = absPath
+// 	}
+// 	return absolutePaths, nil
+// }
+
+func inferSourceType(uris []string) (string, error) {
+	sourceTypeStr := "local_file"
+
+	for _, u := range uris {
+		if strings.HasPrefix(u, "http://") || strings.HasPrefix(u, "https://") {
+			sourceTypeStr = "webpage"
+		} else if sourceTypeStr == "webpage" {
+			return "", fmt.Errorf("inconsistent URI source types")
 		}
-		absolutePaths[i] = absPath
 	}
-	return absolutePaths, nil
+
+	return sourceTypeStr, nil
 }
 
 func executeAdd(args []string) {
@@ -231,7 +250,7 @@ func executeAdd(args []string) {
 		DataUris:   cmd.Args(),
 	}
 
-	err = SubcommandAdd(addArgs)
+	err = SubcommandAdd(addArgs, os.Stdout)
 	if err != nil {
 		fmt.Printf("Error occurred during add subcommand: %v", err)
 		return
@@ -283,7 +302,7 @@ func executeDelete(args []string) {
 		DataUris:   cmd.Args(),
 	}
 
-	err = SubcommandDelete(deleteArgs)
+	err = SubcommandDelete(deleteArgs, os.Stdout)
 	if err != nil {
 		fmt.Printf("Error occurred during delete subcommand: %v", err)
 		return
@@ -333,7 +352,7 @@ func executeGet(args []string) {
 		Name:      cmd.Args()[0],
 	}
 
-	_, err = SubcommandGet(getArgs)
+	_, err = SubcommandGet(getArgs, os.Stdout)
 	if err != nil {
 		fmt.Printf("Error occurred during get subcommand: %v", err)
 		return
@@ -389,7 +408,7 @@ func executeUpdate(args []string) {
 		DataUri:    cmd.Args()[1],
 	}
 
-	err = SubcommandUpdate(updateArgs)
+	err = SubcommandUpdate(updateArgs, os.Stdout)
 	if err != nil {
 		fmt.Printf("Error occurred during update subcommand: %v", err)
 		return
@@ -421,23 +440,22 @@ func executeSearch(args []string) {
 		TopN:       int32(*topN),
 	}
 
-	_, err = SubcommandLexicalSearch(searchArgs)
+	_, err = SubcommandLexicalSearch(searchArgs, os.Stdout)
 	if err != nil {
 		printCmdErr(fmt.Sprintf("Error during search: %v", err))
 		return
 	}
 }
 
-func inferSourceType(uris []string) (string, error) {
-	sourceTypeStr := "local_file"
-
-	for _, u := range uris {
-		if strings.HasPrefix(u, "http://") || strings.HasPrefix(u, "https://") {
-			sourceTypeStr = "webpage"
-		} else if sourceTypeStr == "webpage" {
-			return "", fmt.Errorf("inconsistent URI source types")
-		}
+func executeStartServer(args []string) {
+	lis, err := net.Listen("tcp", ":50051")
+	if err != nil {
+		log.Fatalf("failed to listen: %v", err)
 	}
-
-	return sourceTypeStr, nil
+	s := grpc.NewServer()
+	pb.RegisterSemantiflyServer(s, &Server{})
+	log.Printf("server listening at %v", lis.Addr())
+	if err := s.Serve(lis); err != nil {
+		log.Fatalf("failed to serve: %v", err)
+	}
 }

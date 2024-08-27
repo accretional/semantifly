@@ -39,8 +39,14 @@ func TestAdd(t *testing.T) {
 		DataUris:   []string{testFilePath},
 	}
 
+	// Create a buffer to capture output
+	var buf bytes.Buffer
+
 	// Call the Add function with the buffer
-	SubcommandAdd(args)
+	err = SubcommandAdd(args, &buf)
+	if err != nil {
+		t.Fatalf("Add function returned an error: %v", err)
+	}
 
 	// Check if the index file was created
 	indexFilePath := path.Join(tempDir, indexFile)
@@ -81,6 +87,11 @@ func TestAdd(t *testing.T) {
 	if _, err := os.Stat(path.Join(copiesDir, testFilePath)); os.IsNotExist(err) {
 		t.Errorf("Data file for %s was not copied", testFilePath)
 	}
+
+	output := buf.String()
+	if !strings.Contains(output, "added successfully") {
+		t.Errorf("Expected output to contain 'added successfully', but got '%s'", output)
+	}
 }
 
 func TestAdd_MultipleFilesSamePath(t *testing.T) {
@@ -109,19 +120,13 @@ func TestAdd_MultipleFilesSamePath(t *testing.T) {
 		DataUris:   []string{testFilePath1, testFilePath2},
 	}
 
-	// Capture stdout
-	oldStdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	// Call the Add function with the buffer
-	SubcommandAdd(args)
-
-	w.Close()
-	os.Stdout = oldStdout
-
 	var buf bytes.Buffer
-	io.Copy(&buf, r)
+
+	err = SubcommandAdd(args, &buf)
+	if err != nil {
+		t.Fatalf("Add function returned an error: %v", err)
+	}
+
 	output := buf.String()
 
 	// Checking if the second entry was skipped
@@ -167,19 +172,13 @@ func TestAdd_Webpage(t *testing.T) {
 		DataUris:   []string{testWebpageURL},
 	}
 
-	// Capture stdout
-	oldStdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	// Call the Add function with the buffer
-	SubcommandAdd(args)
-
-	w.Close()
-	os.Stdout = oldStdout
-
 	var buf bytes.Buffer
-	io.Copy(&buf, r)
+
+	err = SubcommandAdd(args, &buf)
+	if err != nil {
+		t.Fatalf("Add function returned an error: %v", err)
+	}
+
 	output := buf.String()
 
 	// Check if the index file was created

@@ -2,6 +2,7 @@ package subcommands
 
 import (
 	"fmt"
+	"io"
 	"path"
 
 	fetch "accretional.com/semantifly/fetcher"
@@ -9,7 +10,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func SubcommandUpdate(u *pb.UpdateRequest) error {
+func SubcommandUpdate(u *pb.UpdateRequest, w io.Writer) error {
 	indexFilePath := path.Join(u.IndexPath, indexFile)
 
 	indexMap, err := readIndex(indexFilePath, false)
@@ -51,7 +52,7 @@ func SubcommandUpdate(u *pb.UpdateRequest) error {
 		}
 	}
 
-	fmt.Printf("Index %s updated successfully to URI %s\n", u.Name, u.DataUri)
+	fmt.Fprintf(w, "Index %s updated successfully to URI %s\n", u.Name, u.DataUri)
 	return nil
 }
 

@@ -1,9 +1,11 @@
 package subcommands
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path"
+	"strings"
 	"testing"
 
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
@@ -32,7 +34,7 @@ func TestDelete(t *testing.T) {
 	}
 
 	// Set up test arguments
-	args := &pb.AddRequest{
+	addArgs := &pb.AddRequest{
 		IndexPath:  tempDir,
 		DataType:   "text",
 		SourceType: "local_file",
@@ -40,18 +42,26 @@ func TestDelete(t *testing.T) {
 		DataUris:   []string{testFilePath1, testFilePath2},
 	}
 
-	// Call the Add function
-	SubcommandAdd(args)
+	var addBuf bytes.Buffer
+
+	err = SubcommandAdd(addArgs, &addBuf)
+	if err != nil {
+		t.Fatalf("Add function returned an error: %v", err)
+	}
 
 	// Test case
-	testArgs := &pb.DeleteRequest{
+	deleteArgs := &pb.DeleteRequest{
 		IndexPath:  tempDir,
 		DeleteCopy: true,
 		DataUris:   []string{testFilePath1},
 	}
 
+	var deleteBuf bytes.Buffer
 	// Run the Delete function
-	SubcommandDelete(testArgs)
+	err = SubcommandDelete(deleteArgs, &deleteBuf)
+	if err != nil {
+		t.Fatalf("Delete function returned an error: %v", err)
+	}
 
 	// Verify the results
 	indexFilePath := path.Join(tempDir, indexFile)
@@ -69,5 +79,10 @@ func TestDelete(t *testing.T) {
 	copiesDir := path.Join(tempDir, addedCopiesSubDir)
 	if _, err := os.Stat(path.Join(copiesDir, testFilePath1)); !os.IsNotExist(err) {
 		t.Errorf("Data file for %s was not deleted", testFilePath1)
+	}
+
+	deleteOutput := deleteBuf.String()
+	if !strings.Contains(deleteOutput, "deleted successfully") {
+		t.Errorf("Expected output to contain 'deleted successfully', but got '%s'", deleteOutput)
 	}
 }

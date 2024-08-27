@@ -2,6 +2,7 @@ package subcommands
 
 import (
 	"fmt"
+	"io"
 	"path"
 
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
@@ -10,7 +11,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func SubcommandAdd(a *pb.AddRequest) error {
+func SubcommandAdd(a *pb.AddRequest, w io.Writer) error {
 	dataType, err := parseDataType(a.DataType)
 	if err != nil {
 		return fmt.Errorf("Error in parsing DataType: %v\n", err)
@@ -29,7 +30,7 @@ func SubcommandAdd(a *pb.AddRequest) error {
 
 	for _, u := range a.DataUris {
 		if indexMap[u] != nil {
-			fmt.Printf("File %s has already been added. Skipping without refresh.\n", u)
+			fmt.Fprintf(w, "File %s has already been added. Skipping without refresh.\n", u)
 			continue
 		}
 
@@ -44,19 +45,19 @@ func SubcommandAdd(a *pb.AddRequest) error {
 		if a.MakeCopy {
 			err = makeCopy(a.IndexPath, ile)
 			if err != nil {
-				fmt.Printf("Failed to make a copy for %s: %v. Skipping.\n", u, err)
+				fmt.Fprintf(w, "Failed to make a copy for %s: %v. Skipping.\n", u, err)
 				continue
 			}
 		}
 
 		err = search.CreateSearchDictionary(ile)
 		if err != nil {
-			fmt.Printf("File %s failed to create search dictionary with err: %s. Skipping.\n", u, err)
+			fmt.Fprintf(w, "File %s failed to create search dictionary with err: %s. Skipping.\n", u, err)
 			continue
 		}
 
 		indexMap[ile.Name] = ile
-		fmt.Printf("Index %s added successfully.\n", u)
+		fmt.Fprintf(w, "Index %s added successfully.\n", u)
 	}
 
 	if err := writeIndex(indexFilePath, indexMap); err != nil {

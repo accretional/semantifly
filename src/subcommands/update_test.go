@@ -1,9 +1,11 @@
 package subcommands
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path"
+	"strings"
 	"testing"
 
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
@@ -35,8 +37,12 @@ func TestUpdate(t *testing.T) {
 		DataUris:   []string{testFilePath},
 	}
 
-	// Call the Add function
-	SubcommandAdd(args)
+	var buf bytes.Buffer
+
+	err = SubcommandAdd(args, &buf)
+	if err != nil {
+		t.Fatalf("Add function returned an error: %v", err)
+	}
 
 	// Check if the index file was created
 	indexFilePath := path.Join(tempDir, indexFile)
@@ -61,7 +67,19 @@ func TestUpdate(t *testing.T) {
 	}
 
 	// Call the Update function
-	SubcommandUpdate(updateArgs)
+	var updateBuf bytes.Buffer
+
+	// Call the Update function
+	err = SubcommandUpdate(updateArgs, &updateBuf)
+	if err != nil {
+		t.Fatalf("Update function returned an error: %v", err)
+	}
+
+	// Check the output in the buffer
+	updateOutput := updateBuf.String()
+	if !strings.Contains(updateOutput, "updated successfully") {
+		t.Errorf("Expected output to contain 'updated successfully', but got '%s'", updateOutput)
+	}
 
 	// Read the index file
 	indexMap, err := readIndex(indexFilePath, false)

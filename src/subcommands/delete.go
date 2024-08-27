@@ -2,6 +2,7 @@ package subcommands
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path"
 
@@ -20,7 +21,7 @@ import (
 //   - If there is an error searching for a URI in the index, an error message is printed and the URI is skipped.
 //   - If there is an error deleting a URI from the index, an error message is printed and the URI is skipped.
 //   - If there is an error deleting the associated data file, an error message is printed.
-func SubcommandDelete(d *pb.DeleteRequest) error {
+func SubcommandDelete(d *pb.DeleteRequest, w io.Writer) error {
 	indexFilePath := path.Join(d.IndexPath, indexFile)
 
 	indexMap, err := readIndex(indexFilePath, false)
@@ -31,17 +32,17 @@ func SubcommandDelete(d *pb.DeleteRequest) error {
 	for _, uri := range d.DataUris {
 
 		if _, present := indexMap[uri]; !present {
-			fmt.Printf("Entry %s not found in index file %s, skipping\n", uri, indexFilePath)
+			fmt.Fprintf(w, "Entry %s not found in index file %s, skipping\n", uri, indexFilePath)
 			continue
 		}
 
 		delete(indexMap, uri)
 
-		fmt.Printf("Index %s deleted successfully.\n", uri)
+		fmt.Fprintf(w, "Index %s deleted successfully.\n", uri)
 
 		if d.DeleteCopy {
-			if err := deleteCopy(d.IndexPath, uri); err != nil {
-				fmt.Printf("Failed to delete copy of file %s with err: %s, skipping", uri, err)
+			if err := deleteCopy(d.IndexPath, uri, w); err != nil {
+				fmt.Fprintf(w, "Failed to delete copy of file %s with err: %s, skipping", uri, err)
 			}
 		}
 	}
@@ -58,12 +59,12 @@ func SubcommandDelete(d *pb.DeleteRequest) error {
 // Parameters:
 //   - indexPath (string): The path to the index directory.
 //   - name (string): The name of the copied file to delete.
-func deleteCopy(indexPath, name string) error {
+func deleteCopy(indexPath, name string, w io.Writer) error {
 	copiedFilePath := path.Join(indexPath, addedCopiesSubDir, name)
 
 	if _, err := os.Stat(copiedFilePath); err != nil {
 		if os.IsNotExist(err) {
-			fmt.Printf("No copy of %s found, skipping\n", name)
+			fmt.Fprintf(w, "No copy of %s found, skipping\n", name)
 			return nil
 		}
 

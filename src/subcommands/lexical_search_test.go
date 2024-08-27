@@ -3,7 +3,6 @@ package subcommands
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"os"
 	"path"
 	"strings"
@@ -82,7 +81,8 @@ func TestLexicalSearch(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			results, err := SubcommandLexicalSearch(tc.args)
+			var buf bytes.Buffer
+			results, err := SubcommandLexicalSearch(tc.args, &buf)
 			if err != nil {
 				t.Fatalf("LexicalSearch failed: %v", err)
 			}
@@ -116,7 +116,8 @@ func TestLexicalSearch_NonExistentIndex(t *testing.T) {
 		TopN:       10,
 	}
 
-	_, err = SubcommandLexicalSearch(args)
+	var buf bytes.Buffer
+	_, err = SubcommandLexicalSearch(args, &buf)
 	if err == nil {
 		t.Error("Expected an error for non-existent index file, but got nil")
 	}
@@ -156,7 +157,8 @@ func TestLexicalSearch_UnexpectedTopN(t *testing.T) {
 	}
 
 	expectedErrorMsg := "topn: -4 is an invalid amount"
-	_, err = SubcommandLexicalSearch(args)
+	var buf bytes.Buffer
+	_, err = SubcommandLexicalSearch(args, &buf)
 	if err == nil {
 		t.Error("Expected an error for bad topN, but got nil")
 	} else if strings.Compare(err.Error(), expectedErrorMsg) != 0 {
@@ -176,20 +178,10 @@ func TestPrintSearchResults(t *testing.T) {
 		},
 	}
 
-	// capture stdout
-	oldStdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	PrintSearchResults(results)
-
-	w.Close()
-	os.Stdout = oldStdout
-
 	var buf bytes.Buffer
-	io.Copy(&buf, r)
-	output := buf.String()
+	PrintSearchResults(results, &buf)
 
+	output := buf.String()
 	expectedOutput := "File: file1.txt\nOccurrences: 5\n\nFile: file2.txt\nOccurrences: 3\n\n"
 
 	if output != expectedOutput {
