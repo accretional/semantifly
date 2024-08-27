@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"accretional.com/semantifly/grpcclient"
+	// "accretional.com/semantifly/grpcclient"
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 )
 
@@ -51,7 +51,7 @@ func CommandReadRun() {
 	}
 
 	setupSemantifly()
-	grpcclient.Init()
+	// grpcclient.Init()
 
 	cmdName := os.Args[1]
 	args := os.Args[2:]
@@ -205,10 +205,10 @@ func executeAdd(args []string) {
 		return
 	}
 
-	*indexPath, err = convertToAbsPath(*indexPath)
-	if err != nil {
-		printCmdErr(err.Error())
-	}
+	// *indexPath, err = convertToAbsPath(*indexPath)
+	// if err != nil {
+	// 	printCmdErr(err.Error())
+	// }
 
 	if *sourceType == "" {
 		sourceTypeStr, err := inferSourceType(cmd.Args())
@@ -218,31 +218,30 @@ func executeAdd(args []string) {
 		*sourceType = sourceTypeStr
 	}
 
-	dataUris, err := convertUrisToAbsPath(cmd.Args(), *sourceType == "local_file")
-	if err != nil {
-		printCmdErr(err.Error())
-	}
+	// dataUris, err := convertUrisToAbsPath(cmd.Args(), *sourceType == "local_file")
+	// if err != nil {
+	// 	printCmdErr(err.Error())
+	// }
 
 	addArgs := &pb.AddRequest{
 		IndexPath:  *indexPath,
 		DataType:   *dataType,
 		SourceType: *sourceType,
 		MakeCopy:   *makeLocalCopy,
-		DataUris:   dataUris,
+		DataUris:   cmd.Args(),
 	}
 
-	res, err := grpcclient.Add(addArgs)
+	err = SubcommandAdd(addArgs)
 	if err != nil {
 		fmt.Printf("Error occurred during add subcommand: %v", err)
 		return
 	}
-	fmt.Println(res.Message)
 }
 
 func executeDelete(args []string) {
 	cmd := flag.NewFlagSet("delete", flag.ExitOnError)
 	deleteLocalCopy := cmd.Bool("copy", false, "Whether to delete the copy made")
-	sourceType := cmd.String("source-type", "", "How to access the content")
+	// sourceType := cmd.String("source-type", "", "How to access the content")
 	indexPath := cmd.String("index-path", "", "Path to the index file")
 
 	flags, nonFlags, err := parseArgs(args, cmd)
@@ -260,41 +259,40 @@ func executeDelete(args []string) {
 	}
 
 	// Convert relative paths to absolute paths
-	if *sourceType == "" {
-		sourceTypeStr, err := inferSourceType(cmd.Args())
-		if err != nil {
-			printCmdErr(fmt.Sprintf("Failed to infer source type from URIs: %v\n", err))
-		}
-		*sourceType = sourceTypeStr
-	}
+	// if *sourceType == "" {
+	// 	sourceTypeStr, err := inferSourceType(cmd.Args())
+	// 	if err != nil {
+	// 		printCmdErr(fmt.Sprintf("Failed to infer source type from URIs: %v\n", err))
+	// 	}
+	// 	*sourceType = sourceTypeStr
+	// }
 
-	dataUris, err := convertUrisToAbsPath(cmd.Args(), *sourceType == "local_file")
-	if err != nil {
-		printCmdErr(err.Error())
-	}
+	// dataUris, err := convertUrisToAbsPath(cmd.Args(), *sourceType == "local_file")
+	// if err != nil {
+	// 	printCmdErr(err.Error())
+	// }
 
-	*indexPath, err = convertToAbsPath(*indexPath)
-	if err != nil {
-		printCmdErr(err.Error())
-	}
+	// *indexPath, err = convertToAbsPath(*indexPath)
+	// if err != nil {
+	// 	printCmdErr(err.Error())
+	// }
 
 	deleteArgs := &pb.DeleteRequest{
 		IndexPath:  *indexPath,
 		DeleteCopy: *deleteLocalCopy,
-		DataUris:   dataUris,
+		DataUris:   cmd.Args(),
 	}
 
-	res, err := grpcclient.Delete(deleteArgs)
+	err = SubcommandDelete(deleteArgs)
 	if err != nil {
 		fmt.Printf("Error occurred during delete subcommand: %v", err)
 		return
 	}
-	fmt.Println(res.Message)
 }
 
 func executeGet(args []string) {
 	cmd := flag.NewFlagSet("get", flag.ExitOnError)
-	sourceType := cmd.String("source-type", "", "How to access the content")
+	// sourceType := cmd.String("source-type", "", "How to access the content")
 	indexPath := cmd.String("index-path", "", "Path to the index file")
 
 	flags, nonFlags, err := parseArgs(args, cmd)
@@ -312,42 +310,41 @@ func executeGet(args []string) {
 	}
 
 	// Convert relative paths to absolute paths
-	if *sourceType == "" {
-		sourceTypeStr, err := inferSourceType(cmd.Args())
-		if err != nil {
-			printCmdErr(fmt.Sprintf("Failed to infer source type from URIs: %v\n", err))
-		}
-		*sourceType = sourceTypeStr
-	}
+	// if *sourceType == "" {
+	// 	sourceTypeStr, err := inferSourceType(cmd.Args())
+	// 	if err != nil {
+	// 		printCmdErr(fmt.Sprintf("Failed to infer source type from URIs: %v\n", err))
+	// 	}
+	// 	*sourceType = sourceTypeStr
+	// }
 
-	dataUris, err := convertUrisToAbsPath(cmd.Args(), *sourceType == "local_file")
-	if err != nil {
-		printCmdErr(err.Error())
-	}
+	// dataUris, err := convertUrisToAbsPath(cmd.Args(), *sourceType == "local_file")
+	// if err != nil {
+	// 	printCmdErr(err.Error())
+	// }
 
-	*indexPath, err = convertToAbsPath(*indexPath)
-	if err != nil {
-		printCmdErr(err.Error())
-	}
+	// *indexPath, err = convertToAbsPath(*indexPath)
+	// if err != nil {
+	// 	printCmdErr(err.Error())
+	// }
 
 	getArgs := &pb.GetRequest{
 		IndexPath: *indexPath,
-		Name:      dataUris[0],
+		Name:      cmd.Args()[0],
 	}
 
-	res, err := grpcclient.Get(getArgs)
+	_, err = SubcommandGet(getArgs)
 	if err != nil {
 		fmt.Printf("Error occurred during get subcommand: %v", err)
 		return
 	}
-	fmt.Println(res.Message)
 }
 
 func executeUpdate(args []string) {
 	cmd := flag.NewFlagSet("update", flag.ExitOnError)
 	dataType := cmd.String("type", "", "The type of the input data")
 	sourceType := cmd.String("source-type", "", "How to access the content")
-	makeLocalCopy := cmd.String("copy", "false", "Whether to copy and use the file as it is now, or dynamically access it")
+	makeLocalCopy := cmd.Bool("copy", false, "Whether to copy and use the file as it is now, or dynamically access it")
 	indexPath := cmd.String("index-path", "", "Path to the index file")
 
 	flags, nonFlags, err := parseArgs(args, cmd)
@@ -365,39 +362,38 @@ func executeUpdate(args []string) {
 	}
 
 	// Convert relative paths to absolute paths
-	if *sourceType == "" {
-		sourceTypeStr, err := inferSourceType(cmd.Args())
-		if err != nil {
-			printCmdErr(fmt.Sprintf("Failed to infer source type from URIs: %v\n", err))
-		}
-		*sourceType = sourceTypeStr
-	}
+	// if *sourceType == "" {
+	// 	sourceTypeStr, err := inferSourceType(cmd.Args())
+	// 	if err != nil {
+	// 		printCmdErr(fmt.Sprintf("Failed to infer source type from URIs: %v\n", err))
+	// 	}
+	// 	*sourceType = sourceTypeStr
+	// }
 
-	dataUris, err := convertUrisToAbsPath(cmd.Args(), *sourceType == "local_file")
-	if err != nil {
-		printCmdErr(err.Error())
-	}
+	// dataUris, err := convertUrisToAbsPath(cmd.Args(), *sourceType == "local_file")
+	// if err != nil {
+	// 	printCmdErr(err.Error())
+	// }
 
-	*indexPath, err = convertToAbsPath(*indexPath)
-	if err != nil {
-		printCmdErr(err.Error())
-	}
+	// *indexPath, err = convertToAbsPath(*indexPath)
+	// if err != nil {
+	// 	printCmdErr(err.Error())
+	// }
 
 	updateArgs := &pb.UpdateRequest{
 		IndexPath:  *indexPath,
-		Name:       dataUris[0],
+		Name:       cmd.Args()[0],
 		DataType:   *dataType,
 		SourceType: *sourceType,
 		UpdateCopy: *makeLocalCopy,
-		DataUri:    dataUris[1],
+		DataUri:    cmd.Args()[1],
 	}
 
-	res, err := grpcclient.Update(updateArgs)
+	err = SubcommandUpdate(updateArgs)
 	if err != nil {
 		fmt.Printf("Error occurred during update subcommand: %v", err)
 		return
 	}
-	fmt.Println(res.Message)
 }
 
 func executeSearch(args []string) {
@@ -425,12 +421,11 @@ func executeSearch(args []string) {
 		TopN:       int32(*topN),
 	}
 
-	res, err := grpcclient.LexicalSearch(searchArgs)
+	_, err = SubcommandLexicalSearch(searchArgs)
 	if err != nil {
 		printCmdErr(fmt.Sprintf("Error during search: %v", err))
 		return
 	}
-	fmt.Println(res.Message)
 }
 
 func inferSourceType(uris []string) (string, error) {

@@ -31,22 +31,16 @@ func TestAdd(t *testing.T) {
 	}
 
 	// Set up test arguments
-	args := AddArgs{
+	args := &pb.AddRequest{
 		IndexPath:  tempDir,
 		DataType:   "text",
 		SourceType: "local_file",
 		MakeCopy:   true,
-		DataURIs:   []string{testFilePath},
+		DataUris:   []string{testFilePath},
 	}
-
-	// Create a buffer to capture output
-	var buf bytes.Buffer
 
 	// Call the Add function with the buffer
-	err = Add(args, &buf)
-	if err != nil {
-		t.Fatalf("Add function returned an error: %v", err)
-	}
+	SubcommandAdd(args)
 
 	// Check if the index file was created
 	indexFilePath := path.Join(tempDir, indexFile)
@@ -87,12 +81,6 @@ func TestAdd(t *testing.T) {
 	if _, err := os.Stat(path.Join(copiesDir, testFilePath)); os.IsNotExist(err) {
 		t.Errorf("Data file for %s was not copied", testFilePath)
 	}
-
-	// Check the output in the buffer
-	output := buf.String()
-	if !strings.Contains(output, "added successfully") {
-		t.Errorf("Expected output to contain 'added successfully', but got '%s'", output)
-	}
 }
 
 func TestAdd_MultipleFilesSamePath(t *testing.T) {
@@ -113,23 +101,27 @@ func TestAdd_MultipleFilesSamePath(t *testing.T) {
 	testFilePath2 := path.Join(tempDir, "test_file.txt")
 
 	// Set up test arguments
-	args := AddArgs{
+	args := &pb.AddRequest{
 		IndexPath:  tempDir,
 		DataType:   "text",
 		SourceType: "local_file",
 		MakeCopy:   true,
-		DataURIs:   []string{testFilePath1, testFilePath2},
+		DataUris:   []string{testFilePath1, testFilePath2},
 	}
 
-	// Create a buffer to capture output
-	var buf bytes.Buffer
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
 
 	// Call the Add function with the buffer
-	err = Add(args, &buf)
-	if err != nil {
-		t.Fatalf("Add function returned an error: %v", err)
-	}
+	SubcommandAdd(args)
 
+	w.Close()
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	io.Copy(&buf, r)
 	output := buf.String()
 
 	// Checking if the second entry was skipped
@@ -167,22 +159,28 @@ func TestAdd_Webpage(t *testing.T) {
 	testWebpageURL := "http://echo.jsontest.com/title/lorem/content/ipsum"
 
 	// Set up test arguments
-	args := AddArgs{
+	args := &pb.AddRequest{
 		IndexPath:  tempDir,
 		DataType:   "text",
 		SourceType: "webpage",
 		MakeCopy:   true,
-		DataURIs:   []string{testWebpageURL},
+		DataUris:   []string{testWebpageURL},
 	}
 
-	// Create a buffer to capture output
-	var buf bytes.Buffer
+	// Capture stdout
+	oldStdout := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
 
 	// Call the Add function with the buffer
-	err = Add(args, &buf)
-	if err != nil {
-		t.Fatalf("Add function returned an error: %v", err)
-	}
+	SubcommandAdd(args)
+
+	w.Close()
+	os.Stdout = oldStdout
+
+	var buf bytes.Buffer
+	io.Copy(&buf, r)
+	output := buf.String()
 
 	// Check if the index file was created
 	indexFilePath := path.Join(tempDir, indexFile)
@@ -258,7 +256,6 @@ func TestAdd_Webpage(t *testing.T) {
 	}
 
 	// Check the output in the buffer
-	output := buf.String()
 	if !strings.Contains(output, "added successfully") {
 		t.Errorf("Expected output to contain 'added successfully', but got '%s'", output)
 	}

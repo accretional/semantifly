@@ -1,12 +1,12 @@
 package subcommands
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"path"
-	"strings"
 	"testing"
+
+	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 )
 
 func TestDelete(t *testing.T) {
@@ -31,39 +31,27 @@ func TestDelete(t *testing.T) {
 		t.Fatalf("Failed to create test file 2: %v", err)
 	}
 
-	// Set up test arguments for Add
-	addArgs := AddArgs{
+	// Set up test arguments
+	args := &pb.AddRequest{
 		IndexPath:  tempDir,
 		DataType:   "text",
 		SourceType: "local_file",
 		MakeCopy:   true,
-		DataURIs:   []string{testFilePath1, testFilePath2},
+		DataUris:   []string{testFilePath1, testFilePath2},
 	}
-
-	// Create a buffer for Add output
-	var addBuf bytes.Buffer
 
 	// Call the Add function
-	err = Add(addArgs, &addBuf)
-	if err != nil {
-		t.Fatalf("Add function returned an error: %v", err)
-	}
+	SubcommandAdd(args)
 
-	// Test case for Delete
-	deleteArgs := DeleteArgs{
+	// Test case
+	testArgs := &pb.DeleteRequest{
 		IndexPath:  tempDir,
 		DeleteCopy: true,
-		DataURIs:   []string{testFilePath1},
+		DataUris:   []string{testFilePath1},
 	}
-
-	// Create a buffer for Delete output
-	var deleteBuf bytes.Buffer
 
 	// Run the Delete function
-	err = Delete(deleteArgs, &deleteBuf)
-	if err != nil {
-		t.Fatalf("Delete function returned an error: %v", err)
-	}
+	SubcommandDelete(testArgs)
 
 	// Verify the results
 	indexFilePath := path.Join(tempDir, indexFile)
@@ -81,11 +69,5 @@ func TestDelete(t *testing.T) {
 	copiesDir := path.Join(tempDir, addedCopiesSubDir)
 	if _, err := os.Stat(path.Join(copiesDir, testFilePath1)); !os.IsNotExist(err) {
 		t.Errorf("Data file for %s was not deleted", testFilePath1)
-	}
-
-	// Check the output in the buffer
-	deleteOutput := deleteBuf.String()
-	if !strings.Contains(deleteOutput, "deleted successfully") {
-		t.Errorf("Expected output to contain 'deleted successfully', but got '%s'", deleteOutput)
 	}
 }

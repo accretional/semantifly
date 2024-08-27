@@ -2,18 +2,13 @@ package subcommands
 
 import (
 	"fmt"
-	"io"
 	"path"
 
 	fetch "accretional.com/semantifly/fetcher"
+	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 )
 
-type GetArgs struct {
-	IndexPath string
-	Name      string
-}
-
-func Get(g GetArgs, w io.Writer) (string, error) {
+func SubcommandGet(g *pb.GetRequest) (string, error) {
 	indexFilePath := path.Join(g.IndexPath, indexFile)
 
 	indexMap, err := readIndex(indexFilePath, false)
@@ -24,17 +19,17 @@ func Get(g GetArgs, w io.Writer) (string, error) {
 	targetEntry := indexMap[g.Name]
 
 	if targetEntry == nil {
-		fmt.Fprintf(w, "entry '%s' not found in index file %s\n", g.Name, indexFilePath)
+		fmt.Printf("entry '%s' not found in index file %s\n", g.Name, indexFilePath)
 		return "", fmt.Errorf("entry '%s' not found in index file %s", g.Name, indexFilePath)
 	}
 
 	if targetEntry.Content != "" {
-		fmt.Fprintln(w, targetEntry.Content)
+		fmt.Println(targetEntry.Content)
 	} else {
 		content, err := fetchFromCopy(g.IndexPath, g.Name)
 		if content == nil {
 			if err != nil {
-				fmt.Fprintf(w, "failed to read content from copy: %v. Fetching from the source.\n", err)
+				fmt.Printf("failed to read content from copy: %v. Fetching from the source.\n", err)
 			}
 
 			content, err = fetch.FetchFromSource(targetEntry.SourceType, targetEntry.URI)
@@ -43,7 +38,7 @@ func Get(g GetArgs, w io.Writer) (string, error) {
 			}
 		}
 
-		fmt.Fprintln(w, string(content))
+		fmt.Println(string(content))
 		return string(content), nil
 	}
 

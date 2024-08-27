@@ -2,7 +2,6 @@ package subcommands
 
 import (
 	"fmt"
-	"io"
 	"path"
 
 	fetch "accretional.com/semantifly/fetcher"
@@ -10,16 +9,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-type UpdateArgs struct {
-	Name       string
-	IndexPath  string
-	DataType   string
-	SourceType string
-	UpdateCopy string
-	DataURI    string
-}
-
-func Update(u UpdateArgs, w io.Writer) error {
+func SubcommandUpdate(u *pb.UpdateRequest) error {
 	indexFilePath := path.Join(u.IndexPath, indexFile)
 
 	indexMap, err := readIndex(indexFilePath, false)
@@ -27,7 +17,7 @@ func Update(u UpdateArgs, w io.Writer) error {
 		return fmt.Errorf("failed to read the index file: %v", err)
 	}
 
-	if err := updateIndex(indexMap, &u); err != nil {
+	if err := updateIndex(indexMap, u); err != nil {
 		return fmt.Errorf("failed to update the index entry %s: %v", u.Name, err)
 	}
 
@@ -35,14 +25,14 @@ func Update(u UpdateArgs, w io.Writer) error {
 		return fmt.Errorf("failed to write to the index file: %v", err)
 	}
 
-	if u.UpdateCopy == "true" {
+	if u.UpdateCopy {
 
 		sourceType, err := parseSourceType(u.SourceType)
 		if err != nil {
 			return fmt.Errorf("invalid source type: %v", err)
 		}
 
-		content, err := fetch.FetchFromSource(sourceType, u.DataURI)
+		content, err := fetch.FetchFromSource(sourceType, u.DataUri)
 
 		if err != nil {
 			return fmt.Errorf("failed to validate the URI %s: %v\n", u, err)
@@ -50,7 +40,7 @@ func Update(u UpdateArgs, w io.Writer) error {
 
 		ile := &pb.IndexListEntry{
 			Name:       u.Name,
-			URI:        u.DataURI,
+			URI:        u.DataUri,
 			DataType:   pb.DataType(pb.DataType_value[u.DataType]),
 			SourceType: pb.SourceType(pb.SourceType_value[u.SourceType]),
 			Content:    string(content),
@@ -61,18 +51,18 @@ func Update(u UpdateArgs, w io.Writer) error {
 		}
 	}
 
-	fmt.Fprintf(w, "Index %s updated successfully to URI %s\n", u.Name, u.DataURI)
+	fmt.Printf("Index %s updated successfully to URI %s\n", u.Name, u.DataUri)
 	return nil
 }
 
-func updateIndex(indexMap map[string]*pb.IndexListEntry, u *UpdateArgs) error {
+func updateIndex(indexMap map[string]*pb.IndexListEntry, u *pb.UpdateRequest) error {
 
 	entry, exists := indexMap[u.Name]
 	if !exists {
 		return fmt.Errorf("entry %s not found", u.Name)
 	}
 
-	entry.URI = u.DataURI
+	entry.URI = u.DataUri
 
 	if u.DataType != "" {
 		if dataType, err := parseDataType(u.DataType); err != nil {

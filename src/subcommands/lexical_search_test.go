@@ -54,35 +54,35 @@ func TestLexicalSearch(t *testing.T) {
 
 	testCases := []struct {
 		name       string
-		args       LexicalSearchArgs
+		args       *pb.LexicalSearchRequest
 		wantLen    int
 		wantFirst  string
 		wantOccurs int32
 	}{
 		{
 			name:       "Search for 'test'",
-			args:       LexicalSearchArgs{IndexPath: tempDir, SearchTerm: "test", TopN: 2},
+			args:       &pb.LexicalSearchRequest{IndexPath: tempDir, SearchTerm: "test", TopN: 2},
 			wantLen:    2,
 			wantFirst:  "file2.txt",
 			wantOccurs: 10,
 		},
 		{
 			name:       "Search for 'search'",
-			args:       LexicalSearchArgs{IndexPath: tempDir, SearchTerm: "searching", TopN: 1},
+			args:       &pb.LexicalSearchRequest{IndexPath: tempDir, SearchTerm: "searching", TopN: 1},
 			wantLen:    1,
 			wantFirst:  "file1.txt",
 			wantOccurs: 7,
 		},
 		{
 			name:    "Search for non-existent term",
-			args:    LexicalSearchArgs{IndexPath: tempDir, SearchTerm: "nonexistent", TopN: 10},
+			args:    &pb.LexicalSearchRequest{IndexPath: tempDir, SearchTerm: "nonexistent", TopN: 10},
 			wantLen: 0,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			results, err := LexicalSearch(tc.args)
+			results, err := SubcommandLexicalSearch(tc.args)
 			if err != nil {
 				t.Fatalf("LexicalSearch failed: %v", err)
 			}
@@ -110,13 +110,13 @@ func TestLexicalSearch_NonExistentIndex(t *testing.T) {
 	}
 	defer os.RemoveAll(tempDir)
 
-	args := LexicalSearchArgs{
+	args := &pb.LexicalSearchRequest{
 		IndexPath:  tempDir,
 		SearchTerm: "test",
 		TopN:       10,
 	}
 
-	_, err = LexicalSearch(args)
+	_, err = SubcommandLexicalSearch(args)
 	if err == nil {
 		t.Error("Expected an error for non-existent index file, but got nil")
 	}
@@ -149,14 +149,14 @@ func TestLexicalSearch_UnexpectedTopN(t *testing.T) {
 		t.Fatalf("Failed to write mock index file: %v", err)
 	}
 
-	args := LexicalSearchArgs{
+	args := &pb.LexicalSearchRequest{
 		IndexPath:  tempDir,
 		SearchTerm: "test",
 		TopN:       -4,
 	}
 
 	expectedErrorMsg := "topn: -4 is an invalid amount"
-	_, err = LexicalSearch(args)
+	_, err = SubcommandLexicalSearch(args)
 	if err == nil {
 		t.Error("Expected an error for bad topN, but got nil")
 	} else if strings.Compare(err.Error(), expectedErrorMsg) != 0 {

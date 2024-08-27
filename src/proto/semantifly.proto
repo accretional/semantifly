@@ -57,7 +57,7 @@ message UpdateRequest {
   string name = 2;
   string data_type = 3;
   string source_type = 4;
-  string update_copy = 5;
+  bool update_copy = 5;
   string data_uri = 6;
 }
 
