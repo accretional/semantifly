@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
@@ -35,6 +36,14 @@ func initializeDatabaseSchema(ctx context.Context, conn PgxIface) error {
     }
     defer tx.Rollback(ctx)
 
+    // Install pgvector for semantic search
+    _, err = tx.Exec(ctx, `
+        CREATE EXTENSION IF NOT EXISTS vector;
+    `)
+    if err != nil {
+        return fmt.Errorf("failed to create extension for pgvector: %w", err)
+    }
+
     // Create the main table
     _, err = tx.Exec(ctx, `
         CREATE TABLE IF NOT EXISTS index_list (
@@ -46,8 +55,9 @@ func initializeDatabaseSchema(ctx context.Context, conn PgxIface) error {
             last_refreshed_time TIMESTAMP,
             content TEXT,
             search_vector tsvector,
-            word_occurrences JSONB
-        )
+            word_occurrences JSONB,
+            embedding vector(1536)
+        );
     `)
     if err != nil {
         return fmt.Errorf("failed to create table: %w", err)
@@ -57,6 +67,7 @@ func initializeDatabaseSchema(ctx context.Context, conn PgxIface) error {
     _, err = tx.Exec(ctx, `
         CREATE INDEX IF NOT EXISTS idx_search_vector ON index_list USING GIN (search_vector);
         CREATE INDEX IF NOT EXISTS idx_word_occurrences ON index_list USING GIN (word_occurrences);
+        CREATE INDEX IF NOT EXISTS idx_embedding ON index_list USING ivfflat (embedding vector_cosine_ops);
     `)
     if err != nil {
         return fmt.Errorf("failed to create indexes: %w", err)
@@ -81,7 +92,6 @@ func initializeDatabaseSchema(ctx context.Context, conn PgxIface) error {
     return nil
 }
 
-
 // insertRows inserts or updates rows in the index_list table and refreshes the materialized view.
 //
 // Parameters:
@@ -89,25 +99,38 @@ func initializeDatabaseSchema(ctx context.Context, conn PgxIface) error {
 //   - conn: A PgxIface interface for database connection.
 //   - index: A pointer to a pb.Index struct containing the entries to be inserted or updated.
 func insertRows(ctx context.Context, conn PgxIface, index *pb.Index) error {
-    tx, err := conn.Begin(ctx)
-    if err != nil {
-        return fmt.Errorf("unable to connect to database: %w", err)
-    }
-    defer tx.Rollback(ctx)
+	tx, err := conn.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("unable to connect to database: %w", err)
+	}
+	defer tx.Rollback(ctx)
 
-    batch := &pgx.Batch{}
-    for _, entry := range index.Entries {
-        wordOccurrencesJSON, err := json.Marshal(entry.WordOccurrences)
-        if err != nil {
-            return fmt.Errorf("failed to marshal word occurrences: %w", err)
-        }
+	generator, err := NewEmbeddingGenerator()
+	if err != nil {
+		return fmt.Errorf("failed to create embedding generator: %w", err)
+	}
 
-        batch.Queue(`
+	batch := &pgx.Batch{}
+	for _, entry := range index.Entries {
+		wordOccurrencesJSON, err := json.Marshal(entry.WordOccurrences)
+		if err != nil {
+			return fmt.Errorf("failed to marshal word occurrences: %w", err)
+		}
+
+		embedding, err := generator.GenerateEmbedding(entry.Content)
+		if err != nil {
+			return fmt.Errorf("failed to generate embedding for entry %s: %w", entry.Name, err)
+		}
+
+        // Convert the embedding slice to a string representation
+        embeddingStr := fmt.Sprintf("[%s]", strings.Trim(strings.Join(strings.Fields(fmt.Sprint(embedding)), ","), "[]"))
+
+		batch.Queue(`
             INSERT INTO index_list(
                 name, uri, data_type, source_type, first_added_time, 
-                last_refreshed_time, content, search_vector, word_occurrences
+                last_refreshed_time, content, search_vector, word_occurrences, embedding
             )
-            VALUES($1, $2, $3, $4, $5, $6, $7, to_tsvector('english', $7), $8)
+            VALUES($1, $2, $3, $4, $5, $6, $7, to_tsvector('english', $7), $8, $9)
             ON CONFLICT (name) DO UPDATE SET
                 uri = EXCLUDED.uri,
                 data_type = EXCLUDED.data_type,
@@ -115,33 +138,33 @@ func insertRows(ctx context.Context, conn PgxIface, index *pb.Index) error {
                 last_refreshed_time = EXCLUDED.last_refreshed_time,
                 content = EXCLUDED.content,
                 search_vector = to_tsvector('english', EXCLUDED.content),
-                word_occurrences = EXCLUDED.word_occurrences
+                word_occurrences = EXCLUDED.word_occurrences,
+                embedding = EXCLUDED.embedding
         `, entry.Name, entry.URI, entry.DataType.String(), entry.SourceType.String(),
-            entry.FirstAddedTime.AsTime(), entry.LastRefreshedTime.AsTime(),
-            entry.Content, wordOccurrencesJSON)
-    }
+			entry.FirstAddedTime.AsTime(), entry.LastRefreshedTime.AsTime(),
+			entry.Content, wordOccurrencesJSON, embeddingStr)
+	}
 
-    br := tx.SendBatch(ctx, batch)
-    _, err = br.Exec()
-    br.Close()
-    if err != nil {
-        return fmt.Errorf("failed to insert rows: %w", err)
-    }
+	br := tx.SendBatch(ctx, batch)
+	_, err = br.Exec()
+	br.Close()
+	if err != nil {
+		return fmt.Errorf("failed to insert rows: %w", err)
+	}
 
-    err = tx.Commit(ctx)
-    if err != nil {
-        return fmt.Errorf("failed to commit transaction: %w", err)
-    }
+	err = tx.Commit(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
 
-    // Refresh the materialized view outside the transaction
-    _, err = conn.Exec(ctx, `REFRESH MATERIALIZED VIEW CONCURRENTLY mv_index_list`)
-    if err != nil {
-        return fmt.Errorf("failed to refresh materialized view: %w", err)
-    }
+	// Refresh the materialized view outside the transaction
+	_, err = conn.Exec(ctx, `REFRESH MATERIALIZED VIEW CONCURRENTLY mv_index_list`)
+	if err != nil {
+		return fmt.Errorf("failed to refresh materialized view: %w", err)
+	}
 
-    return nil
+	return nil
 }
-
 
 // queryRow retrieves a single row from the index_list table based on the provided name.
 // It returns a pointer to a pb.IndexListEntry struct containing the row data, or an error if the query fails.
