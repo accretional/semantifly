@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"testing"
 
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
@@ -19,30 +20,29 @@ import (
 )
 
 func setupPostgres() error {
-    currentDir, err := os.Getwd()
-    if err != nil {
-        return fmt.Errorf("Failed to get current directory: %v", err)
-    }
+	currentDir, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("Failed to get current directory: %v", err)
+	}
 
-    if filepath.Base(currentDir) != "semantifly" {
-        err = os.Chdir("../..")
-        if err != nil {
-            return fmt.Errorf("Failed to change directory: %v", err)
-        }
-    }
+	if filepath.Base(currentDir) != "semantifly" {
+		err = os.Chdir("../..")
+		if err != nil {
+			return fmt.Errorf("Failed to change directory: %v", err)
+		}
+	}
 
-    cmd := exec.Command("bash", "setup_postgres.sh")
+	cmd := exec.Command("bash", "setup_postgres.sh")
 
-    var stdoutBuf, stderrBuf bytes.Buffer
-    cmd.Stdout = io.MultiWriter(os.Stdout, &stdoutBuf)
-    cmd.Stderr = io.MultiWriter(os.Stderr, &stderrBuf)
+	var stderrBuf bytes.Buffer
+	cmd.Stderr = io.MultiWriter(os.Stderr, &stderrBuf)
 
-    err = cmd.Run()
-    if err != nil {
-        return fmt.Errorf("Failed to setup PostgreSQL server: %v", err)
-    }
+	err = cmd.Run()
+	if err != nil {
+		return fmt.Errorf("Failed to setup PostgreSQL server: %v", err)
+	}
 
-    return nil
+	return nil
 }
 
 func createTestingDatabase() (*pg.DB, error) {
@@ -263,20 +263,29 @@ func TestQueryRow(t *testing.T) {
 
 	expectedEntry := index.Entries[0]
 
-	if expectedEntry.Name != entry.Name {
-		t.Fatalf("expected name %s, got %s", expectedEntry.Name, entry.Name)
+	type PartialEntry struct {
+		Name       string
+		URI        string
+		DataType   pb.DataType
+		SourceType pb.SourceType
 	}
 
-	if expectedEntry.URI != entry.URI {
-		t.Fatalf("expected URI %s, got %s", expectedEntry.URI, entry.URI)
+	expectedPartial := PartialEntry{
+		Name:       expectedEntry.Name,
+		URI:        expectedEntry.URI,
+		DataType:   expectedEntry.DataType,
+		SourceType: expectedEntry.SourceType,
 	}
 
-	if expectedEntry.DataType != entry.DataType {
-		t.Fatalf("expected DataType %v, got %v", expectedEntry.DataType, entry.DataType)
+	actualPartial := PartialEntry{
+		Name:       entry.Name,
+		URI:        entry.URI,
+		DataType:   entry.DataType,
+		SourceType: entry.SourceType,
 	}
 
-	if expectedEntry.SourceType != entry.SourceType {
-		t.Fatalf("expected SourceType %v, got %v", expectedEntry.SourceType, entry.SourceType)
+	if !reflect.DeepEqual(expectedPartial, actualPartial) {
+		t.Fatalf("Partial entry mismatch.\nExpected: %+v\nGot: %+v", expectedPartial, actualPartial)
 	}
 
 	// Delete the test entry
