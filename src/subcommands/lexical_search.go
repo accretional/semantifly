@@ -106,6 +106,7 @@ func SubcommandLexicalSearch(args *pb.LexicalSearchRequest, w io.Writer) ([]file
 	if len(combinedResults) > int(args.TopN) {
 		combinedResults = combinedResults[:args.TopN]
 	}
+
 	PrintSearchResults(combinedResults, w)
 
 	return combinedResults, nil
