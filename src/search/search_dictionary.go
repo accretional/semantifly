@@ -16,7 +16,7 @@ import (
 // during content fetching or processing.
 
 func CreateSearchDictionary(ile *pb.IndexListEntry) error {
-	content, err := fetch.FetchFromSource(ile.SourceType, ile.URI)
+	content, err := fetch.FetchFromSource(ile.ContentMetadata.SourceType, ile.ContentMetadata.URI)
 	if err != nil {
 		return fmt.Errorf("failed to open source file: %w", err)
 	}

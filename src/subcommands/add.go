@@ -5,8 +5,8 @@ import (
 	"path"
 
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
-	"google.golang.org/protobuf/types/known/timestamppb"
 	search "accretional.com/semantifly/search"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type AddArgs struct {
@@ -46,10 +46,14 @@ func Add(a AddArgs) {
 		}
 
 		ile := &pb.IndexListEntry{
-			Name:           u,
-			URI:            u,
-			DataType:       dataType,
-			SourceType:     sourceType,
+			Name: u,
+
+			ContentMetadata: &pb.ContentMetadata{
+				URI:        u,
+				DataType:   dataType,
+				SourceType: sourceType,
+			},
+
 			FirstAddedTime: timestamppb.Now(),
 		}
 

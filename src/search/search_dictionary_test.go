@@ -128,7 +128,9 @@ func TestCreateSearchDictionary(t *testing.T) {
 			}
 
 			ile := &pb.IndexListEntry{
-				URI: tempFile.Name(),
+				ContentMetadata: &pb.ContentMetadata{
+					URI: tempFile.Name(),
+				},
 			}
 
 			err = CreateSearchDictionary(ile)
