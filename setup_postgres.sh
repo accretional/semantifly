@@ -30,12 +30,7 @@ start_postgres() {
         git clone https://github.com/mpartel/postgres-protobuf && \
         cd postgres-protobuf && \
         make && \
-        PKGLIBDIR=\$(pg_config --pkglibdir) && \
-        SHAREDIR=\$(pg_config --sharedir) && \
-        cp protobuf.so \$PKGLIBDIR && \
-        mkdir -p \$SHAREDIR/extension && \
-        cp postgres_protobuf--*.sql \$SHAREDIR/extension && \
-        cp postgres_protobuf.control \$SHAREDIR/extension && \
+        make install && \
         echo 'shared_preload_libraries = '\''protobuf'\''' >> /var/lib/postgresql/data/postgresql.conf
     "; then
         echo "Failed to install postgres-protobuf in the Postgres container" >&2
