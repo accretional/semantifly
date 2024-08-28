@@ -37,7 +37,7 @@ func Get(g GetArgs) {
 				fmt.Printf("Failed to read content from copy: %v. Fetching from the source.\n", err)
 			}
 
-			content, err = fetch.FetchFromSource(targetEntry.SourceType, targetEntry.URI)
+			content, err = fetch.FetchFromSource(targetEntry.ContentMetadata.SourceType, targetEntry.ContentMetadata.URI)
 			if err != nil {
 				fmt.Printf("Failed to read content from source: %v.\n", err)
 				return

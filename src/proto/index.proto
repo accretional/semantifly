@@ -9,18 +9,22 @@ message Index {
     repeated IndexListEntry entries = 1;
 }
 
+message ContentMetadata {
+    string URI = 1;
+    DataType dataType = 2;
+    SourceType sourceType = 3;
+}
+
 message IndexListEntry {
     string name = 1;
-    string URI = 2;
-    DataType dataType = 3;
-    SourceType sourceType = 4;
-    google.protobuf.Timestamp first_added_time = 5;
-    google.protobuf.Timestamp last_refreshed_time = 6;
+    ContentMetadata content_metadata = 2;
+    google.protobuf.Timestamp first_added_time = 3;
+    google.protobuf.Timestamp last_refreshed_time = 4;
     // Possibly to be changed to byte or some more complex representation based on DataType
-	string content = 7;
+	string content = 5;
     // Map that stores the count of each word
-    map<string, int32> word_occurrences = 8;
-    map<string, int32> stemmed_word_occurrences = 9;
+    map<string, int32> word_occurrences = 6;
+    map<string, int32> stemmed_word_occurrences = 7;
 }
 
 // Roughly corresponding to file extension, how to parse/encode the file.

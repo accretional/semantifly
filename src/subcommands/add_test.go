@@ -62,14 +62,14 @@ func TestAdd(t *testing.T) {
 		if entry.Name != testFilePath {
 			t.Errorf("Expected Name %s, got %s", testFilePath, entry.Name)
 		}
-		if entry.URI != testFilePath {
-			t.Errorf("Expected URI %s, got %s", testFilePath, entry.URI)
+		if entry.ContentMetadata.URI != testFilePath {
+			t.Errorf("Expected URI %s, got %s", testFilePath, entry.ContentMetadata.URI)
 		}
-		if entry.DataType != pb.DataType_TEXT {
-			t.Errorf("Expected DataType %v, got %v", pb.DataType_TEXT, entry.DataType)
+		if entry.ContentMetadata.DataType != pb.DataType_TEXT {
+			t.Errorf("Expected DataType %v, got %v", pb.DataType_TEXT, entry.ContentMetadata.DataType)
 		}
-		if entry.SourceType != pb.SourceType_LOCAL_FILE {
-			t.Errorf("Expected SourceType %v, got %v", pb.SourceType_LOCAL_FILE, entry.SourceType)
+		if entry.ContentMetadata.SourceType != pb.SourceType_LOCAL_FILE {
+			t.Errorf("Expected SourceType %v, got %v", pb.SourceType_LOCAL_FILE, entry.ContentMetadata.SourceType)
 		}
 		if entry.FirstAddedTime == nil {
 			t.Errorf("FirstAddedTime is nil")
@@ -190,14 +190,14 @@ func TestAdd_Webpage(t *testing.T) {
 		if entry.Name != testWebpageURL {
 			t.Errorf("Expected Name %s, got %s", testWebpageURL, entry.Name)
 		}
-		if entry.URI != testWebpageURL {
-			t.Errorf("Expected URI %s, got %s", testWebpageURL, entry.URI)
+		if entry.ContentMetadata.URI != testWebpageURL {
+			t.Errorf("Expected URI %s, got %s", testWebpageURL, entry.ContentMetadata.URI)
 		}
-		if entry.DataType != pb.DataType_TEXT {
-			t.Errorf("Expected DataType %v, got %v", pb.DataType_TEXT, entry.DataType)
+		if entry.ContentMetadata.DataType != pb.DataType_TEXT {
+			t.Errorf("Expected DataType %v, got %v", pb.DataType_TEXT, entry.ContentMetadata.DataType)
 		}
-		if entry.SourceType != pb.SourceType_WEBPAGE {
-			t.Errorf("Expected SourceType %v, got %v", pb.SourceType_LOCAL_FILE, entry.SourceType)
+		if entry.ContentMetadata.SourceType != pb.SourceType_WEBPAGE {
+			t.Errorf("Expected SourceType %v, got %v", pb.SourceType_LOCAL_FILE, entry.ContentMetadata.SourceType)
 		}
 		if entry.FirstAddedTime == nil {
 			t.Errorf("FirstAddedTime is nil")

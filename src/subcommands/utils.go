@@ -95,17 +95,21 @@ func writeIndex(indexFilePath string, indexMap map[string]*pb.IndexListEntry) er
 //   - ile: Pointer to the IndexListEntry to be copied.
 func makeCopy(indexPath string, ile *pb.IndexListEntry) error {
 
-	content, err := fetch.FetchFromSource(ile.SourceType, ile.URI)
+	content, err := fetch.FetchFromSource(ile.ContentMetadata.SourceType, ile.ContentMetadata.URI)
 	if err != nil {
-		return fmt.Errorf("failed to fetch the content of URI %s: %v", ile.URI, err)
+		return fmt.Errorf("failed to fetch the content of URI %s: %v", ile.ContentMetadata.URI, err)
 
 	}
 
 	ileCopy := &pb.IndexListEntry{
 		Name:              ile.Name,
-		URI:               ile.URI,
-		DataType:          ile.DataType,
-		SourceType:        ile.SourceType,
+
+		ContentMetadata: &pb.ContentMetadata{
+			URI:               ile.ContentMetadata.URI,
+			DataType:          ile.ContentMetadata.DataType,
+			SourceType:        ile.ContentMetadata.SourceType,
+		},
+
 		FirstAddedTime:    ile.FirstAddedTime,
 		Content:           string(content),
 		LastRefreshedTime: timestamppb.Now(),
