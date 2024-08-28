@@ -250,7 +250,6 @@ func TestAdd_Webpage(t *testing.T) {
 	if ile.Content != string(webpageContent) {
 		t.Errorf("Failed to validate webpage copy: Expected \"%s\", got \"%s\"", webpageContent, ile.Content)
 	}
-
 	// Check the output in the buffer
 	if !strings.Contains(output, "added successfully") {
 		t.Errorf("Expected output to contain 'added successfully', but got '%s'", output)

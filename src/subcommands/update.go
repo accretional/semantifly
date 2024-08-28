@@ -65,6 +65,6 @@ func updateIndex(indexMap map[string]*pb.IndexListEntry, u *pb.UpdateRequest) er
 
 	entry.LastRefreshedTime = timestamppb.Now()
 	indexMap[u.Name] = entry
-
+  
 	return nil
 }
