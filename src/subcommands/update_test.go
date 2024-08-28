@@ -30,16 +30,15 @@ func TestUpdate(t *testing.T) {
 
 	// Set up test arguments
 	args := &pb.AddRequest{
-		IndexPath:  tempDir,
-		DataType:   "text",
-		SourceType: "local_file",
+		DataType:   0,
+		SourceType: 0,
 		MakeCopy:   true,
 		DataUris:   []string{testFilePath},
 	}
 
 	var buf bytes.Buffer
 
-	err = SubcommandAdd(args, &buf)
+	err = SubcommandAdd(args, tempDir, &buf)
 	if err != nil {
 		t.Fatalf("Add function returned an error: %v", err)
 	}
@@ -60,7 +59,6 @@ func TestUpdate(t *testing.T) {
 
 	// Set up test arguments
 	updateArgs := &pb.UpdateRequest{
-		IndexPath:  tempDir,
 		Name:       testFilePath,
 		UpdateCopy: true,
 		DataUri:    updatedFilePath,
@@ -70,7 +68,7 @@ func TestUpdate(t *testing.T) {
 	var updateBuf bytes.Buffer
 
 	// Call the Update function
-	err = SubcommandUpdate(updateArgs, &updateBuf)
+	err = SubcommandUpdate(updateArgs, tempDir, &updateBuf)
 	if err != nil {
 		t.Fatalf("Update function returned an error: %v", err)
 	}

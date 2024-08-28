@@ -21,8 +21,8 @@ import (
 //   - If there is an error searching for a URI in the index, an error message is printed and the URI is skipped.
 //   - If there is an error deleting a URI from the index, an error message is printed and the URI is skipped.
 //   - If there is an error deleting the associated data file, an error message is printed.
-func SubcommandDelete(d *pb.DeleteRequest, w io.Writer) error {
-	indexFilePath := path.Join(d.IndexPath, indexFile)
+func SubcommandDelete(d *pb.DeleteRequest, indexPath string, w io.Writer) error {
+	indexFilePath := path.Join(indexPath, indexFile)
 
 	indexMap, err := readIndex(indexFilePath, false)
 	if err != nil {
@@ -41,7 +41,7 @@ func SubcommandDelete(d *pb.DeleteRequest, w io.Writer) error {
 		fmt.Fprintf(w, "Index %s deleted successfully.\n", uri)
 
 		if d.DeleteCopy {
-			if err := deleteCopy(d.IndexPath, uri, w); err != nil {
+			if err := deleteCopy(indexPath, uri, w); err != nil {
 				fmt.Fprintf(w, "Failed to delete copy of file %s with err: %s, skipping", uri, err)
 			}
 		}

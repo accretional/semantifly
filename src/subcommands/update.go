@@ -10,8 +10,8 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func SubcommandUpdate(u *pb.UpdateRequest, w io.Writer) error {
-	indexFilePath := path.Join(u.IndexPath, indexFile)
+func SubcommandUpdate(u *pb.UpdateRequest, indexPath string, w io.Writer) error {
+	indexFilePath := path.Join(indexPath, indexFile)
 
 	indexMap, err := readIndex(indexFilePath, false)
 	if err != nil {
@@ -27,13 +27,7 @@ func SubcommandUpdate(u *pb.UpdateRequest, w io.Writer) error {
 	}
 
 	if u.UpdateCopy {
-
-		sourceType, err := parseSourceType(u.SourceType)
-		if err != nil {
-			return fmt.Errorf("invalid source type: %v", err)
-		}
-
-		content, err := fetch.FetchFromSource(sourceType, u.DataUri)
+		content, err := fetch.FetchFromSource(u.SourceType, u.DataUri)
 
 		if err != nil {
 			return fmt.Errorf("failed to validate the URI %s: %v\n", u, err)
@@ -42,12 +36,12 @@ func SubcommandUpdate(u *pb.UpdateRequest, w io.Writer) error {
 		ile := &pb.IndexListEntry{
 			Name:       u.Name,
 			URI:        u.DataUri,
-			DataType:   pb.DataType(pb.DataType_value[u.DataType]),
-			SourceType: pb.SourceType(pb.SourceType_value[u.SourceType]),
+			DataType:   u.DataType,
+			SourceType: u.SourceType,
 			Content:    string(content),
 		}
 
-		if err := makeCopy(u.IndexPath, ile); err != nil {
+		if err := makeCopy(indexPath, ile); err != nil {
 			return fmt.Errorf("failed to update the copy of the source file: %v", err)
 		}
 	}
@@ -65,27 +59,11 @@ func updateIndex(indexMap map[string]*pb.IndexListEntry, u *pb.UpdateRequest) er
 
 	entry.URI = u.DataUri
 
-	if u.DataType != "" {
-		if dataType, err := parseDataType(u.DataType); err != nil {
-			return fmt.Errorf("error in parsing DataType: %v", err)
-		} else {
-			entry.DataType = dataType
-		}
-	}
-
-	if u.SourceType != "" {
-		if sourceType, err := parseSourceType(u.SourceType); err != nil {
-			return fmt.Errorf("error in parsing SourceType: %v", err)
-		} else {
-			entry.SourceType = sourceType
-		}
-	}
+	entry.DataType = u.DataType
+	entry.SourceType = u.SourceType
 
 	entry.LastRefreshedTime = timestamppb.Now()
 	indexMap[u.Name] = entry
-
-	u.SourceType = pb.SourceType_name[int32(entry.SourceType)]
-	u.DataType = pb.DataType_name[int32(entry.DataType)]
 
 	return nil
 }

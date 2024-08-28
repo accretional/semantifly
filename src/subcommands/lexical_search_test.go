@@ -60,21 +60,21 @@ func TestLexicalSearch(t *testing.T) {
 	}{
 		{
 			name:       "Search for 'test'",
-			args:       &pb.LexicalSearchRequest{IndexPath: tempDir, SearchTerm: "test", TopN: 2},
+			args:       &pb.LexicalSearchRequest{SearchTerm: "test", TopN: 2},
 			wantLen:    2,
 			wantFirst:  "file2.txt",
 			wantOccurs: 10,
 		},
 		{
 			name:       "Search for 'search'",
-			args:       &pb.LexicalSearchRequest{IndexPath: tempDir, SearchTerm: "searching", TopN: 1},
+			args:       &pb.LexicalSearchRequest{SearchTerm: "searching", TopN: 1},
 			wantLen:    1,
 			wantFirst:  "file1.txt",
 			wantOccurs: 7,
 		},
 		{
 			name:    "Search for non-existent term",
-			args:    &pb.LexicalSearchRequest{IndexPath: tempDir, SearchTerm: "nonexistent", TopN: 10},
+			args:    &pb.LexicalSearchRequest{SearchTerm: "nonexistent", TopN: 10},
 			wantLen: 0,
 		},
 	}
@@ -82,7 +82,7 @@ func TestLexicalSearch(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			var buf bytes.Buffer
-			results, err := SubcommandLexicalSearch(tc.args, &buf)
+			results, err := SubcommandLexicalSearch(tc.args, tempDir, &buf)
 			if err != nil {
 				t.Fatalf("LexicalSearch failed: %v", err)
 			}
@@ -111,13 +111,12 @@ func TestLexicalSearch_NonExistentIndex(t *testing.T) {
 	defer os.RemoveAll(tempDir)
 
 	args := &pb.LexicalSearchRequest{
-		IndexPath:  tempDir,
 		SearchTerm: "test",
 		TopN:       10,
 	}
 
 	var buf bytes.Buffer
-	_, err = SubcommandLexicalSearch(args, &buf)
+	_, err = SubcommandLexicalSearch(args, tempDir, &buf)
 	if err == nil {
 		t.Error("Expected an error for non-existent index file, but got nil")
 	}
@@ -151,14 +150,13 @@ func TestLexicalSearch_UnexpectedTopN(t *testing.T) {
 	}
 
 	args := &pb.LexicalSearchRequest{
-		IndexPath:  tempDir,
 		SearchTerm: "test",
 		TopN:       -4,
 	}
 
 	expectedErrorMsg := "topn: -4 is an invalid amount"
 	var buf bytes.Buffer
-	_, err = SubcommandLexicalSearch(args, &buf)
+	_, err = SubcommandLexicalSearch(args, tempDir, &buf)
 	if err == nil {
 		t.Error("Expected an error for bad topN, but got nil")
 	} else if strings.Compare(err.Error(), expectedErrorMsg) != 0 {

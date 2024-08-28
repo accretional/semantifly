@@ -30,16 +30,15 @@ func TestGet(t *testing.T) {
 	}
 
 	addArgs := &pb.AddRequest{
-		IndexPath:  tempDir,
-		DataType:   "text",
-		SourceType: "local_file",
+		DataType:   0,
+		SourceType: 0,
 		MakeCopy:   true,
 		DataUris:   []string{testFilePath},
 	}
 
 	var addBuf bytes.Buffer
 
-	err = SubcommandAdd(addArgs, &addBuf)
+	err = SubcommandAdd(addArgs, tempDir, &addBuf)
 	if err != nil {
 		t.Fatalf("Add function returned an error: %v", err)
 	}
@@ -51,13 +50,12 @@ func TestGet(t *testing.T) {
 	}
 
 	getArgs := &pb.GetRequest{
-		IndexPath: tempDir,
 		Name:      testFilePath,
 	}
 
 	var getBuf bytes.Buffer
 
-	_, err = SubcommandGet(getArgs, &getBuf)
+	_, err = SubcommandGet(getArgs, tempDir, &getBuf)
 	if err != nil {
 		t.Fatalf("Get function returned an error: %v", err)
 	}
@@ -81,16 +79,15 @@ func TestGet_Webpage(t *testing.T) {
 	testWebpageURL := "http://echo.jsontest.com/title/lorem/content/ipsum"
 
 	addArgs := &pb.AddRequest{
-		IndexPath:  tempDir,
-		DataType:   "text",
-		SourceType: "webpage",
+		DataType:   0,
+		SourceType: 1,
 		MakeCopy:   true,
 		DataUris:   []string{testWebpageURL},
 	}
 
 	var addBuf bytes.Buffer
 
-	err = SubcommandAdd(addArgs, &addBuf)
+	err = SubcommandAdd(addArgs, tempDir, &addBuf)
 	if err != nil {
 		t.Fatalf("Add function returned an error: %v", err)
 	}
@@ -101,13 +98,12 @@ func TestGet_Webpage(t *testing.T) {
 	}
 
 	getArgs := &pb.GetRequest{
-		IndexPath: tempDir,
 		Name:      testWebpageURL,
 	}
 
 	var getBuf bytes.Buffer
 
-	_, err = SubcommandGet(getArgs, &getBuf)
+	_, err = SubcommandGet(getArgs, tempDir, &getBuf)
 	if err != nil {
 		t.Fatalf("Get function returned an error: %v", err)
 	}

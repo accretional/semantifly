@@ -1,6 +1,7 @@
 syntax = "proto3";
-
 package semantifly;
+
+import "google/protobuf/timestamp.proto";
 
 option go_package = "accretional.com/semantifly/proto";
 
@@ -13,72 +14,86 @@ service Semantifly {
 }
 
 message AddRequest {
-  string index_path = 1;
-  string data_type = 2;
-  string source_type = 3;
-  bool make_copy = 4;
-  repeated string data_uris = 5;
-}
-
-message FileContent {
-  string name = 1;
-  bytes content = 2;
+  DataType data_type = 1;
+  SourceType source_type = 2;
+  bool make_copy = 3;
+  repeated string data_uris = 4;
 }
 
 message AddResponse {
-  bool success = 1;
-  string message = 2;
+  string message = 1;
 }
 
 message DeleteRequest {
-  string index_path = 1;
-  bool delete_copy = 2;
-  repeated string data_uris = 3;
+  bool delete_copy = 1;
+  repeated string data_uris = 2;
 }
 
 message DeleteResponse {
-  bool success = 1;
-  string message = 2;
+  string message = 1;
 }
 
 message GetRequest {
-  string index_path = 1;
-  string name = 2;
+  string name = 1;
 }
 
 message GetResponse {
-  bool success = 1;
-  string content = 2;
-  string message = 3;
-}
-
-message UpdateRequest {
-  string index_path = 1;
-  string name = 2;
-  string data_type = 3;
-  string source_type = 4;
-  bool update_copy = 5;
-  string data_uri = 6;
-}
-
-message UpdateResponse {
-  bool success = 1;
+  string content = 1;
   string message = 2;
 }
 
+message UpdateRequest {
+  string name = 1;
+  DataType data_type = 2;
+  SourceType source_type = 3;
+  bool update_copy = 4;
+  string data_uri = 5;
+}
+
+message UpdateResponse {
+  string message = 1;
+}
+
 message LexicalSearchRequest {
-  string index_path = 1;
-  string search_term = 2;
-  int32 top_n = 3;
+  string search_term = 1;
+  int32 top_n = 2;
 }
 
 message LexicalSearchResponse {
-  bool success = 1;
-  repeated LexicalSearchResult results = 2;
-  string message = 3;
+  repeated LexicalSearchResult results = 1;
+  string message = 2;
 }
 
 message LexicalSearchResult {
   string name = 1;
-  float occurrences = 2;
+  int32 occurrences = 2;
+}
+
+message Index {
+    repeated IndexListEntry entries = 1;
+}
+
+message IndexListEntry {
+    string name = 1;
+    string URI = 2;
+    DataType dataType = 3;
+    SourceType sourceType = 4;
+    google.protobuf.Timestamp first_added_time = 5;
+    google.protobuf.Timestamp last_refreshed_time = 6;
+    // Possibly to be changed to byte or some more complex representation based on DataType
+	string content = 7;
+    // Map that stores the count of each word
+    map<string, int32> word_occurrences = 8;
+    map<string, int32> stemmed_word_occurrences = 9;
+}
+
+// Roughly corresponding to file extension, how to parse/encode the file.
+enum DataType {
+    TEXT = 0;
+}
+
+// How to *access* the content. Eg locally as a file, remotely as a web page, etc.
+enum SourceType {
+    LOCAL_FILE = 0;
+    WEBPAGE = 1;
 }

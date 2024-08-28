@@ -9,8 +9,8 @@ import (
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 )
 
-func SubcommandGet(g *pb.GetRequest, w io.Writer) (string, error) {
-	indexFilePath := path.Join(g.IndexPath, indexFile)
+func SubcommandGet(g *pb.GetRequest, indexPath string, w io.Writer) (string, error) {
+	indexFilePath := path.Join(indexPath, indexFile)
 
 	indexMap, err := readIndex(indexFilePath, false)
 	if err != nil {
@@ -27,7 +27,7 @@ func SubcommandGet(g *pb.GetRequest, w io.Writer) (string, error) {
 	if targetEntry.Content != "" {
 		fmt.Fprintln(w, targetEntry.Content)
 	} else {
-		content, err := fetchFromCopy(g.IndexPath, g.Name)
+		content, err := fetchFromCopy(indexPath, g.Name)
 		if content == nil {
 			if err != nil {
 				fmt.Fprintf(w, "failed to read content from copy: %v. Fetching from the source.\n", err)

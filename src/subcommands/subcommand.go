@@ -224,11 +224,6 @@ func executeAdd(args []string) {
 		return
 	}
 
-	// *indexPath, err = convertToAbsPath(*indexPath)
-	// if err != nil {
-	// 	printCmdErr(err.Error())
-	// }
-
 	if *sourceType == "" {
 		sourceTypeStr, err := inferSourceType(cmd.Args())
 		if err != nil {
@@ -237,20 +232,24 @@ func executeAdd(args []string) {
 		*sourceType = sourceTypeStr
 	}
 
-	// dataUris, err := convertUrisToAbsPath(cmd.Args(), *sourceType == "local_file")
-	// if err != nil {
-	// 	printCmdErr(err.Error())
-	// }
+	dataTypeEnum, err := parseDataType(*dataType)
+	if err != nil {
+		printCmdErr(fmt.Sprintf("Error in parsing DataType: %v\n", err))
+	}
+
+	sourceTypeEnum, err := parseSourceType(*sourceType)
+	if err != nil {
+		printCmdErr(fmt.Sprintf("Error in parsing SourceType: %v\n", err))
+	}
 
 	addArgs := &pb.AddRequest{
-		IndexPath:  *indexPath,
-		DataType:   *dataType,
-		SourceType: *sourceType,
+		DataType:   dataTypeEnum,
+		SourceType: sourceTypeEnum,
 		MakeCopy:   *makeLocalCopy,
 		DataUris:   cmd.Args(),
 	}
 
-	err = SubcommandAdd(addArgs, os.Stdout)
+	err = SubcommandAdd(addArgs, *indexPath, os.Stdout)
 	if err != nil {
 		fmt.Printf("Error occurred during add subcommand: %v", err)
 		return
@@ -277,32 +276,12 @@ func executeDelete(args []string) {
 		return
 	}
 
-	// Convert relative paths to absolute paths
-	// if *sourceType == "" {
-	// 	sourceTypeStr, err := inferSourceType(cmd.Args())
-	// 	if err != nil {
-	// 		printCmdErr(fmt.Sprintf("Failed to infer source type from URIs: %v\n", err))
-	// 	}
-	// 	*sourceType = sourceTypeStr
-	// }
-
-	// dataUris, err := convertUrisToAbsPath(cmd.Args(), *sourceType == "local_file")
-	// if err != nil {
-	// 	printCmdErr(err.Error())
-	// }
-
-	// *indexPath, err = convertToAbsPath(*indexPath)
-	// if err != nil {
-	// 	printCmdErr(err.Error())
-	// }
-
 	deleteArgs := &pb.DeleteRequest{
-		IndexPath:  *indexPath,
 		DeleteCopy: *deleteLocalCopy,
 		DataUris:   cmd.Args(),
 	}
 
-	err = SubcommandDelete(deleteArgs, os.Stdout)
+	err = SubcommandDelete(deleteArgs, *indexPath, os.Stdout)
 	if err != nil {
 		fmt.Printf("Error occurred during delete subcommand: %v", err)
 		return
@@ -311,7 +290,6 @@ func executeDelete(args []string) {
 
 func executeGet(args []string) {
 	cmd := flag.NewFlagSet("get", flag.ExitOnError)
-	// sourceType := cmd.String("source-type", "", "How to access the content")
 	indexPath := cmd.String("index-path", "", "Path to the index file")
 
 	flags, nonFlags, err := parseArgs(args, cmd)
@@ -328,31 +306,11 @@ func executeGet(args []string) {
 		return
 	}
 
-	// Convert relative paths to absolute paths
-	// if *sourceType == "" {
-	// 	sourceTypeStr, err := inferSourceType(cmd.Args())
-	// 	if err != nil {
-	// 		printCmdErr(fmt.Sprintf("Failed to infer source type from URIs: %v\n", err))
-	// 	}
-	// 	*sourceType = sourceTypeStr
-	// }
-
-	// dataUris, err := convertUrisToAbsPath(cmd.Args(), *sourceType == "local_file")
-	// if err != nil {
-	// 	printCmdErr(err.Error())
-	// }
-
-	// *indexPath, err = convertToAbsPath(*indexPath)
-	// if err != nil {
-	// 	printCmdErr(err.Error())
-	// }
-
 	getArgs := &pb.GetRequest{
-		IndexPath: *indexPath,
-		Name:      cmd.Args()[0],
+		Name: cmd.Args()[0],
 	}
 
-	_, err = SubcommandGet(getArgs, os.Stdout)
+	_, err = SubcommandGet(getArgs, *indexPath, os.Stdout)
 	if err != nil {
 		fmt.Printf("Error occurred during get subcommand: %v", err)
 		return
@@ -361,7 +319,7 @@ func executeGet(args []string) {
 
 func executeUpdate(args []string) {
 	cmd := flag.NewFlagSet("update", flag.ExitOnError)
-	dataType := cmd.String("type", "", "The type of the input data")
+	dataType := cmd.String("type", "text", "The type of the input data")
 	sourceType := cmd.String("source-type", "", "How to access the content")
 	makeLocalCopy := cmd.Bool("copy", false, "Whether to copy and use the file as it is now, or dynamically access it")
 	indexPath := cmd.String("index-path", "", "Path to the index file")
@@ -380,35 +338,33 @@ func executeUpdate(args []string) {
 		return
 	}
 
-	// Convert relative paths to absolute paths
-	// if *sourceType == "" {
-	// 	sourceTypeStr, err := inferSourceType(cmd.Args())
-	// 	if err != nil {
-	// 		printCmdErr(fmt.Sprintf("Failed to infer source type from URIs: %v\n", err))
-	// 	}
-	// 	*sourceType = sourceTypeStr
-	// }
+	if *sourceType == "" {
+		sourceTypeStr, err := inferSourceType(cmd.Args())
+		if err != nil {
+			printCmdErr(fmt.Sprintf("Failed to infer source type from URIs: %v\n", err))
+		}
+		*sourceType = sourceTypeStr
+	}
 
-	// dataUris, err := convertUrisToAbsPath(cmd.Args(), *sourceType == "local_file")
-	// if err != nil {
-	// 	printCmdErr(err.Error())
-	// }
+	dataTypeEnum, err := parseDataType(*dataType)
+	if err != nil {
+		printCmdErr(fmt.Sprintf("Error in parsing DataType: %v\n", err))
+	}
 
-	// *indexPath, err = convertToAbsPath(*indexPath)
-	// if err != nil {
-	// 	printCmdErr(err.Error())
-	// }
+	sourceTypeEnum, err := parseSourceType(*sourceType)
+	if err != nil {
+		printCmdErr(fmt.Sprintf("Error in parsing SourceType: %v\n", err))
+	}
 
 	updateArgs := &pb.UpdateRequest{
-		IndexPath:  *indexPath,
 		Name:       cmd.Args()[0],
-		DataType:   *dataType,
-		SourceType: *sourceType,
+		DataType:   dataTypeEnum,
+		SourceType: sourceTypeEnum,
 		UpdateCopy: *makeLocalCopy,
 		DataUri:    cmd.Args()[1],
 	}
 
-	err = SubcommandUpdate(updateArgs, os.Stdout)
+	err = SubcommandUpdate(updateArgs, *indexPath, os.Stdout)
 	if err != nil {
 		fmt.Printf("Error occurred during update subcommand: %v", err)
 		return
@@ -435,12 +391,11 @@ func executeSearch(args []string) {
 	}
 
 	searchArgs := &pb.LexicalSearchRequest{
-		IndexPath:  *indexPath,
 		SearchTerm: cmd.Args()[0],
 		TopN:       int32(*topN),
 	}
 
-	_, err = SubcommandLexicalSearch(searchArgs, os.Stdout)
+	_, err = SubcommandLexicalSearch(searchArgs, *indexPath, os.Stdout)
 	if err != nil {
 		printCmdErr(fmt.Sprintf("Error during search: %v", err))
 		return

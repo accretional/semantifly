@@ -32,9 +32,8 @@ func TestAdd(t *testing.T) {
 
 	// Set up test arguments
 	args := &pb.AddRequest{
-		IndexPath:  tempDir,
-		DataType:   "text",
-		SourceType: "local_file",
+		DataType:   0,
+		SourceType: 0,
 		MakeCopy:   true,
 		DataUris:   []string{testFilePath},
 	}
@@ -43,7 +42,7 @@ func TestAdd(t *testing.T) {
 	var buf bytes.Buffer
 
 	// Call the Add function with the buffer
-	err = SubcommandAdd(args, &buf)
+	err = SubcommandAdd(args, tempDir, &buf)
 	if err != nil {
 		t.Fatalf("Add function returned an error: %v", err)
 	}
@@ -113,16 +112,15 @@ func TestAdd_MultipleFilesSamePath(t *testing.T) {
 
 	// Set up test arguments
 	args := &pb.AddRequest{
-		IndexPath:  tempDir,
-		DataType:   "text",
-		SourceType: "local_file",
+		DataType:   0,
+		SourceType: 0,
 		MakeCopy:   true,
 		DataUris:   []string{testFilePath1, testFilePath2},
 	}
 
 	var buf bytes.Buffer
 
-	err = SubcommandAdd(args, &buf)
+	err = SubcommandAdd(args, tempDir, &buf)
 	if err != nil {
 		t.Fatalf("Add function returned an error: %v", err)
 	}
@@ -165,16 +163,15 @@ func TestAdd_Webpage(t *testing.T) {
 
 	// Set up test arguments
 	args := &pb.AddRequest{
-		IndexPath:  tempDir,
-		DataType:   "text",
-		SourceType: "webpage",
+		DataType: 	0,
+		SourceType: 1,
 		MakeCopy:   true,
 		DataUris:   []string{testWebpageURL},
 	}
 
 	var buf bytes.Buffer
 
-	err = SubcommandAdd(args, &buf)
+	err = SubcommandAdd(args, tempDir, &buf)
 	if err != nil {
 		t.Fatalf("Add function returned an error: %v", err)
 	}

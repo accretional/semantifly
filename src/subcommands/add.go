@@ -11,18 +11,8 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func SubcommandAdd(a *pb.AddRequest, w io.Writer) error {
-	dataType, err := parseDataType(a.DataType)
-	if err != nil {
-		return fmt.Errorf("Error in parsing DataType: %v\n", err)
-	}
-
-	sourceType, err := parseSourceType(a.SourceType)
-	if err != nil {
-		return fmt.Errorf("Error in parsing SourceType: %v\n", err)
-	}
-
-	indexFilePath := path.Join(a.IndexPath, indexFile)
+func SubcommandAdd(a *pb.AddRequest, indexPath string, w io.Writer) error {
+	indexFilePath := path.Join(indexPath, indexFile)
 	indexMap, err := readIndex(indexFilePath, true)
 	if err != nil {
 		return fmt.Errorf("Failed to read the index file: %v", err)
@@ -37,13 +27,13 @@ func SubcommandAdd(a *pb.AddRequest, w io.Writer) error {
 		ile := &pb.IndexListEntry{
 			Name:           u,
 			URI:            u,
-			DataType:       dataType,
-			SourceType:     sourceType,
+			DataType:       a.DataType,
+			SourceType:     a.SourceType,
 			FirstAddedTime: timestamppb.Now(),
 		}
 
 		if a.MakeCopy {
-			err = makeCopy(a.IndexPath, ile)
+			err = makeCopy(indexPath, ile)
 			if err != nil {
 				fmt.Fprintf(w, "Failed to make a copy for %s: %v. Skipping.\n", u, err)
 				continue

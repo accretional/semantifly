@@ -35,30 +35,28 @@ func TestDelete(t *testing.T) {
 
 	// Set up test arguments
 	addArgs := &pb.AddRequest{
-		IndexPath:  tempDir,
-		DataType:   "text",
-		SourceType: "local_file",
+		DataType:   0,
+		SourceType: 0,
 		MakeCopy:   true,
 		DataUris:   []string{testFilePath1, testFilePath2},
 	}
 
 	var addBuf bytes.Buffer
 
-	err = SubcommandAdd(addArgs, &addBuf)
+	err = SubcommandAdd(addArgs, tempDir, &addBuf)
 	if err != nil {
 		t.Fatalf("Add function returned an error: %v", err)
 	}
 
 	// Test case
 	deleteArgs := &pb.DeleteRequest{
-		IndexPath:  tempDir,
 		DeleteCopy: true,
 		DataUris:   []string{testFilePath1},
 	}
 
 	var deleteBuf bytes.Buffer
 	// Run the Delete function
-	err = SubcommandDelete(deleteArgs, &deleteBuf)
+	err = SubcommandDelete(deleteArgs, tempDir, &deleteBuf)
 	if err != nil {
 		t.Fatalf("Delete function returned an error: %v", err)
 	}

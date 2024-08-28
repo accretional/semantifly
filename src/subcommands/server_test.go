@@ -13,7 +13,6 @@ import (
 )
 
 const testDir = "./test_semantifly"
-const testIndexPath = "test"
 
 func setupTestEnvironment(t *testing.T) func() {
 	err := os.MkdirAll(testDir, 0755)
@@ -81,9 +80,8 @@ func TestServerCommands(t *testing.T) {
 	// Add
 	addCtx, addCancel := context.WithTimeout(context.Background(), time.Second)
 	_, err := client.Add(addCtx, &pb.AddRequest{
-		IndexPath:  testIndexPath,
-		DataType:   "text",
-		SourceType: "local_file",
+		DataType:   0,
+		SourceType: 0,
 		MakeCopy:   true,
 		DataUris:   []string{filepath.Join(testDir, "test_file1.txt")},
 	})
@@ -97,16 +95,12 @@ func TestServerCommands(t *testing.T) {
 	defer getCancel()
 
 	getReq := &pb.GetRequest{
-		IndexPath: testIndexPath,
-		Name:      filepath.Join(testDir, "test_file1.txt"),
+		Name: filepath.Join(testDir, "test_file1.txt"),
 	}
 
 	getResp, err := client.Get(getCtx, getReq)
 	if err != nil {
 		t.Fatalf("Get failed: %v", err)
-	}
-	if !getResp.Success {
-		t.Errorf("Get was not successful: %s", getResp.Message)
 	}
 	if getResp.Content == "" {
 		t.Errorf("Get returned empty content")
@@ -117,20 +111,16 @@ func TestServerCommands(t *testing.T) {
 	defer updCancel()
 
 	updReq := &pb.UpdateRequest{
-		IndexPath:  testIndexPath,
 		Name:       filepath.Join(testDir, "test_file1.txt"),
-		DataType:   "text",
-		SourceType: "local_file",
+		DataType:   0,
+		SourceType: 0,
 		UpdateCopy: true,
 		DataUri:    filepath.Join(testDir, "test_file2.txt"),
 	}
 
-	updResp, err := client.Update(updCtx, updReq)
+	_, err = client.Update(updCtx, updReq)
 	if err != nil {
 		t.Fatalf("Update failed: %v", err)
-	}
-	if !updResp.Success {
-		t.Errorf("Update was not successful: %s", updResp.Message)
 	}
 
 	// Search
@@ -138,7 +128,6 @@ func TestServerCommands(t *testing.T) {
 	defer searchCancel()
 
 	searchReq := &pb.LexicalSearchRequest{
-		IndexPath:  testIndexPath,
 		SearchTerm: "test",
 		TopN:       5,
 	}
@@ -146,9 +135,6 @@ func TestServerCommands(t *testing.T) {
 	searchResp, err := client.LexicalSearch(searchCtx, searchReq)
 	if err != nil {
 		t.Fatalf("LexicalSearch failed: %v", err)
-	}
-	if !searchResp.Success {
-		t.Errorf("LexicalSearch was not successful: %s", searchResp.Message)
 	}
 	if len(searchResp.Results) == 0 {
 		t.Errorf("LexicalSearch returned no results")
@@ -159,16 +145,12 @@ func TestServerCommands(t *testing.T) {
 	defer delCancel()
 
 	delReq := &pb.DeleteRequest{
-		IndexPath:  testIndexPath,
 		DeleteCopy: true,
 		DataUris:   []string{filepath.Join(testDir, "test_file1.txt")},
 	}
 
-	delResp, err := client.Delete(delCtx, delReq)
+	_, err = client.Delete(delCtx, delReq)
 	if err != nil {
 		t.Fatalf("Delete failed: %v", err)
-	}
-	if !delResp.Success {
-		t.Errorf("Delete was not successful: %s", delResp.Message)
 	}
 }

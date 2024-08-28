@@ -22,11 +22,11 @@ type occurrenceList []fileOccurrence
 type searchMap map[string]occurrenceList // Search Map maps search terms to the list of their occurrences in files
 
 // LexicalSearch performs a search in the index for the specified term and returns the top N results ranked by the frequency of the term.
-func SubcommandLexicalSearch(args *pb.LexicalSearchRequest, w io.Writer) ([]fileOccurrence, error) {
+func SubcommandLexicalSearch(args *pb.LexicalSearchRequest, indexPath string, w io.Writer) ([]fileOccurrence, error) {
 	if args.TopN <= 0 {
 		return nil, fmt.Errorf("topn: %d is an invalid amount", args.TopN)
 	}
-	indexFilePath := path.Join(args.IndexPath, indexFile)
+	indexFilePath := path.Join(indexPath, indexFile)
 	data, err := os.ReadFile(indexFilePath)
 	if err != nil {
 		if os.IsNotExist(err) {
