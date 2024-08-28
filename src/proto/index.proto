@@ -11,8 +11,8 @@ message Index {
 
 message ContentMetadata {
     string URI = 1;
-    DataType dataType = 2;
-    SourceType sourceType = 3;
+    DataType data_type = 2;
+    SourceType source_type = 3;
 }
 
 message IndexListEntry {
