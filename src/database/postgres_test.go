@@ -263,29 +263,29 @@ func TestQueryRow(t *testing.T) {
 
 	expectedEntry := index.Entries[0]
 
-	type PartialEntry struct {
+	type Metadata struct {
 		Name       string
 		URI        string
 		DataType   pb.DataType
 		SourceType pb.SourceType
 	}
 
-	expectedPartial := PartialEntry{
+	expectedMetadata := Metadata{
 		Name:       expectedEntry.Name,
 		URI:        expectedEntry.URI,
 		DataType:   expectedEntry.DataType,
 		SourceType: expectedEntry.SourceType,
 	}
 
-	actualPartial := PartialEntry{
+	actualMetadata := Metadata{
 		Name:       entry.Name,
 		URI:        entry.URI,
 		DataType:   entry.DataType,
 		SourceType: entry.SourceType,
 	}
 
-	if !reflect.DeepEqual(expectedPartial, actualPartial) {
-		t.Fatalf("Partial entry mismatch.\nExpected: %+v\nGot: %+v", expectedPartial, actualPartial)
+	if !reflect.DeepEqual(expectedMetadata, actualMetadata) {
+		t.Fatalf("Partial entry mismatch.\nExpected: %+v\nGot: %+v", expectedMetadata, actualMetadata)
 	}
 
 	// Delete the test entry
