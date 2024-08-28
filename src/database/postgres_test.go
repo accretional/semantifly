@@ -173,10 +173,12 @@ func TestInsertRow(t *testing.T) {
 	index := &pb.Index{
 		Entries: []*pb.IndexListEntry{
 			{
-				Name:              "Test Entry",
-				URI:               "http://example.com",
-				DataType:          pb.DataType_TEXT,
-				SourceType:        pb.SourceType_WEBPAGE,
+				Name: "Test Entry",
+				ContentMetadata: &pb.ContentMetadata{
+					URI:        "http://example.com",
+					DataType:   pb.DataType_TEXT,
+					SourceType: pb.SourceType_WEBPAGE,
+				},
 				FirstAddedTime:    timestamppb.Now(),
 				LastRefreshedTime: timestamppb.Now(),
 				Content:           "Test Content",
@@ -233,13 +235,17 @@ func TestQueryRow(t *testing.T) {
 		t.Fatalf("Failed to initialise the database schema: %v", err)
 	}
 
+	expectedMetadata := &pb.ContentMetadata{
+		URI:        "http://example.com",
+		DataType:   pb.DataType_TEXT,
+		SourceType: pb.SourceType_WEBPAGE,
+	}
+
 	index := &pb.Index{
 		Entries: []*pb.IndexListEntry{
 			{
 				Name:              "Test Entry",
-				URI:               "http://example.com",
-				DataType:          pb.DataType_TEXT,
-				SourceType:        pb.SourceType_WEBPAGE,
+				ContentMetadata:   expectedMetadata,
 				FirstAddedTime:    timestamppb.Now(),
 				LastRefreshedTime: timestamppb.Now(),
 				Content:           "Test Content",
@@ -253,40 +259,17 @@ func TestQueryRow(t *testing.T) {
 		t.Fatalf("failed to insert rows: %v", err)
 	}
 
-	entry, err := getContentMetadata(ctx, conn, "Test Entry")
+	fetchedMetadata, err := getContentMetadata(ctx, conn, "Test Entry")
 	if err != nil {
 		t.Fatalf("failed to query row: %v", err)
 	}
 
-	if entry == nil {
+	if fetchedMetadata == nil {
 		t.Fatalf("entry is nil")
 	}
 
-	expectedEntry := index.Entries[0]
-
-	type Metadata struct {
-		Name       string
-		URI        string
-		DataType   pb.DataType
-		SourceType pb.SourceType
-	}
-
-	expectedMetadata := Metadata{
-		Name:       expectedEntry.Name,
-		URI:        expectedEntry.URI,
-		DataType:   expectedEntry.DataType,
-		SourceType: expectedEntry.SourceType,
-	}
-
-	actualMetadata := Metadata{
-		Name:       entry.Name,
-		URI:        entry.URI,
-		DataType:   entry.DataType,
-		SourceType: entry.SourceType,
-	}
-
-	if !reflect.DeepEqual(expectedMetadata, actualMetadata) {
-		t.Fatalf("Partial entry mismatch.\nExpected: %+v\nGot: %+v", expectedMetadata, actualMetadata)
+	if !reflect.DeepEqual(expectedMetadata, fetchedMetadata) {
+		t.Fatalf("Partial entry mismatch.\nExpected: %+v\nGot: %+v", expectedMetadata, fetchedMetadata)
 	}
 
 	// Delete the test entry
