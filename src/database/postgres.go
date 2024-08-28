@@ -2,14 +2,12 @@ package database
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"time"
 
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	"google.golang.org/protobuf/types/known/timestamppb"
+	"google.golang.org/protobuf/proto"
 )
 
 type PgxIface interface {
@@ -26,42 +24,40 @@ func initializeDatabaseSchema(ctx context.Context, conn PgxIface) error {
 	}
 	defer tx.Rollback(ctx)
 
-	// Create the main table
-	// TODO: Use tsvector instead for lexical search
+	// Create the main table using protobuf
 	_, err = tx.Exec(ctx, `
         CREATE TABLE IF NOT EXISTS index_list (
             name TEXT PRIMARY KEY,
-            uri TEXT,
-            data_type TEXT,
-            source_type TEXT,
-            first_added_time TIMESTAMP,
-            last_refreshed_time TIMESTAMP,
-            content TEXT,
-            word_occurrences JSONB
+            entry BYTEA
         )
     `)
 	if err != nil {
 		return fmt.Errorf("failed to create table: %w", err)
 	}
 
-	// Create indexes
-	// TODO: Create an index for the tsvector once it is added to the table
+	// Create the protobuf extension functions
 	_, err = tx.Exec(ctx, `
-        CREATE INDEX IF NOT EXISTS idx_word_occurrences ON index_list USING GIN (word_occurrences);
+        CREATE OR REPLACE FUNCTION pb_get(data bytea, path text)
+        RETURNS text
+        AS 'postgres-protobuf', 'pb_get'
+        LANGUAGE C STRICT IMMUTABLE;
+
+        CREATE OR REPLACE FUNCTION pb_get_json(data bytea, path text)
+        RETURNS jsonb
+        AS 'postgres-protobuf', 'pb_get_json'
+        LANGUAGE C STRICT IMMUTABLE;
+    `)
+	if err != nil {
+		return fmt.Errorf("failed to create protobuf functions: %w", err)
+	}
+
+	// Create indexes
+	_, err = tx.Exec(ctx, `
+        CREATE INDEX IF NOT EXISTS idx_word_occurrences ON index_list USING GIN ((pb_get_json(data, 'word_occurrences')));
+        CREATE INDEX IF NOT EXISTS idx_stemmed_word_occurrences ON index_list USING GIN ((pb_get_json(data, 'stemmed_word_occurrences')));
     `)
 	if err != nil {
 		return fmt.Errorf("failed to create indexes: %w", err)
-	}
-
-	// Create materialized view
-	_, err = tx.Exec(ctx, `
-        CREATE MATERIALIZED VIEW IF NOT EXISTS mv_index_list AS
-        SELECT * FROM index_list
-        WITH DATA;
-        CREATE UNIQUE INDEX IF NOT EXISTS mv_index_list_name_idx ON mv_index_list (name);
-    `)
-	if err != nil {
-		return fmt.Errorf("failed to create materialized view: %w", err)
 	}
 
 	err = tx.Commit(ctx)
@@ -87,27 +83,17 @@ func insertRows(ctx context.Context, conn PgxIface, upsertIndex *pb.Index) error
 
 	batch := &pgx.Batch{}
 	for _, entry := range upsertIndex.Entries {
-		wordOccurrencesJSON, err := json.Marshal(entry.WordOccurrences)
+		ile, err := proto.Marshal(entry)
 		if err != nil {
-			return fmt.Errorf("failed to marshal word occurrences: %w", err)
+			return fmt.Errorf("failed to marshal protobuf: %w", err)
 		}
 
 		batch.Queue(`
-            INSERT INTO index_list(
-                name, uri, data_type, source_type, first_added_time, 
-                last_refreshed_time, content, word_occurrences
-            )
-            VALUES($1, $2, $3, $4, $5, $6, $7, $8)
+            INSERT INTO index_list(name, data)
+            VALUES($1, $2)
             ON CONFLICT (name) DO UPDATE SET
-                uri = EXCLUDED.uri,
-                data_type = EXCLUDED.data_type,
-                source_type = EXCLUDED.source_type,
-                last_refreshed_time = EXCLUDED.last_refreshed_time,
-                content = EXCLUDED.content,
-                word_occurrences = EXCLUDED.word_occurrences
-        `, entry.Name, entry.URI, entry.DataType.String(), entry.SourceType.String(),
-			entry.FirstAddedTime.AsTime(), entry.LastRefreshedTime.AsTime(),
-			entry.Content, wordOccurrencesJSON)
+                data = EXCLUDED.data
+        `, entry.Name, ile)
 	}
 
 	br := tx.SendBatch(ctx, batch)
@@ -122,16 +108,10 @@ func insertRows(ctx context.Context, conn PgxIface, upsertIndex *pb.Index) error
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 
-	// Refresh the materialized view outside the transaction
-	_, err = conn.Exec(ctx, `REFRESH MATERIALIZED VIEW CONCURRENTLY mv_index_list`)
-	if err != nil {
-		return fmt.Errorf("failed to refresh materialized view: %w", err)
-	}
-
 	return nil
 }
 
-// queryRow retrieves a single row from the index_list table based on the provided name.
+// getContentMetadata retrieves a single row from the index_list table based on the provided name.
 // It returns a pointer to a pb.IndexListEntry struct containing the row data, or an error if the query fails.
 //
 // Parameters:
@@ -150,27 +130,22 @@ func getContentMetadata(ctx context.Context, conn PgxIface, name string) (*pb.In
 
 	var entry pb.IndexListEntry
 	var dataType, sourceType string
-	var firstAddedTime, lastRefreshedTime time.Time
 
 	err = tx.QueryRow(ctx, `
-		SELECT name, uri, data_type, source_type, first_added_time, last_refreshed_time
-		FROM index_list 
-		WHERE name=$1
-	`, name).Scan(
-		&entry.Name, &entry.URI, &dataType, &sourceType, &firstAddedTime, &lastRefreshedTime)
+        SELECT name, pb_get(entry, 'uri') as uri, pb_get(entry, 'data_type') as data_type, pb_get(entry, 'source_type') as source_type
+        FROM index_list 
+        WHERE name=$1
+    `, name).Scan(&entry.Name, &entry.URI, &dataType, &sourceType)
 
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, fmt.Errorf("no entry found for name: %s", name)
 		}
-
 		return nil, fmt.Errorf("QueryRow failed: %w", err)
 	}
 
 	entry.DataType = pb.DataType(pb.DataType_value[dataType])
 	entry.SourceType = pb.SourceType(pb.SourceType_value[sourceType])
-	entry.FirstAddedTime = timestamppb.New(firstAddedTime)
-	entry.LastRefreshedTime = timestamppb.New(lastRefreshedTime)
 
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
