@@ -6,7 +6,6 @@ import (
 	"path"
 
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
-
 	search "accretional.com/semantifly/search"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -25,10 +24,14 @@ func SubcommandAdd(a *pb.AddRequest, indexPath string, w io.Writer) error {
 		}
 
 		ile := &pb.IndexListEntry{
-			Name:           u,
-			URI:            u,
-			DataType:       a.DataType,
-			SourceType:     a.SourceType,
+			Name: u,
+
+			ContentMetadata: &pb.ContentMetadata{
+				URI:        u,
+				DataType:   a.DataType,
+				SourceType: a.SourceType,
+			},
+
 			FirstAddedTime: timestamppb.Now(),
 		}
 

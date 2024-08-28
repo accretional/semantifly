@@ -34,11 +34,13 @@ func SubcommandUpdate(u *pb.UpdateRequest, indexPath string, w io.Writer) error 
 		}
 
 		ile := &pb.IndexListEntry{
-			Name:       u.Name,
-			URI:        u.DataUri,
-			DataType:   u.DataType,
-			SourceType: u.SourceType,
-			Content:    string(content),
+			Name: u.Name,
+			ContentMetadata: &pb.ContentMetadata{
+				URI:        u.DataUri,
+				DataType:   u.DataType,
+				SourceType: u.SourceType,
+			},
+			Content: string(content),
 		}
 
 		if err := makeCopy(indexPath, ile); err != nil {
@@ -57,10 +59,9 @@ func updateIndex(indexMap map[string]*pb.IndexListEntry, u *pb.UpdateRequest) er
 		return fmt.Errorf("entry %s not found", u.Name)
 	}
 
-	entry.URI = u.DataUri
-
-	entry.DataType = u.DataType
-	entry.SourceType = u.SourceType
+	entry.ContentMetadata.URI = u.DataUri
+	entry.ContentMetadata.DataType = u.DataType
+	entry.ContentMetadata.SourceType = u.SourceType
 
 	entry.LastRefreshedTime = timestamppb.Now()
 	indexMap[u.Name] = entry

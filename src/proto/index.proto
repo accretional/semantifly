@@ -1,0 +1,39 @@
+syntax = "proto3";
+package semantifly;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "accretional.com/semantifly/proto";
+
+message Index {
+    repeated IndexListEntry entries = 1;
+}
+
+message ContentMetadata {
+    string URI = 1;
+    DataType data_type = 2;
+    SourceType source_type = 3;
+}
+
+message IndexListEntry {
+    string name = 1;
+    ContentMetadata content_metadata = 2;
+    google.protobuf.Timestamp first_added_time = 3;
+    google.protobuf.Timestamp last_refreshed_time = 4;
+    // Possibly to be changed to byte or some more complex representation based on DataType
+	string content = 5;
+    // Map that stores the count of each word
+    map<string, int32> word_occurrences = 6;
+    map<string, int32> stemmed_word_occurrences = 7;
+}
+
+// Roughly corresponding to file extension, how to parse/encode the file.
+enum DataType {
+    TEXT = 0;
+}
+
+// How to *access* the content. Eg locally as a file, remotely as a web page, etc.
+enum SourceType {
+    LOCAL_FILE = 0;
+    WEBPAGE = 1;
+}

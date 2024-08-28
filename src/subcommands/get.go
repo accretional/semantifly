@@ -33,7 +33,7 @@ func SubcommandGet(g *pb.GetRequest, indexPath string, w io.Writer) (string, err
 				fmt.Fprintf(w, "failed to read content from copy: %v. Fetching from the source.\n", err)
 			}
 
-			content, err = fetch.FetchFromSource(targetEntry.SourceType, targetEntry.URI)
+			content, err = fetch.FetchFromSource(targetEntry.ContentMetadata.SourceType, targetEntry.ContentMetadata.URI)
 			if err != nil {
 				return "", fmt.Errorf("failed to read content from source: %v", err)
 			}
