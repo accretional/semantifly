@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"time"
 
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
@@ -20,23 +19,16 @@ type PgxIface interface {
 	Exec(ctx context.Context, sql string, arguments ...interface{}) (pgconn.CommandTag, error)
 }
 
-func establishConnection(ctx context.Context) (*pgx.Conn, error) {
-	conn, err := pgx.Connect(ctx, os.Getenv("DATABASE_URL"))
-	if err != nil {
-		return nil, fmt.Errorf("unable to connect to database: %w", err)
-	}
-	return conn, nil
-}
-
 func initializeDatabaseSchema(ctx context.Context, conn PgxIface) error {
-    tx, err := conn.Begin(ctx)
-    if err != nil {
-        return fmt.Errorf("unable to connect to database: %w", err)
-    }
-    defer tx.Rollback(ctx)
+	tx, err := conn.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("unable to connect to database: %w", err)
+	}
+	defer tx.Rollback(ctx)
 
-    // Create the main table
-    _, err = tx.Exec(ctx, `
+	// Create the main table
+	// TODO: Use tsvector instead for lexical search
+	_, err = tx.Exec(ctx, `
         CREATE TABLE IF NOT EXISTS index_list (
             name TEXT PRIMARY KEY,
             uri TEXT,
@@ -45,42 +37,40 @@ func initializeDatabaseSchema(ctx context.Context, conn PgxIface) error {
             first_added_time TIMESTAMP,
             last_refreshed_time TIMESTAMP,
             content TEXT,
-            search_vector tsvector,
             word_occurrences JSONB
         )
     `)
-    if err != nil {
-        return fmt.Errorf("failed to create table: %w", err)
-    }
+	if err != nil {
+		return fmt.Errorf("failed to create table: %w", err)
+	}
 
-    // Create indexes
-    _, err = tx.Exec(ctx, `
-        CREATE INDEX IF NOT EXISTS idx_search_vector ON index_list USING GIN (search_vector);
+	// Create indexes
+	// TODO: Create an index for the tsvector once it is added to the table
+	_, err = tx.Exec(ctx, `
         CREATE INDEX IF NOT EXISTS idx_word_occurrences ON index_list USING GIN (word_occurrences);
     `)
-    if err != nil {
-        return fmt.Errorf("failed to create indexes: %w", err)
-    }
+	if err != nil {
+		return fmt.Errorf("failed to create indexes: %w", err)
+	}
 
-    // Create materialized view
-    _, err = tx.Exec(ctx, `
+	// Create materialized view
+	_, err = tx.Exec(ctx, `
         CREATE MATERIALIZED VIEW IF NOT EXISTS mv_index_list AS
         SELECT * FROM index_list
         WITH DATA;
         CREATE UNIQUE INDEX IF NOT EXISTS mv_index_list_name_idx ON mv_index_list (name);
     `)
-    if err != nil {
-        return fmt.Errorf("failed to create materialized view: %w", err)
-    }
+	if err != nil {
+		return fmt.Errorf("failed to create materialized view: %w", err)
+	}
 
-    err = tx.Commit(ctx)
-    if err != nil {
-        return fmt.Errorf("failed to commit transaction: %w", err)
-    }
+	err = tx.Commit(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
 
-    return nil
+	return nil
 }
-
 
 // insertRows inserts or updates rows in the index_list table and refreshes the materialized view.
 //
@@ -88,60 +78,58 @@ func initializeDatabaseSchema(ctx context.Context, conn PgxIface) error {
 //   - ctx: The context for database operations.
 //   - conn: A PgxIface interface for database connection.
 //   - index: A pointer to a pb.Index struct containing the entries to be inserted or updated.
-func insertRows(ctx context.Context, conn PgxIface, index *pb.Index) error {
-    tx, err := conn.Begin(ctx)
-    if err != nil {
-        return fmt.Errorf("unable to connect to database: %w", err)
-    }
-    defer tx.Rollback(ctx)
+func insertRows(ctx context.Context, conn PgxIface, upsertIndex *pb.Index) error {
+	tx, err := conn.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("unable to connect to database: %w", err)
+	}
+	defer tx.Rollback(ctx)
 
-    batch := &pgx.Batch{}
-    for _, entry := range index.Entries {
-        wordOccurrencesJSON, err := json.Marshal(entry.WordOccurrences)
-        if err != nil {
-            return fmt.Errorf("failed to marshal word occurrences: %w", err)
-        }
+	batch := &pgx.Batch{}
+	for _, entry := range upsertIndex.Entries {
+		wordOccurrencesJSON, err := json.Marshal(entry.WordOccurrences)
+		if err != nil {
+			return fmt.Errorf("failed to marshal word occurrences: %w", err)
+		}
 
-        batch.Queue(`
+		batch.Queue(`
             INSERT INTO index_list(
                 name, uri, data_type, source_type, first_added_time, 
-                last_refreshed_time, content, search_vector, word_occurrences
+                last_refreshed_time, content, word_occurrences
             )
-            VALUES($1, $2, $3, $4, $5, $6, $7, to_tsvector('english', $7), $8)
+            VALUES($1, $2, $3, $4, $5, $6, $7, $8)
             ON CONFLICT (name) DO UPDATE SET
                 uri = EXCLUDED.uri,
                 data_type = EXCLUDED.data_type,
                 source_type = EXCLUDED.source_type,
                 last_refreshed_time = EXCLUDED.last_refreshed_time,
                 content = EXCLUDED.content,
-                search_vector = to_tsvector('english', EXCLUDED.content),
                 word_occurrences = EXCLUDED.word_occurrences
         `, entry.Name, entry.URI, entry.DataType.String(), entry.SourceType.String(),
-            entry.FirstAddedTime.AsTime(), entry.LastRefreshedTime.AsTime(),
-            entry.Content, wordOccurrencesJSON)
-    }
+			entry.FirstAddedTime.AsTime(), entry.LastRefreshedTime.AsTime(),
+			entry.Content, wordOccurrencesJSON)
+	}
 
-    br := tx.SendBatch(ctx, batch)
-    _, err = br.Exec()
-    br.Close()
-    if err != nil {
-        return fmt.Errorf("failed to insert rows: %w", err)
-    }
+	br := tx.SendBatch(ctx, batch)
+	_, err = br.Exec()
+	br.Close()
+	if err != nil {
+		return fmt.Errorf("failed to insert rows: %w", err)
+	}
 
-    err = tx.Commit(ctx)
-    if err != nil {
-        return fmt.Errorf("failed to commit transaction: %w", err)
-    }
+	err = tx.Commit(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
 
-    // Refresh the materialized view outside the transaction
-    _, err = conn.Exec(ctx, `REFRESH MATERIALIZED VIEW CONCURRENTLY mv_index_list`)
-    if err != nil {
-        return fmt.Errorf("failed to refresh materialized view: %w", err)
-    }
+	// Refresh the materialized view outside the transaction
+	_, err = conn.Exec(ctx, `REFRESH MATERIALIZED VIEW CONCURRENTLY mv_index_list`)
+	if err != nil {
+		return fmt.Errorf("failed to refresh materialized view: %w", err)
+	}
 
-    return nil
+	return nil
 }
-
 
 // queryRow retrieves a single row from the index_list table based on the provided name.
 // It returns a pointer to a pb.IndexListEntry struct containing the row data, or an error if the query fails.
@@ -153,7 +141,7 @@ func insertRows(ctx context.Context, conn PgxIface, index *pb.Index) error {
 //
 // Returns:
 //   - *pb.IndexListEntry: A pointer to the retrieved index entry.
-func queryRow(ctx context.Context, conn PgxIface, name string) (*pb.IndexListEntry, error) {
+func getContentMetadata(ctx context.Context, conn PgxIface, name string) (*pb.IndexListEntry, error) {
 	tx, err := conn.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("unable to connect to database: %w", err)
@@ -163,14 +151,13 @@ func queryRow(ctx context.Context, conn PgxIface, name string) (*pb.IndexListEnt
 	var entry pb.IndexListEntry
 	var dataType, sourceType string
 	var firstAddedTime, lastRefreshedTime time.Time
-	var wordOccurrencesJSON []byte
 
 	err = tx.QueryRow(ctx, `
-		SELECT name, uri, data_type, source_type, first_added_time, last_refreshed_time, content, word_occurrences
+		SELECT name, uri, data_type, source_type, first_added_time, last_refreshed_time
 		FROM index_list 
 		WHERE name=$1
 	`, name).Scan(
-		&entry.Name, &entry.URI, &dataType, &sourceType, &firstAddedTime, &lastRefreshedTime, &entry.Content, &wordOccurrencesJSON)
+		&entry.Name, &entry.URI, &dataType, &sourceType, &firstAddedTime, &lastRefreshedTime)
 
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -184,11 +171,6 @@ func queryRow(ctx context.Context, conn PgxIface, name string) (*pb.IndexListEnt
 	entry.SourceType = pb.SourceType(pb.SourceType_value[sourceType])
 	entry.FirstAddedTime = timestamppb.New(firstAddedTime)
 	entry.LastRefreshedTime = timestamppb.New(lastRefreshedTime)
-
-	err = json.Unmarshal(wordOccurrencesJSON, &entry.WordOccurrences)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal word occurrences: %w", err)
-	}
 
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("failed to commit transaction: %w", err)
