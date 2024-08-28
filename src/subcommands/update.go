@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"path"
 
+	fetch "accretional.com/semantifly/fetcher"
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 	"google.golang.org/protobuf/types/known/timestamppb"
-	fetch "accretional.com/semantifly/fetcher"
 )
 
 type UpdateArgs struct {
@@ -52,11 +52,13 @@ func Update(u UpdateArgs) {
 		}
 
 		ile := &pb.IndexListEntry{
-			Name:       u.Name,
-			URI:        u.DataURI,
-			DataType:   pb.DataType(pb.DataType_value[u.DataType]),
-			SourceType: pb.SourceType(pb.SourceType_value[u.SourceType]),
-			Content:    string(content),
+			Name: u.Name,
+			ContentMetadata: &pb.ContentMetadata{
+				URI:        u.DataURI,
+				DataType:   pb.DataType(pb.DataType_value[u.DataType]),
+				SourceType: pb.SourceType(pb.SourceType_value[u.SourceType]),
+			},
+			Content: string(content),
 		}
 
 		if err := makeCopy(u.IndexPath, ile); err != nil {
@@ -75,13 +77,13 @@ func updateIndex(indexMap map[string]*pb.IndexListEntry, u *UpdateArgs) error {
 		return fmt.Errorf("entry %s not found", u.Name)
 	}
 
-	entry.URI = u.DataURI
+	entry.ContentMetadata.URI = u.DataURI
 
 	if u.DataType != "" {
 		if dataType, err := parseDataType(u.DataType); err != nil {
 			return fmt.Errorf("error in parsing DataType: %v", err)
 		} else {
-			entry.DataType = dataType
+			entry.ContentMetadata.DataType = dataType
 		}
 	}
 
@@ -89,15 +91,15 @@ func updateIndex(indexMap map[string]*pb.IndexListEntry, u *UpdateArgs) error {
 		if sourceType, err := parseSourceType(u.SourceType); err != nil {
 			return fmt.Errorf("error in parsing SourceType: %v", err)
 		} else {
-			entry.SourceType = sourceType
+			entry.ContentMetadata.SourceType = sourceType
 		}
 	}
 
 	entry.LastRefreshedTime = timestamppb.Now()
 	indexMap[u.Name] = entry
 
-	u.SourceType = pb.SourceType_name[int32(entry.SourceType)]
-	u.DataType = pb.DataType_name[int32(entry.DataType)]
+	u.SourceType = pb.SourceType_name[int32(entry.ContentMetadata.SourceType)]
+	u.DataType = pb.DataType_name[int32(entry.ContentMetadata.DataType)]
 
 	return nil
 }
