@@ -34,8 +34,9 @@ func setupPostgres() error {
 
 	cmd := exec.Command("bash", "setup_postgres.sh")
 
-	var stderrBuf bytes.Buffer
+	var stdoutBuf, stderrBuf bytes.Buffer
 	cmd.Stderr = io.MultiWriter(os.Stderr, &stderrBuf)
+	cmd.Stdout = io.MultiWriter(os.Stdout, &stdoutBuf)
 
 	err = cmd.Run()
 	if err != nil {
