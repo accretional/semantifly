@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 	"github.com/jackc/pgx/v5"
@@ -33,12 +34,13 @@ func initializeDatabaseSchema(ctx context.Context, conn PgxIface) error {
 
 }
 
-func createProtoFieldIndex(ctx context.Context, conn PgxIface, indexName string) error {
-	query := fmt.Sprintf(`
-        CREATE INDEX IF NOT EXISTS idx_word_occurrences ON index_list USING GIN ((%s));
-    `, indexName)
+func createProtoFieldIndex(ctx context.Context, conn PgxIface, fieldName string) error {
 
-	_, err := conn.Exec(ctx, query)
+	indexName := strings.ReplaceAll(fieldName, "->", "_")
+
+	_, err := conn.Exec(ctx, `
+        CREATE INDEX IF NOT EXISTS idx_$1 ON index_list USING GIN (($2));
+    `, indexName, fieldName)
 	if err != nil {
 		return fmt.Errorf("failed to create indexes: %w", err)
 	}
@@ -78,6 +80,18 @@ func insertRows(ctx context.Context, conn PgxIface, upsertIndex *pb.Index) error
 	err = tx.Commit(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
+}
+
+func deleteRow(ctx context.Context, conn PgxIface, name string) error {
+	_, err := conn.Exec(ctx, `
+		DELETE FROM index_list 
+		WHERE name=$1
+	`, name)
+	if err != nil {
+		return fmt.Errorf("failed to delete index: %w", err)
 	}
 
 	return nil

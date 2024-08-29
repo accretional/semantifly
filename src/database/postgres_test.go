@@ -251,6 +251,71 @@ func TestInsertRow(t *testing.T) {
 	}
 }
 
+func TestDeleteRow(t *testing.T) {
+
+	err := setupPostgres()
+
+	if err != nil {
+		t.Fatalf("setupPostgres failed: %v", err)
+	}
+
+	// Set a mock DATABASE_URL for testing
+	os.Setenv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/testdb")
+	defer os.Unsetenv("DATABASE_URL")
+
+	db, err := createTestingDatabase()
+	if err != nil {
+		t.Fatalf("Failed to create test database: %v", err)
+	}
+	defer db.Close()
+
+	// Test connection
+	ctx := context.Background()
+	conn, err := pgx.Connect(ctx, os.Getenv("DATABASE_URL"))
+	if err != nil {
+		t.Fatalf("Failed to establish connection to the database: %v", err)
+	}
+
+	// Test database table initialisation
+	err = initializeDatabaseSchema(ctx, conn)
+	if err != nil {
+		t.Fatalf("Failed to initialise the database schema: %v", err)
+	}
+
+	index := &pb.Index{
+		Entries: []*pb.IndexListEntry{
+			{
+				Name: "Test Entry",
+				ContentMetadata: &pb.ContentMetadata{
+					URI:        "http://example.com",
+					DataType:   pb.DataType_TEXT,
+					SourceType: pb.SourceType_WEBPAGE,
+				},
+				FirstAddedTime:    timestamppb.Now(),
+				LastRefreshedTime: timestamppb.Now(),
+				Content:           "Test Content",
+				WordOccurrences:   map[string]int32{"test": 1, "content": 1},
+			},
+		},
+	}
+
+	err = insertRows(ctx, conn, index)
+	if err != nil {
+		t.Fatalf("failed to insert rows: %v", err)
+	}
+
+	// Test delete row
+	err = deleteRow(ctx, conn, "Test Entry")
+	if err != nil {
+		t.Fatalf("failed to delete entry: %v", err)
+	}
+
+	// Cleanup
+	if err := removeTestingDatabase(); err != nil {
+		t.Fatalf("Failed to remove test database: %v", err)
+	}
+}
+
 func TestQueryRow(t *testing.T) {
 
 	err := setupPostgres()
