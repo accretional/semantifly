@@ -9,19 +9,19 @@ import (
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 )
 
-func SubcommandGet(g *pb.GetRequest, indexPath string, w io.Writer) (string, error) {
+func SubcommandGet(g *pb.GetRequest, indexPath string, w io.Writer) (string, *pb.ContentMetadata, error) {
 	indexFilePath := path.Join(indexPath, indexFile)
 
 	indexMap, err := readIndex(indexFilePath, false)
 	if err != nil {
-		return "", fmt.Errorf("failed to read the index file: %v", err)
+		return "", nil, fmt.Errorf("failed to read the index file: %v", err)
 	}
 
 	targetEntry := indexMap[g.Name]
 
 	if targetEntry == nil {
 		fmt.Fprintf(w, "entry '%s' not found in index file %s\n", g.Name, indexFilePath)
-		return "", fmt.Errorf("entry '%s' not found in index file %s", g.Name, indexFilePath)
+		return "", nil, fmt.Errorf("entry '%s' not found in index file %s", g.Name, indexFilePath)
 	}
 
 	if targetEntry.Content == "" {
@@ -33,12 +33,12 @@ func SubcommandGet(g *pb.GetRequest, indexPath string, w io.Writer) (string, err
 
 			content, err = fetch.FetchFromSource(targetEntry.ContentMetadata.SourceType, targetEntry.ContentMetadata.URI)
 			if err != nil {
-				return "", fmt.Errorf("failed to read content from source: %v", err)
+				return "", nil, fmt.Errorf("failed to read content from source: %v", err)
 			}
 		}
 
-		return string(content), nil
+		return string(content), targetEntry.ContentMetadata, nil
 	}
 
-	return targetEntry.Content, nil
+	return targetEntry.Content, targetEntry.ContentMetadata, nil
 }

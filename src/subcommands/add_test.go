@@ -30,19 +30,15 @@ func TestAdd(t *testing.T) {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
-	var filesData []*pb.ContentMetadata
-
 	testFileData := &pb.ContentMetadata{
 		DataType:   0,
 		SourceType: 0,
 		URI:        testFilePath,
 	}
 
-	filesData = append(filesData, testFileData)
-
 	args := &pb.AddRequest{
-		FilesData: filesData,
-		MakeCopy:  true,
+		AddedMetadata: testFileData,
+		MakeCopy:      true,
 	}
 
 	// Create a buffer to capture output
@@ -113,38 +109,45 @@ func TestAdd_MultipleFilesSamePath(t *testing.T) {
 	testFilePath2 := path.Join(tempDir, "test_file.txt")
 
 	// Set up test arguments
-	var filesData []*pb.ContentMetadata
 
 	testFileData1 := &pb.ContentMetadata{
 		DataType:   0,
 		SourceType: 0,
 		URI:        testFilePath1,
 	}
+
+	args := &pb.AddRequest{
+		AddedMetadata: testFileData1,
+		MakeCopy:      true,
+	}
+
+	var buf1 bytes.Buffer
+	err = SubcommandAdd(args, tempDir, &buf1)
+	if err != nil {
+		t.Fatalf("Add function returned an error: %v", err)
+	}
+
 	testFileData2 := &pb.ContentMetadata{
 		DataType:   0,
 		SourceType: 0,
 		URI:        testFilePath2,
 	}
 
-	filesData = append(filesData, testFileData1, testFileData2)
-
-	args := &pb.AddRequest{
-		FilesData: filesData,
-		MakeCopy:  true,
+	args = &pb.AddRequest{
+		AddedMetadata: testFileData2,
+		MakeCopy:      true,
 	}
 
-	var buf bytes.Buffer
-
-	err = SubcommandAdd(args, tempDir, &buf)
-	if err != nil {
-		t.Fatalf("Add function returned an error: %v", err)
+	var buf2 bytes.Buffer
+	err = SubcommandAdd(args, tempDir, &buf2)
+	if err == nil {
+		t.Fatalf("Add function did not return an error when it was suppposed to.")
 	}
-
-	output := buf.String()
+	output := buf2.String()
 
 	// Checking if the second entry was skipped
-	if !strings.Contains(output, "Skipping without refresh") {
-		t.Errorf("Expected output 'Skipping without refresh', but got '%s'", output)
+	if !strings.Contains(err.Error(), "Skipping without refresh") {
+		t.Errorf("Expected error 'Skipping without refresh', but got '%s'", output)
 	}
 
 	// Check if the index file was created
@@ -177,18 +180,15 @@ func TestAdd_Webpage(t *testing.T) {
 	testWebpageURL := "http://echo.jsontest.com/title/lorem/content/ipsum"
 
 	// Set up test arguments
-	var filesData []*pb.ContentMetadata
-
 	webData := &pb.ContentMetadata{
 		DataType:   0,
 		SourceType: 1,
 		URI:        testWebpageURL,
 	}
-	filesData = append(filesData, webData)
 
 	args := &pb.AddRequest{
-		FilesData: filesData,
-		MakeCopy:  true,
+		AddedMetadata: webData,
+		MakeCopy:      true,
 	}
 
 	var buf bytes.Buffer

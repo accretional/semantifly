@@ -17,34 +17,29 @@ func SubcommandAdd(a *pb.AddRequest, indexPath string, w io.Writer) error {
 		return fmt.Errorf("Failed to read the index file: %v", err)
 	}
 
-	for _, u := range a.FilesData {
-		if indexMap[u.URI] != nil {
-			fmt.Fprintf(w, "File %s has already been added. Skipping without refresh.\n", u)
-			continue
-		}
-
-		ile := &pb.IndexListEntry{
-			Name:            u.URI,
-			ContentMetadata: u,
-			FirstAddedTime:  timestamppb.Now(),
-		}
-
-		if a.MakeCopy {
-			err = makeCopy(indexPath, ile)
-			if err != nil {
-				fmt.Fprintf(w, "Failed to make a copy for %s: %v. Skipping.\n", u, err)
-				continue
-			}
-		}
-
-		err = search.CreateSearchDictionary(ile)
-		if err != nil {
-			fmt.Fprintf(w, "File %s failed to create search dictionary with err: %s. Skipping.\n", u, err)
-			continue
-		}
-
-		indexMap[ile.Name] = ile
+	if indexMap[a.AddedMetadata.URI] != nil {
+		return fmt.Errorf("File %s has already been added. Skipping without refresh.\n", a)
 	}
+
+	ile := &pb.IndexListEntry{
+		Name:            a.AddedMetadata.URI,
+		ContentMetadata: a.AddedMetadata,
+		FirstAddedTime:  timestamppb.Now(),
+	}
+
+	if a.MakeCopy {
+		err = makeCopy(indexPath, ile)
+		if err != nil {
+			fmt.Fprintf(w, "Failed to make a copy for %s: %v. Skipping.\n", a, err)
+		}
+	}
+
+	err = search.CreateSearchDictionary(ile)
+	if err != nil {
+		fmt.Fprintf(w, "File %s failed to create search dictionary with err: %s. Skipping.\n", a, err)
+	}
+
+	indexMap[ile.Name] = ile
 
 	if err := writeIndex(indexFilePath, indexMap); err != nil {
 		return fmt.Errorf("Failed to write to the index file: %v", err)

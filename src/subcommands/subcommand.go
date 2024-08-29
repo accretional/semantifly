@@ -217,21 +217,15 @@ func executeAdd(args []string) {
 		printCmdErr(fmt.Sprintf("Error in parsing SourceType: %v\n", err))
 	}
 
-	dataUris := cmd.Args()
-
-	var filesData []*pb.ContentMetadata
-	for i := 0; i < len(dataUris); i++ {
-		currentFile := &pb.ContentMetadata{
-			URI:        dataUris[i],
-			DataType:   dataTypeEnum,
-			SourceType: sourceTypeEnum,
-		}
-		filesData = append(filesData, currentFile)
-	}
+	dataUri := cmd.Args()[0]
 
 	addArgs := &pb.AddRequest{
-		FilesData: filesData,
-		MakeCopy:  *makeLocalCopy,
+		AddedMetadata: &pb.ContentMetadata{
+			URI:        dataUri,
+			DataType:   dataTypeEnum,
+			SourceType: sourceTypeEnum,
+		},
+		MakeCopy: *makeLocalCopy,
 	}
 
 	err = SubcommandAdd(addArgs, *indexPath, os.Stdout)
@@ -262,7 +256,7 @@ func executeDelete(args []string) {
 
 	deleteArgs := &pb.DeleteRequest{
 		DeleteCopy: *deleteLocalCopy,
-		DataUris:   cmd.Args(),
+		Names:      cmd.Args(),
 	}
 
 	err = SubcommandDelete(deleteArgs, *indexPath, os.Stdout)
@@ -294,7 +288,7 @@ func executeGet(args []string) {
 		Name: cmd.Args()[0],
 	}
 
-	resp, err := SubcommandGet(getArgs, *indexPath, os.Stdout)
+	resp, _, err := SubcommandGet(getArgs, *indexPath, os.Stdout)
 	if err != nil {
 		fmt.Printf("Error occurred during get subcommand: %v", err)
 		return
@@ -344,7 +338,7 @@ func executeUpdate(args []string) {
 
 	updateArgs := &pb.UpdateRequest{
 		Name: cmd.Args()[0],
-		FileData: &pb.ContentMetadata{
+		UpdatedMetadata: &pb.ContentMetadata{
 			URI:        cmd.Args()[1],
 			DataType:   dataTypeEnum,
 			SourceType: sourceTypeEnum,

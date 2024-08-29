@@ -27,18 +27,14 @@ func TestUpdate(t *testing.T) {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
-	var filesData []*pb.ContentMetadata
-
 	testFileData := &pb.ContentMetadata{
 		DataType:   0,
 		SourceType: 0,
 		URI:        testFilePath,
 	}
 
-	filesData = append(filesData, testFileData)
-
 	args := &pb.AddRequest{
-		FilesData: filesData,
+		AddedMetadata: testFileData,
 		MakeCopy:  true,
 	}
 
@@ -72,7 +68,7 @@ func TestUpdate(t *testing.T) {
 	// Set up test arguments
 	updateArgs := &pb.UpdateRequest{
 		Name:       testFilePath,
-		FileData:   testUpdateFileData,
+		UpdatedMetadata:   testUpdateFileData,
 		UpdateCopy: true,
 	}
 

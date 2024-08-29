@@ -32,8 +32,6 @@ func TestDelete(t *testing.T) {
 		t.Fatalf("Failed to create test file 2: %v", err)
 	}
 
-	var filesData []*pb.ContentMetadata
-
 	testFileData1 := &pb.ContentMetadata{
 		DataType:   0,
 		SourceType: 0,
@@ -45,11 +43,9 @@ func TestDelete(t *testing.T) {
 		URI:        testFilePath2,
 	}
 
-	filesData = append(filesData, testFileData1, testFileData2)
-
 	addArgs := &pb.AddRequest{
-		FilesData: filesData,
-		MakeCopy:  true,
+		AddedMetadata: testFileData1,
+		MakeCopy:      true,
 	}
 
 	var addBuf bytes.Buffer
@@ -59,10 +55,22 @@ func TestDelete(t *testing.T) {
 		t.Fatalf("Add function returned an error: %v", err)
 	}
 
+	addArgs2 := &pb.AddRequest{
+		AddedMetadata: testFileData2,
+		MakeCopy:      true,
+	}
+
+	var addBuf2 bytes.Buffer
+
+	err = SubcommandAdd(addArgs2, tempDir, &addBuf2)
+	if err != nil {
+		t.Fatalf("Add function returned an error: %v", err)
+	}
+
 	// Test case
 	deleteArgs := &pb.DeleteRequest{
 		DeleteCopy: true,
-		DataUris:   []string{testFilePath1},
+		Names:      []string{testFilePath1},
 	}
 
 	var deleteBuf bytes.Buffer

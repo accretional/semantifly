@@ -75,18 +75,14 @@ func TestServerCommands(t *testing.T) {
 	// Add
 	addCtx, addCancel := context.WithTimeout(context.Background(), time.Second)
 
-	var filesData []*pb.ContentMetadata
-
 	testFileData1 := &pb.ContentMetadata{
 		DataType:   0,
 		SourceType: 0,
 		URI:        filepath.Join(testDir, "test_file1.txt"),
 	}
 
-	filesData = append(filesData, testFileData1)
-
 	addArgs := &pb.AddRequest{
-		FilesData: filesData,
+		AddedMetadata: testFileData1,
 		MakeCopy:  true,
 	}
 
@@ -108,7 +104,7 @@ func TestServerCommands(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Get failed: %v", err)
 	}
-	if getResp.Content == "" {
+	if *getResp.Content == "" {
 		t.Errorf("Get returned empty content")
 	}
 
@@ -124,7 +120,7 @@ func TestServerCommands(t *testing.T) {
 
 	updReq := &pb.UpdateRequest{
 		Name:       filepath.Join(testDir, "test_file1.txt"),
-		FileData:   testUpdateFileData,
+		UpdatedMetadata:   testUpdateFileData,
 		UpdateCopy: true,
 	}
 
@@ -156,7 +152,7 @@ func TestServerCommands(t *testing.T) {
 
 	delReq := &pb.DeleteRequest{
 		DeleteCopy: true,
-		DataUris:   []string{filepath.Join(testDir, "test_file1.txt")},
+		Names:   []string{filepath.Join(testDir, "test_file1.txt")},
 	}
 
 	_, err = client.Delete(delCtx, delReq)

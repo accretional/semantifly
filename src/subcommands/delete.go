@@ -29,7 +29,7 @@ func SubcommandDelete(d *pb.DeleteRequest, indexPath string, w io.Writer) error 
 		return fmt.Errorf("failed to read the index file: %v", err)
 	}
 
-	for _, uri := range d.DataUris {
+	for _, uri := range d.Names {
 
 		if _, present := indexMap[uri]; !present {
 			fmt.Fprintf(w, "Entry %s not found in index file %s, skipping\n", uri, indexFilePath)

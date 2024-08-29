@@ -29,18 +29,15 @@ func TestGet(t *testing.T) {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
-	var filesData []*pb.ContentMetadata
-
 	testFileData := &pb.ContentMetadata{
 		DataType:   0,
 		SourceType: 0,
 		URI:        testFilePath,
 	}
-	filesData = append(filesData, testFileData)
 
 	addArgs := &pb.AddRequest{
-		FilesData: filesData,
-		MakeCopy:  true,
+		AddedMetadata: testFileData,
+		MakeCopy:      true,
 	}
 
 	var addBuf bytes.Buffer
@@ -62,7 +59,7 @@ func TestGet(t *testing.T) {
 
 	var getBuf bytes.Buffer
 
-	resp, err := SubcommandGet(getArgs, tempDir, &getBuf)
+	resp, _, err := SubcommandGet(getArgs, tempDir, &getBuf)
 	if err != nil {
 		t.Fatalf("Get function returned an error: %v", err)
 	}
@@ -82,18 +79,14 @@ func TestGet_Webpage(t *testing.T) {
 
 	testWebpageURL := "http://echo.jsontest.com/title/lorem/content/ipsum"
 
-	var filesData []*pb.ContentMetadata
-
 	testWebData := &pb.ContentMetadata{
 		DataType:   0,
 		SourceType: 1,
 		URI:        testWebpageURL,
 	}
 
-	filesData = append(filesData, testWebData)
-
 	addArgs := &pb.AddRequest{
-		FilesData: filesData,
+		AddedMetadata: testWebData,
 		MakeCopy:  true,
 	}
 
@@ -115,7 +108,7 @@ func TestGet_Webpage(t *testing.T) {
 
 	var getBuf bytes.Buffer
 
-	getResp, err := SubcommandGet(getArgs, tempDir, &getBuf)
+	getResp, _, err := SubcommandGet(getArgs, tempDir, &getBuf)
 	if err != nil {
 		t.Fatalf("Get function returned an error: %v", err)
 	}

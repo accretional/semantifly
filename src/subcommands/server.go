@@ -40,11 +40,11 @@ func (s *Server) Delete(ctx context.Context, req *pb.DeleteRequest) (*pb.DeleteR
 
 func (s *Server) Get(ctx context.Context, req *pb.GetRequest) (*pb.GetResponse, error) {
 	var buf bytes.Buffer
-	content, err := SubcommandGet(req, s.serverIndexPath, &buf)
+	content, contentMetadata, err := SubcommandGet(req, s.serverIndexPath, &buf)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	return &pb.GetResponse{Content: content, ErrorMessage: buf.String()}, nil
+	return &pb.GetResponse{Content: &content, ReturnedMetadata: contentMetadata, ErrorMessage: buf.String()}, nil
 }
 
 func (s *Server) Update(ctx context.Context, req *pb.UpdateRequest) (*pb.UpdateResponse, error) {

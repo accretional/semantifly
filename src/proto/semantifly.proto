@@ -14,7 +14,7 @@ service Semantifly {
 }
 
 message AddRequest {
-  repeated ContentMetadata files_data = 1;
+  ContentMetadata added_metadata = 1;
   bool make_copy = 2;
 }
 
@@ -24,7 +24,7 @@ message AddResponse {
 
 message DeleteRequest {
   bool delete_copy = 1;
-  repeated string data_uris = 2;
+  repeated string names = 2;
 }
 
 message DeleteResponse {
@@ -36,13 +36,14 @@ message GetRequest {
 }
 
 message GetResponse {
-  string content = 1;
+  optional string content = 1;
   string error_message = 2;
+  ContentMetadata returned_metadata = 3;
 }
 
 message UpdateRequest {
   string name = 1;
-  ContentMetadata file_data = 2;
+  ContentMetadata updated_metadata = 2;
   bool update_copy = 3;
 }
 
