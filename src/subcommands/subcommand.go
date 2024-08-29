@@ -231,7 +231,7 @@ func executeAdd(args []string) {
 
 	addArgs := &pb.AddRequest{
 		FilesData: filesData,
-		MakeCopy: *makeLocalCopy,
+		MakeCopy:  *makeLocalCopy,
 	}
 
 	err = SubcommandAdd(addArgs, *indexPath, os.Stdout)
@@ -393,12 +393,26 @@ func executeSearch(args []string) {
 }
 
 func executeStartServer(args []string) {
-	lis, err := net.Listen("tcp", ":50051")
+	cmd := flag.NewFlagSet("start-server", flag.ExitOnError)
+	serverIndexPath := cmd.String("index-path", "index", "Path to the server index")
+	port := cmd.String("port", "50051", "Port for the server")
+
+	flags, nonFlags, err := parseArgs(args, cmd)
+	if err != nil {
+		printCmdErr(fmt.Sprintf("Error: %v", err))
+		return
+	}
+
+	reorderedArgs := append(flags, nonFlags...)
+	cmd.Parse(reorderedArgs)
+
+	portStr := ":" + *port
+	lis, err := net.Listen("tcp", portStr)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}
 	s := grpc.NewServer()
-	pb.RegisterSemantiflyServer(s, &Server{})
+	pb.RegisterSemantiflyServer(s, SemantiflyNewServer(*serverIndexPath))
 	log.Printf("server listening at %v", lis.Addr())
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)

@@ -11,13 +11,18 @@ import (
 
 type Server struct {
 	pb.UnimplementedSemantiflyServer
+	serverIndexPath string
 }
 
-const serverIndexPath = "index"
+func SemantiflyNewServer(serverIndexPath string) *Server {
+	return &Server{
+		serverIndexPath: serverIndexPath,
+	}
+}
 
 func (s *Server) Add(ctx context.Context, req *pb.AddRequest) (*pb.AddResponse, error) {
 	var buf bytes.Buffer
-	err := SubcommandAdd(req, serverIndexPath, &buf)
+	err := SubcommandAdd(req, s.serverIndexPath, &buf)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -26,7 +31,7 @@ func (s *Server) Add(ctx context.Context, req *pb.AddRequest) (*pb.AddResponse, 
 
 func (s *Server) Delete(ctx context.Context, req *pb.DeleteRequest) (*pb.DeleteResponse, error) {
 	var buf bytes.Buffer
-	err := SubcommandDelete(req, serverIndexPath, &buf)
+	err := SubcommandDelete(req, s.serverIndexPath, &buf)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -35,7 +40,7 @@ func (s *Server) Delete(ctx context.Context, req *pb.DeleteRequest) (*pb.DeleteR
 
 func (s *Server) Get(ctx context.Context, req *pb.GetRequest) (*pb.GetResponse, error) {
 	var buf bytes.Buffer
-	content, err := SubcommandGet(req, serverIndexPath, &buf)
+	content, err := SubcommandGet(req, s.serverIndexPath, &buf)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -45,7 +50,7 @@ func (s *Server) Get(ctx context.Context, req *pb.GetRequest) (*pb.GetResponse, 
 func (s *Server) Update(ctx context.Context, req *pb.UpdateRequest) (*pb.UpdateResponse, error) {
 	var buf bytes.Buffer
 
-	err := SubcommandUpdate(req, serverIndexPath, &buf)
+	err := SubcommandUpdate(req, s.serverIndexPath, &buf)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -55,7 +60,7 @@ func (s *Server) Update(ctx context.Context, req *pb.UpdateRequest) (*pb.UpdateR
 func (s *Server) LexicalSearch(ctx context.Context, req *pb.LexicalSearchRequest) (*pb.LexicalSearchResponse, error) {
 	var buf bytes.Buffer
 
-	results, err := SubcommandLexicalSearch(req, serverIndexPath, &buf)
+	results, err := SubcommandLexicalSearch(req, s.serverIndexPath, &buf)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

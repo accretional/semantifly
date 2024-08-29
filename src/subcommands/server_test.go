@@ -36,7 +36,7 @@ func setupTestEnvironment(t *testing.T) func() {
 }
 
 func setupServerAndClient(t *testing.T) (pb.SemantiflyClient, func()) {
-	stopServer := startTestServer()
+	startTestServer()
 
 	// Set up the client
 	opts := []grpc.DialOption{
@@ -52,21 +52,16 @@ func setupServerAndClient(t *testing.T) (pb.SemantiflyClient, func()) {
 
 	cleanup := func() {
 		conn.Close()
-		stopServer()
 	}
 
 	return client, cleanup
 }
 
-func startTestServer() func() {
-	go executeStartServer([]string{"--semantifly_dir", testDir})
+func startTestServer() {
+	go executeStartServer([]string{"--index-path", testDir})
 
 	// Allow some time for the server to start
 	time.Sleep(100 * time.Millisecond)
-
-	return func() {
-
-	}
 }
 
 func TestServerCommands(t *testing.T) {
