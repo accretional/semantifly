@@ -165,30 +165,6 @@ func appendToIndexLog(indexLog string) {
 	}
 }
 
-// func convertToAbsPath(filePath string) (string, error) {
-// 	absIndexPath, err := filepath.Abs(filePath)
-// 	if err != nil {
-// 		return "", fmt.Errorf("error converting index path to absolute: %v", err)
-// 	}
-// 	return absIndexPath, nil
-// }
-
-// func convertUrisToAbsPath(originalArgs []string, isLocalFile bool) ([]string, error) {
-// 	if !isLocalFile {
-// 		return originalArgs, nil
-// 	}
-
-// 	absolutePaths := make([]string, len(originalArgs))
-// 	for i, path := range originalArgs {
-// 		absPath, err := filepath.Abs(path)
-// 		if err != nil {
-// 			return make([]string, 0), fmt.Errorf("error converting path to absolute: %v", err)
-// 		}
-// 		absolutePaths[i] = absPath
-// 	}
-// 	return absolutePaths, nil
-// }
-
 func inferSourceType(uris []string) (string, error) {
 	sourceTypeStr := "local_file"
 
@@ -259,7 +235,6 @@ func executeAdd(args []string) {
 func executeDelete(args []string) {
 	cmd := flag.NewFlagSet("delete", flag.ExitOnError)
 	deleteLocalCopy := cmd.Bool("copy", false, "Whether to delete the copy made")
-	// sourceType := cmd.String("source-type", "", "How to access the content")
 	indexPath := cmd.String("index-path", "", "Path to the index file")
 
 	flags, nonFlags, err := parseArgs(args, cmd)

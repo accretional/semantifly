@@ -64,10 +64,7 @@ func TestUpdate(t *testing.T) {
 		DataUri:    updatedFilePath,
 	}
 
-	// Call the Update function
 	var updateBuf bytes.Buffer
-
-	// Call the Update function
 	err = SubcommandUpdate(updateArgs, tempDir, &updateBuf)
 	if err != nil {
 		t.Fatalf("Update function returned an error: %v", err)
