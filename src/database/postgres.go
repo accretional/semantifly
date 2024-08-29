@@ -27,7 +27,7 @@ func initializeDatabaseSchema(ctx context.Context, conn PgxIface) error {
 		)
 	`)
 	if err != nil {
-		return fmt.Errorf("failed to create indexes: %w", err)
+		return fmt.Errorf("failed to create the index table: %w", err)
 	}
 
 	return nil
