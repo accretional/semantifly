@@ -28,8 +28,9 @@ func initializeDatabaseSchema(ctx context.Context, conn PgxIface) error {
 	_, err = tx.Exec(ctx, `
 		CREATE TABLE IF NOT EXISTS index_list (
 			name TEXT PRIMARY KEY,
-			entry JSONB
-		)
+			entry JSONB,
+			search_vector tsvector
+		);
 	`)
 	if err != nil {
 		return fmt.Errorf("failed to create table: %w", err)
@@ -39,6 +40,7 @@ func initializeDatabaseSchema(ctx context.Context, conn PgxIface) error {
 	_, err = tx.Exec(ctx, `
 		CREATE INDEX IF NOT EXISTS idx_word_occurrences ON index_list USING GIN ((entry->'wordOccurrences'));
 		CREATE INDEX IF NOT EXISTS idx_stemmed_word_occurrences ON index_list USING GIN ((entry->'stemmedWordOccurrences'));
+		CREATE INDEX idx_search_vector ON index_list USING GIN (search_vector);
 	`)
 	if err != nil {
 		return fmt.Errorf("failed to create indexes: %w", err)
@@ -67,10 +69,11 @@ func insertRows(ctx context.Context, conn PgxIface, upsertIndex *pb.Index) error
 		}
 
 		batch.Queue(`
-            INSERT INTO index_list(name, entry)
-            VALUES($1, $2)
+            INSERT INTO index_list(name, entry, search_vector)
+            VALUES($1, $2, to_tsvector('english', $2::jsonb->>'content'))
             ON CONFLICT (name) DO UPDATE SET
-                entry = EXCLUDED.entry
+                entry = EXCLUDED.entry,
+                search_vector = to_tsvector('english', EXCLUDED.entry::jsonb->>'content')
         `, ile.Name, ileJson)
 	}
 
