@@ -136,15 +136,14 @@ func TestPostgres(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to initialise the database schema: %v", err)
 	}
+
+	// Cleanup
+	if err := removeTestingDatabase(); err != nil {
+		t.Fatalf("Failed to remove test database: %v", err)
+	}
 }
 
 func TestInsertRow(t *testing.T) {
-
-	err := setupPostgres()
-
-	if err != nil {
-		t.Fatalf("setupPostgres failed: %v", err)
-	}
 
 	// Set a mock DATABASE_URL for testing
 	os.Setenv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/testdb")
@@ -204,12 +203,6 @@ func TestInsertRow(t *testing.T) {
 }
 
 func TestQueryRow(t *testing.T) {
-
-	err := setupPostgres()
-
-	if err != nil {
-		t.Fatalf("setupPostgres failed: %v", err)
-	}
 
 	// Set a mock DATABASE_URL for testing
 	os.Setenv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/testdb")

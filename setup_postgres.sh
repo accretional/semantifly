@@ -3,21 +3,33 @@ set -e
 
 trap 'echo "An error occurred. Exiting..." >&2; exit 1' ERR
 
+CONTAINER_NAME="postgres-container"
+POSTGRES_PORT=5432
+
 # Function to check if Postgres is ready
 check_postgres() {
-    docker exec -i postgres-container psql -U postgres -c "SELECT 1" > /dev/null 2>&1 || return 1
+    docker exec -i $CONTAINER_NAME psql -U postgres -c "SELECT 1" > /dev/null 2>&1 || return 1
+}
+
+# Function to remove existing container if it exists
+cleanup_existing_container() {
+    if docker ps -a --format '{{.Names}}' | grep -q "^$CONTAINER_NAME$"; then
+        echo "Removing existing container..."
+        docker rm -f $CONTAINER_NAME
+    fi
 }
 
 # Function to start Postgres container
 start_postgres() {
-    if ! docker run --name postgres-container -e POSTGRES_PASSWORD=postgres -d -p 5432:5432 postgres:14; then
+    cleanup_existing_container
+    if ! docker run --name $CONTAINER_NAME -e POSTGRES_PASSWORD=postgres -d -p $POSTGRES_PORT:5432 postgres:14; then
         echo "Error starting postgres container" >&2
         exit 1
     fi
-    export DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres
+    export DATABASE_URL=postgres://postgres:postgres@localhost:$POSTGRES_PORT/postgres
     
     echo "Waiting for Postgres to start..."
-    while ! docker exec postgres-container pg_isready; do
+    while ! docker exec $CONTAINER_NAME pg_isready; do
         sleep 1
     done
     echo "Postgres server has started"
@@ -31,22 +43,12 @@ if ! docker pull postgres:14; then
 fi
 echo "Postgres image pulled successfully"
 
-# Check if 'nc' command is available to determine which method to use for checking postgres availability
-if ! command -v nc &> /dev/null; then
-    if ! docker inspect postgres-container &> /dev/null || ! docker container inspect -f '{{.State.Running}}' postgres-container | grep -q true; then
-        # Start a new postgres container if it doesn't exist or isn't running
-        start_postgres
-    else
-        echo "Postgres container already exists and is running"
-    fi
+# Check if the container exists and is running
+if docker ps --format '{{.Names}}' | grep -q "^$CONTAINER_NAME$"; then
+    echo "Postgres container is already running"
 else
-    # If 'nc' is available, use it to check if postgres is running on port 5432
-    if ! nc -z localhost 5432; then
-        # Start a new postgres container if it's not running
-        start_postgres
-    else
-        echo "Postgres server is already running on port 5432"
-    fi
+    echo "Starting new Postgres container..."
+    start_postgres
 fi
 
 # Final check to ensure Postgres is fully ready
