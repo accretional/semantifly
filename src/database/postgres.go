@@ -36,11 +36,10 @@ func initializeDatabaseSchema(ctx context.Context, conn PgxIface) error {
 
 func createProtoFieldIndex(ctx context.Context, conn PgxIface, fieldName string) error {
 
-	indexName := strings.ReplaceAll(fieldName, "->", "_")
+	indexName := strings.ReplaceAll(strings.ReplaceAll(fieldName, "->", "_"), "'", "")
+	query := `CREATE INDEX IF NOT EXISTS idx_` + indexName + ` ON index_list USING GIN ((` + fieldName + `));`
 
-	_, err := conn.Exec(ctx, `
-        CREATE INDEX IF NOT EXISTS idx_$1 ON index_list USING GIN (($2));
-    `, indexName, fieldName)
+	_, err := conn.Exec(ctx, query)
 	if err != nil {
 		return fmt.Errorf("failed to create indexes: %w", err)
 	}
