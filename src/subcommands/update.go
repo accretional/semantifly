@@ -1,15 +1,20 @@
 package subcommands
 
 import (
+	"context"
 	"fmt"
 	"path"
 
+	db "accretional.com/semantifly/database"
 	fetch "accretional.com/semantifly/fetcher"
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
+	search "accretional.com/semantifly/search"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type UpdateArgs struct {
+	Context    context.Context
+	DBConn     db.PgxIface
 	Name       string
 	IndexPath  string
 	DataType   string
@@ -29,10 +34,21 @@ func Update(u UpdateArgs) {
 
 	if err := updateIndex(indexMap, &u); err != nil {
 		fmt.Printf("Failed to update the index entry %s: %v", u.Name, err)
+		return
 	}
 
-	if err := writeIndex(indexFilePath, indexMap); err != nil {
-		fmt.Printf("Failed to write to the index file: %v", err)
+	ile := &pb.IndexListEntry{
+		Name: u.Name,
+		ContentMetadata: &pb.ContentMetadata{
+			URI:        u.DataURI,
+			DataType:   pb.DataType(pb.DataType_value[u.DataType]),
+			SourceType: pb.SourceType(pb.SourceType_value[u.SourceType]),
+		},
+	}
+
+	err = search.CreateSearchDictionary(ile)
+	if err != nil {
+		fmt.Printf("Failed to update the search dictionary %s: %v", u, err)
 		return
 	}
 
@@ -51,20 +67,26 @@ func Update(u UpdateArgs) {
 			return
 		}
 
-		ile := &pb.IndexListEntry{
-			Name: u.Name,
-			ContentMetadata: &pb.ContentMetadata{
-				URI:        u.DataURI,
-				DataType:   pb.DataType(pb.DataType_value[u.DataType]),
-				SourceType: pb.SourceType(pb.SourceType_value[u.SourceType]),
-			},
-			Content: string(content),
+		ileWithContent := &pb.IndexListEntry{
+			Name:            ile.Name,
+			ContentMetadata: ile.ContentMetadata,
+			Content:         string(content),
 		}
 
-		if err := makeCopy(u.IndexPath, ile); err != nil {
+		if err := makeCopy(u.IndexPath, ileWithContent); err != nil {
 			fmt.Printf("Failed to update the copy of the source file: %v", err)
 			return
 		}
+	}
+
+	if err := writeIndex(indexFilePath, indexMap); err != nil {
+		fmt.Printf("Failed to write to the index file: %v", err)
+		return
+	}
+
+	if err := db.InsertRows(u.Context, u.DBConn, &pb.Index{Entries: []*pb.IndexListEntry{ile}}); err != nil {
+		fmt.Printf("Failed to update the database: %v", err)
+		return
 	}
 
 	fmt.Printf("Index %s updated successfully to URI %s\n", u.Name, u.DataURI)

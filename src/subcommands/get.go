@@ -1,13 +1,17 @@
 package subcommands
 
 import (
+	"context"
 	"fmt"
 	"path"
 
+	db "accretional.com/semantifly/database"
 	fetch "accretional.com/semantifly/fetcher"
 )
 
 type GetArgs struct {
+	Context   context.Context
+	DBConn    db.PgxIface
 	IndexPath string
 	Name      string
 }
@@ -22,9 +26,19 @@ func Get(g GetArgs) {
 	}
 
 	targetEntry := indexMap[g.Name]
-
 	if targetEntry == nil {
 		fmt.Printf("entry '%s' not found in index file %s\n", g.Name, indexFilePath)
+		return
+	}
+
+	targetMetadata := targetEntry.ContentMetadata
+
+	targetMetadata, err = db.GetContentMetadata(g.Context, g.DBConn, g.Name)
+	if err != nil {
+		fmt.Printf("failed to get entry from database: %v\n", err)
+		return
+	} else if targetMetadata == nil {
+		fmt.Printf("entry '%s' not found in database\n", g.Name)
 		return
 	}
 
@@ -37,7 +51,7 @@ func Get(g GetArgs) {
 				fmt.Printf("Failed to read content from copy: %v. Fetching from the source.\n", err)
 			}
 
-			content, err = fetch.FetchFromSource(targetEntry.ContentMetadata.SourceType, targetEntry.ContentMetadata.URI)
+			content, err = fetch.FetchFromSource(targetMetadata.SourceType, targetMetadata.URI)
 			if err != nil {
 				fmt.Printf("Failed to read content from source: %v.\n", err)
 				return

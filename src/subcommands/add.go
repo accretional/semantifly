@@ -1,15 +1,19 @@
 package subcommands
 
 import (
+	"context"
 	"fmt"
 	"path"
 
+	db "accretional.com/semantifly/database"
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 	search "accretional.com/semantifly/search"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type AddArgs struct {
+	Context    context.Context
+	DBConn     db.PgxIface
 	IndexPath  string
 	DataType   string
 	SourceType string
@@ -36,6 +40,10 @@ func Add(a AddArgs) {
 	if err != nil {
 		fmt.Printf("Failed to read the index file: %v", err)
 		return
+	}
+
+	addIndex := &pb.Index{
+		Entries: make([]*pb.IndexListEntry, 0, len(a.DataURIs)),
 	}
 
 	for _, u := range a.DataURIs {
@@ -72,11 +80,18 @@ func Add(a AddArgs) {
 		}
 
 		indexMap[ile.Name] = ile
+		addIndex.Entries = append(addIndex.Entries, ile)
+
 		fmt.Printf("Index %s added successfully.\n", u)
 	}
 
 	if err := writeIndex(indexFilePath, indexMap); err != nil {
 		fmt.Printf("Failed to write to the index file: %v", err)
+		return
+	}
+
+	if err := db.InsertRows(a.Context, a.DBConn, addIndex); err != nil {
+		fmt.Printf("Failed to write to the database: %v", err)
 		return
 	}
 }

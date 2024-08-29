@@ -133,7 +133,7 @@ func TestPostgres(t *testing.T) {
 	defer conn.Close(ctx)
 
 	// Test database table initialisation
-	err = initializeDatabaseSchema(ctx, conn)
+	err = InitializeDatabaseSchema(ctx, conn)
 	if err != nil {
 		t.Fatalf("Failed to initialise the database schema: %v", err)
 	}
@@ -170,13 +170,13 @@ func TestProtoIndexCreation(t *testing.T) {
 	defer conn.Close(ctx)
 
 	// Test database table initialisation
-	err = initializeDatabaseSchema(ctx, conn)
+	err = InitializeDatabaseSchema(ctx, conn)
 	if err != nil {
 		t.Fatalf("Failed to initialise the database schema: %v", err)
 	}
 
 	// Test index creation for wordOccurrence
-	err = createProtoFieldIndex(ctx, conn, "entry->'wordOccurrence'")
+	err = CreateProtoFieldIndex(ctx, conn, "entry->'wordOccurrence'")
 	if err != nil {
 		t.Fatalf("Failed to create a Proto field index: %v", err)
 	}
@@ -213,7 +213,7 @@ func TestInsertRow(t *testing.T) {
 	}
 
 	// Test database table initialisation
-	err = initializeDatabaseSchema(ctx, conn)
+	err = InitializeDatabaseSchema(ctx, conn)
 	if err != nil {
 		t.Fatalf("Failed to initialise the database schema: %v", err)
 	}
@@ -235,7 +235,7 @@ func TestInsertRow(t *testing.T) {
 		},
 	}
 
-	err = insertRows(ctx, conn, index)
+	err = InsertRows(ctx, conn, index)
 	if err != nil {
 		t.Fatalf("failed to insert rows: %v", err)
 	}
@@ -278,7 +278,7 @@ func TestQueryRow(t *testing.T) {
 	}
 
 	// Test database table initialisation
-	err = initializeDatabaseSchema(ctx, conn)
+	err = InitializeDatabaseSchema(ctx, conn)
 	if err != nil {
 		t.Fatalf("Failed to initialise the database schema: %v", err)
 	}
@@ -302,12 +302,12 @@ func TestQueryRow(t *testing.T) {
 		},
 	}
 
-	err = insertRows(ctx, conn, index)
+	err = InsertRows(ctx, conn, index)
 	if err != nil {
 		t.Fatalf("failed to insert rows: %v", err)
 	}
 
-	fetchedMetadata, err := getContentMetadata(ctx, conn, "Test Entry")
+	fetchedMetadata, err := GetContentMetadata(ctx, conn, "Test Entry")
 	if err != nil {
 		t.Fatalf("failed to query row: %v", err)
 	}
@@ -333,7 +333,7 @@ func TestQueryRow(t *testing.T) {
 
 }
 
-func TestDeleteRow(t *testing.T) {
+func TestDeleteRows(t *testing.T) {
 
 	err := setupPostgres()
 
@@ -359,7 +359,7 @@ func TestDeleteRow(t *testing.T) {
 	}
 
 	// Test database table initialisation
-	err = initializeDatabaseSchema(ctx, conn)
+	err = InitializeDatabaseSchema(ctx, conn)
 	if err != nil {
 		t.Fatalf("Failed to initialise the database schema: %v", err)
 	}
@@ -382,25 +382,25 @@ func TestDeleteRow(t *testing.T) {
 	}
 
 	// Inserting an index
-	err = insertRows(ctx, conn, index)
+	err = InsertRows(ctx, conn, index)
 	if err != nil {
 		t.Fatalf("Failed to insert row: %v", err)
 	}
 
 	// Fetching the row after inserting it
-	_, err = getContentMetadata(ctx, conn, "Test Entry")
+	_, err = GetContentMetadata(ctx, conn, "Test Entry")
 	if err != nil {
 		t.Fatalf("Failed to query row after insertion: %v", err)
 	}
 
 	// Test delete row
-	err = deleteRow(ctx, conn, "Test Entry")
+	err = DeleteRows(ctx, conn, []string{"Test Entry"})
 	if err != nil {
 		t.Fatalf("Failed to delete entry: %v", err)
 	}
 
 	// Fetching the row after deleting it
-	_, err = getContentMetadata(ctx, conn, "Test Entry")
+	_, err = GetContentMetadata(ctx, conn, "Test Entry")
 	if err == nil {
 		t.Fatalf("Index entry not deleted.")
 	} else if !strings.Contains(err.Error(), "no entry found") {

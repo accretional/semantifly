@@ -18,7 +18,7 @@ type PgxIface interface {
 	Exec(ctx context.Context, sql string, arguments ...interface{}) (pgconn.CommandTag, error)
 }
 
-func initializeDatabaseSchema(ctx context.Context, conn PgxIface) error {
+func InitializeDatabaseSchema(ctx context.Context, conn PgxIface) error {
 
 	_, err := conn.Exec(ctx, `
 		CREATE TABLE IF NOT EXISTS index_list (
@@ -34,7 +34,7 @@ func initializeDatabaseSchema(ctx context.Context, conn PgxIface) error {
 
 }
 
-func createProtoFieldIndex(ctx context.Context, conn PgxIface, fieldName string) error {
+func CreateProtoFieldIndex(ctx context.Context, conn PgxIface, fieldName string) error {
 
 	indexName := strings.ReplaceAll(strings.ReplaceAll(fieldName, "->", "_"), "'", "")
 	query := `CREATE INDEX IF NOT EXISTS idx_` + indexName + ` ON index_list USING GIN ((` + fieldName + `));`
@@ -47,7 +47,7 @@ func createProtoFieldIndex(ctx context.Context, conn PgxIface, fieldName string)
 	return nil
 }
 
-func insertRows(ctx context.Context, conn PgxIface, upsertIndex *pb.Index) error {
+func InsertRows(ctx context.Context, conn PgxIface, upsertIndex *pb.Index) error {
 	tx, err := conn.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to connect to database: %w", err)
@@ -84,11 +84,11 @@ func insertRows(ctx context.Context, conn PgxIface, upsertIndex *pb.Index) error
 	return nil
 }
 
-func deleteRow(ctx context.Context, conn PgxIface, name string) error {
+func DeleteRows(ctx context.Context, conn PgxIface, names []string) error {
 	_, err := conn.Exec(ctx, `
 		DELETE FROM index_list 
-		WHERE name=$1
-	`, name)
+		WHERE name=ANY($1)
+	`, names)
 	if err != nil {
 		return fmt.Errorf("failed to delete row from table: %w", err)
 	}
@@ -96,7 +96,7 @@ func deleteRow(ctx context.Context, conn PgxIface, name string) error {
 	return nil
 }
 
-func getContentMetadata(ctx context.Context, conn PgxIface, name string) (*pb.ContentMetadata, error) {
+func GetContentMetadata(ctx context.Context, conn PgxIface, name string) (*pb.ContentMetadata, error) {
 	tx, err := conn.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("unable to connect to database: %w", err)

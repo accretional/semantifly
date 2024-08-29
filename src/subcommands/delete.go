@@ -1,12 +1,17 @@
 package subcommands
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path"
+
+	db "accretional.com/semantifly/database"
 )
 
 type DeleteArgs struct {
+	Context    context.Context
+	DBConn     db.PgxIface
 	IndexPath  string
 	DeleteCopy bool
 	DataURIs   []string
@@ -53,6 +58,11 @@ func Delete(d DeleteArgs) {
 
 	if err := writeIndex(indexFilePath, indexMap); err != nil {
 		fmt.Printf("Failed to write to the index file: %v", err)
+		return
+	}
+
+	if err := db.DeleteRows(d.Context, d.DBConn, d.DataURIs); err != nil {
+		fmt.Printf("Failed to delete from the database: %v", err)
 		return
 	}
 }
