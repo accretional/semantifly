@@ -92,6 +92,29 @@ func insertRows(ctx context.Context, conn PgxIface, upsertIndex *pb.Index) error
 	return nil
 }
 
+func deleteRow(ctx context.Context, conn PgxIface, name string) error {
+    tx, err := conn.Begin(ctx)
+    if err != nil {
+        return fmt.Errorf("unable to connect to database: %w", err)
+    }
+    defer tx.Rollback(ctx)
+
+    _, err = tx.Exec(ctx, `
+        DELETE FROM index_list
+        WHERE name = $1
+    `, name)
+    if err != nil {
+        return fmt.Errorf("failed to delete row: %w", err)
+    }
+
+    err = tx.Commit(ctx)
+    if err != nil {
+        return fmt.Errorf("failed to commit transaction: %w", err)
+    }
+
+    return nil
+}
+
 func getContentMetadata(ctx context.Context, conn PgxIface, name string) (*pb.ContentMetadata, error) {
 	tx, err := conn.Begin(ctx)
 	if err != nil {
