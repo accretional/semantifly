@@ -50,22 +50,19 @@ func TestGet(t *testing.T) {
 	}
 
 	getArgs := &pb.GetRequest{
-		Name:      testFilePath,
+		Name: testFilePath,
 	}
 
 	var getBuf bytes.Buffer
 
-	_, err = SubcommandGet(getArgs, tempDir, &getBuf)
+	resp, err := SubcommandGet(getArgs, tempDir, &getBuf)
 	if err != nil {
 		t.Fatalf("Get function returned an error: %v", err)
 	}
 
-	output := getBuf.String()
-
 	// Get command prints out the content and a new line in the end
-	testContent = testContent + "\n"
-	if output != testContent {
-		t.Errorf("Expected output '%s', but got '%s'", testContent, output)
+	if resp != testContent {
+		t.Errorf("Expected output '%s', but got '%s'", testContent, resp)
 	}
 }
 
@@ -98,21 +95,20 @@ func TestGet_Webpage(t *testing.T) {
 	}
 
 	getArgs := &pb.GetRequest{
-		Name:      testWebpageURL,
+		Name: testWebpageURL,
 	}
 
 	var getBuf bytes.Buffer
 
-	_, err = SubcommandGet(getArgs, tempDir, &getBuf)
+	getResp, err := SubcommandGet(getArgs, tempDir, &getBuf)
 	if err != nil {
 		t.Fatalf("Get function returned an error: %v", err)
 	}
 
-	output := getBuf.String()
-
 	client := &http.Client{
 		Timeout: 10 * time.Second,
 	}
+
 	resp, err := client.Get(testWebpageURL)
 	if err != nil {
 		t.Errorf("failed to fetch web page: %v", err)
@@ -131,9 +127,9 @@ func TestGet_Webpage(t *testing.T) {
 		return
 	}
 
-	webpageContentStr := string(webpageContent) + "\n"
+	webpageContentStr := string(webpageContent)
 
-	if output != webpageContentStr {
-		t.Errorf("Failed to validate webpage copy: Expected \"%s\", got \"%s\"", webpageContent, output)
+	if getResp != webpageContentStr {
+		t.Errorf("Failed to validate webpage copy: Expected \"%s\", got \"%s\"", webpageContent, getResp)
 	}
 }

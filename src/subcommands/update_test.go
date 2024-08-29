@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"strings"
 	"testing"
 
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
@@ -68,12 +67,6 @@ func TestUpdate(t *testing.T) {
 	err = SubcommandUpdate(updateArgs, tempDir, &updateBuf)
 	if err != nil {
 		t.Fatalf("Update function returned an error: %v", err)
-	}
-
-	// Check the output in the buffer
-	updateOutput := updateBuf.String()
-	if !strings.Contains(updateOutput, "updated successfully") {
-		t.Errorf("Expected output to contain 'updated successfully', but got '%s'", updateOutput)
 	}
 
 	// Read the index file

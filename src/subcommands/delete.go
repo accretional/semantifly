@@ -38,8 +38,6 @@ func SubcommandDelete(d *pb.DeleteRequest, indexPath string, w io.Writer) error 
 
 		delete(indexMap, uri)
 
-		fmt.Fprintf(w, "Index %s deleted successfully.\n", uri)
-
 		if d.DeleteCopy {
 			if err := deleteCopy(indexPath, uri, w); err != nil {
 				fmt.Fprintf(w, "Failed to delete copy of file %s with err: %s, skipping", uri, err)

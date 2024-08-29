@@ -50,7 +50,6 @@ func SubcommandAdd(a *pb.AddRequest, indexPath string, w io.Writer) error {
 		}
 
 		indexMap[ile.Name] = ile
-		fmt.Fprintf(w, "Index %s added successfully.\n", u)
 	}
 
 	if err := writeIndex(indexFilePath, indexMap); err != nil {

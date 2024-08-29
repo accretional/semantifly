@@ -56,7 +56,6 @@ func CommandReadRun() {
 	}
 
 	setupSemantifly()
-	// grpcclient.Init()
 
 	cmdName := os.Args[1]
 	args := os.Args[2:]
@@ -285,11 +284,13 @@ func executeGet(args []string) {
 		Name: cmd.Args()[0],
 	}
 
-	_, err = SubcommandGet(getArgs, *indexPath, os.Stdout)
+	resp, err := SubcommandGet(getArgs, *indexPath, os.Stdout)
 	if err != nil {
 		fmt.Printf("Error occurred during get subcommand: %v", err)
 		return
 	}
+
+	fmt.Println(resp)
 }
 
 func executeUpdate(args []string) {
@@ -370,11 +371,13 @@ func executeSearch(args []string) {
 		TopN:       int32(*topN),
 	}
 
-	_, err = SubcommandLexicalSearch(searchArgs, *indexPath, os.Stdout)
+	results, err := SubcommandLexicalSearch(searchArgs, *indexPath, os.Stdout)
 	if err != nil {
 		printCmdErr(fmt.Sprintf("Error during search: %v", err))
 		return
 	}
+
+	PrintSearchResults(results, os.Stdout)
 }
 
 func executeStartServer(args []string) {

@@ -86,11 +86,6 @@ func TestAdd(t *testing.T) {
 	if _, err := os.Stat(path.Join(copiesDir, testFilePath)); os.IsNotExist(err) {
 		t.Errorf("Data file for %s was not copied", testFilePath)
 	}
-
-	output := buf.String()
-	if !strings.Contains(output, "added successfully") {
-		t.Errorf("Expected output to contain 'added successfully', but got '%s'", output)
-	}
 }
 
 func TestAdd_MultipleFilesSamePath(t *testing.T) {
@@ -163,7 +158,7 @@ func TestAdd_Webpage(t *testing.T) {
 
 	// Set up test arguments
 	args := &pb.AddRequest{
-		DataType: 	0,
+		DataType:   0,
 		SourceType: 1,
 		MakeCopy:   true,
 		DataUris:   []string{testWebpageURL},
@@ -175,8 +170,6 @@ func TestAdd_Webpage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Add function returned an error: %v", err)
 	}
-
-	output := buf.String()
 
 	// Check if the index file was created
 	indexFilePath := path.Join(tempDir, indexFile)
@@ -249,9 +242,5 @@ func TestAdd_Webpage(t *testing.T) {
 	// Validating the contents of the copy file
 	if ile.Content != string(webpageContent) {
 		t.Errorf("Failed to validate webpage copy: Expected \"%s\", got \"%s\"", webpageContent, ile.Content)
-	}
-	// Check the output in the buffer
-	if !strings.Contains(output, "added successfully") {
-		t.Errorf("Expected output to contain 'added successfully', but got '%s'", output)
 	}
 }

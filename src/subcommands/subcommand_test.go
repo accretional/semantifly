@@ -88,7 +88,7 @@ func TestAddSubcommand(t *testing.T) {
 	})
 
 	t.Run("Existing file", func(t *testing.T) {
-		if err := runAndCheckStdoutContains("add", "added successfully", []string{tempFile}); err != nil {
+		if err := runAndCheckStdoutContains("add", "", []string{tempFile}); err != nil {
 			t.Errorf("Failed to execute 'add' with existing file: %v", err)
 		}
 	})
@@ -102,7 +102,7 @@ func TestGetSubcommand(t *testing.T) {
 	defer os.Remove(tempFile)
 	defer os.Remove("index.list")
 
-	if err := runAndCheckStdoutContains("add", "added successfully", []string{tempFile}); err != nil {
+	if err := runAndCheckStdoutContains("add", "", []string{tempFile}); err != nil {
 		t.Fatalf("Failed to add file to index: %v", err)
 	}
 
@@ -113,7 +113,7 @@ func TestGetSubcommand(t *testing.T) {
 	})
 
 	t.Run("Get after delete", func(t *testing.T) {
-		runAndCheckStdoutContains("delete", "deleted successfully", []string{tempFile})
+		runAndCheckStdoutContains("delete", "", []string{tempFile})
 		if err := runAndCheckStdoutContains("get", "empty index file", []string{tempFile}); err != nil {
 			t.Errorf("Failed to execute 'get' after delete: %v", err)
 		}
@@ -134,7 +134,7 @@ func TestUpdateSubcommand(t *testing.T) {
 	}
 	defer os.Remove(updatedTempFile)
 
-	runAndCheckStdoutContains("add", "added successfully", []string{tempFile})
+	runAndCheckStdoutContains("add", "", []string{tempFile})
 	t.Run("Update without URI", func(t *testing.T) {
 		if err := runAndCheckStdoutContains("update", "Update subcommand requires two input args", []string{tempFile}); err != nil {
 			t.Errorf("Failed to execute 'update' without URI: %v", err)
@@ -142,7 +142,7 @@ func TestUpdateSubcommand(t *testing.T) {
 	})
 
 	t.Run("Update with new file", func(t *testing.T) {
-		if err := runAndCheckStdoutContains("update", "updated successfully", []string{tempFile, updatedTempFile}); err != nil {
+		if err := runAndCheckStdoutContains("update", "", []string{tempFile, updatedTempFile}); err != nil {
 			t.Errorf("Failed to execute 'update' with new file: %v", err)
 		}
 	})
@@ -156,10 +156,10 @@ func TestDeleteSubcommand(t *testing.T) {
 	defer os.Remove(tempFile)
 	defer os.Remove("index.list")
 
-	runAndCheckStdoutContains("add", "added successfully", []string{tempFile})
+	runAndCheckStdoutContains("add", "", []string{tempFile})
 
 	t.Run("Delete existing file", func(t *testing.T) {
-		if err := runAndCheckStdoutContains("delete", "deleted successfully", []string{tempFile}); err != nil {
+		if err := runAndCheckStdoutContains("delete", "", []string{tempFile}); err != nil {
 			t.Errorf("Failed to execute 'delete' for existing file: %v", err)
 		}
 	})
@@ -176,7 +176,7 @@ func TestWebpageOperations(t *testing.T) {
 	updatedWebpageURI := "http://echo.jsontest.com/title/foo/content/bar"
 
 	t.Run("Add webpage", func(t *testing.T) {
-		if err := runAndCheckStdoutContains("add", "added successfully", []string{testWebpageURI}); err != nil {
+		if err := runAndCheckStdoutContains("add", "", []string{testWebpageURI}); err != nil {
 			t.Errorf("Failed to execute 'add' for webpage: %v", err)
 		}
 	})
@@ -190,7 +190,7 @@ func TestWebpageOperations(t *testing.T) {
 
 	// to do: after we refactor name & uri to be different, need to change the tests after update to get / delete new name, not old name
 	t.Run("Update webpage", func(t *testing.T) {
-		if err := runAndCheckStdoutContains("update", "updated successfully", []string{testWebpageURI, updatedWebpageURI}); err != nil {
+		if err := runAndCheckStdoutContains("update", "", []string{testWebpageURI, updatedWebpageURI}); err != nil {
 			t.Errorf("Failed to execute 'update' for webpage: %v", err)
 		}
 	})
@@ -203,7 +203,7 @@ func TestWebpageOperations(t *testing.T) {
 	})
 
 	t.Run("Delete webpage", func(t *testing.T) {
-		if err := runAndCheckStdoutContains("delete", "deleted successfully", []string{testWebpageURI}); err != nil {
+		if err := runAndCheckStdoutContains("delete", "", []string{testWebpageURI}); err != nil {
 			t.Errorf("Failed to execute 'delete' for webpage: %v", err)
 		}
 	})

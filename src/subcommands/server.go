@@ -21,7 +21,7 @@ func (s *Server) Add(ctx context.Context, req *pb.AddRequest) (*pb.AddResponse, 
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	return &pb.AddResponse{Message: buf.String()}, nil
+	return &pb.AddResponse{ErrorMessage: buf.String()}, nil
 }
 
 func (s *Server) Delete(ctx context.Context, req *pb.DeleteRequest) (*pb.DeleteResponse, error) {
@@ -30,17 +30,16 @@ func (s *Server) Delete(ctx context.Context, req *pb.DeleteRequest) (*pb.DeleteR
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	return &pb.DeleteResponse{Message: buf.String()}, nil
+	return &pb.DeleteResponse{ErrorMessage: buf.String()}, nil
 }
 
 func (s *Server) Get(ctx context.Context, req *pb.GetRequest) (*pb.GetResponse, error) {
 	var buf bytes.Buffer
-
 	content, err := SubcommandGet(req, serverIndexPath, &buf)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	return &pb.GetResponse{Content: content, Message: buf.String()}, nil
+	return &pb.GetResponse{Content: content, ErrorMessage: buf.String()}, nil
 }
 
 func (s *Server) Update(ctx context.Context, req *pb.UpdateRequest) (*pb.UpdateResponse, error) {
@@ -50,7 +49,7 @@ func (s *Server) Update(ctx context.Context, req *pb.UpdateRequest) (*pb.UpdateR
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
-	return &pb.UpdateResponse{Message: buf.String()}, nil
+	return &pb.UpdateResponse{ErrorMessage: buf.String()}, nil
 }
 
 func (s *Server) LexicalSearch(ctx context.Context, req *pb.LexicalSearchRequest) (*pb.LexicalSearchResponse, error) {
@@ -69,5 +68,5 @@ func (s *Server) LexicalSearch(ctx context.Context, req *pb.LexicalSearchRequest
 		}
 	}
 
-	return &pb.LexicalSearchResponse{Message: buf.String(), Results: pbResults}, nil
+	return &pb.LexicalSearchResponse{ErrorMessage: buf.String(), Results: pbResults}, nil
 }

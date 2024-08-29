@@ -48,7 +48,7 @@ func SubcommandUpdate(u *pb.UpdateRequest, indexPath string, w io.Writer) error 
 		}
 	}
 
-	fmt.Fprintf(w, "Index %s updated successfully to URI %s\n", u.Name, u.DataUri)
+	fmt.Printf("Index %s updated successfully to URI %s\n", u.Name, u.DataUri)
 	return nil
 }
 
@@ -65,6 +65,6 @@ func updateIndex(indexMap map[string]*pb.IndexListEntry, u *pb.UpdateRequest) er
 
 	entry.LastRefreshedTime = timestamppb.Now()
 	indexMap[u.Name] = entry
-  
+
 	return nil
 }

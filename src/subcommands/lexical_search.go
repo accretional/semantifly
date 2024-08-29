@@ -107,8 +107,6 @@ func SubcommandLexicalSearch(args *pb.LexicalSearchRequest, indexPath string, w 
 		combinedResults = combinedResults[:args.TopN]
 	}
 
-	PrintSearchResults(combinedResults, w)
-
 	return combinedResults, nil
 }
 

@@ -21,7 +21,7 @@ message AddRequest {
 }
 
 message AddResponse {
-  string message = 1;
+  string error_message = 1;
 }
 
 message DeleteRequest {
@@ -30,7 +30,7 @@ message DeleteRequest {
 }
 
 message DeleteResponse {
-  string message = 1;
+  string error_message = 1;
 }
 
 message GetRequest {
@@ -39,7 +39,7 @@ message GetRequest {
 
 message GetResponse {
   string content = 1;
-  string message = 2;
+  string error_message = 2;
 }
 
 message UpdateRequest {
@@ -51,7 +51,7 @@ message UpdateRequest {
 }
 
 message UpdateResponse {
-  string message = 1;
+  string error_message = 1;
 }
 
 message LexicalSearchRequest {
@@ -61,7 +61,7 @@ message LexicalSearchRequest {
 
 message LexicalSearchResponse {
   repeated LexicalSearchResult results = 1;
-  string message = 2;
+  string error_message = 2;
 }
 
 message LexicalSearchResult {

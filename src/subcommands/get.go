@@ -24,9 +24,7 @@ func SubcommandGet(g *pb.GetRequest, indexPath string, w io.Writer) (string, err
 		return "", fmt.Errorf("entry '%s' not found in index file %s", g.Name, indexFilePath)
 	}
 
-	if targetEntry.Content != "" {
-		fmt.Fprintln(w, targetEntry.Content)
-	} else {
+	if targetEntry.Content == "" {
 		content, err := fetchFromCopy(indexPath, g.Name)
 		if content == nil {
 			if err != nil {
@@ -39,7 +37,6 @@ func SubcommandGet(g *pb.GetRequest, indexPath string, w io.Writer) (string, err
 			}
 		}
 
-		fmt.Fprintln(w, string(content))
 		return string(content), nil
 	}
 

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"strings"
 	"testing"
 
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
@@ -77,10 +76,5 @@ func TestDelete(t *testing.T) {
 	copiesDir := path.Join(tempDir, addedCopiesSubDir)
 	if _, err := os.Stat(path.Join(copiesDir, testFilePath1)); !os.IsNotExist(err) {
 		t.Errorf("Data file for %s was not deleted", testFilePath1)
-	}
-
-	deleteOutput := deleteBuf.String()
-	if !strings.Contains(deleteOutput, "deleted successfully") {
-		t.Errorf("Expected output to contain 'deleted successfully', but got '%s'", deleteOutput)
 	}
 }
