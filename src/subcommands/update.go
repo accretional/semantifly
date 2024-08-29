@@ -47,8 +47,6 @@ func SubcommandUpdate(u *pb.UpdateRequest, indexPath string, w io.Writer) error 
 			return fmt.Errorf("failed to update the copy of the source file: %v", err)
 		}
 	}
-
-	fmt.Printf("Index %s updated successfully to URI %s\n", u.Name, u.DataUri)
 	return nil
 }
 
