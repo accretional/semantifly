@@ -14,10 +14,8 @@ service Semantifly {
 }
 
 message AddRequest {
-  DataType data_type = 1;
-  SourceType source_type = 2;
-  bool make_copy = 3;
-  repeated string data_uris = 4;
+  repeated ContentMetadata files_data = 1;
+  bool make_copy = 2;
 }
 
 message AddResponse {
@@ -44,10 +42,8 @@ message GetResponse {
 
 message UpdateRequest {
   string name = 1;
-  DataType data_type = 2;
-  SourceType source_type = 3;
-  bool update_copy = 4;
-  string data_uri = 5;
+  ContentMetadata file_data = 2;
+  bool update_copy = 3;
 }
 
 message UpdateResponse {

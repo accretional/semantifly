@@ -32,12 +32,24 @@ func TestDelete(t *testing.T) {
 		t.Fatalf("Failed to create test file 2: %v", err)
 	}
 
-	// Set up test arguments
-	addArgs := &pb.AddRequest{
+	var filesData []*pb.ContentMetadata
+
+	testFileData1 := &pb.ContentMetadata{
 		DataType:   0,
 		SourceType: 0,
-		MakeCopy:   true,
-		DataUris:   []string{testFilePath1, testFilePath2},
+		URI:        testFilePath1,
+	}
+	testFileData2 := &pb.ContentMetadata{
+		DataType:   0,
+		SourceType: 0,
+		URI:        testFilePath2,
+	}
+
+	filesData = append(filesData, testFileData1, testFileData2)
+
+	addArgs := &pb.AddRequest{
+		FilesData: filesData,
+		MakeCopy:  true,
 	}
 
 	var addBuf bytes.Buffer

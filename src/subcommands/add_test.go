@@ -30,12 +30,19 @@ func TestAdd(t *testing.T) {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
-	// Set up test arguments
-	args := &pb.AddRequest{
+	var filesData []*pb.ContentMetadata
+
+	testFileData := &pb.ContentMetadata{
 		DataType:   0,
 		SourceType: 0,
-		MakeCopy:   true,
-		DataUris:   []string{testFilePath},
+		URI:        testFilePath,
+	}
+
+	filesData = append(filesData, testFileData)
+
+	args := &pb.AddRequest{
+		FilesData: filesData,
+		MakeCopy:  true,
 	}
 
 	// Create a buffer to capture output
@@ -106,11 +113,24 @@ func TestAdd_MultipleFilesSamePath(t *testing.T) {
 	testFilePath2 := path.Join(tempDir, "test_file.txt")
 
 	// Set up test arguments
-	args := &pb.AddRequest{
+	var filesData []*pb.ContentMetadata
+
+	testFileData1 := &pb.ContentMetadata{
 		DataType:   0,
 		SourceType: 0,
-		MakeCopy:   true,
-		DataUris:   []string{testFilePath1, testFilePath2},
+		URI:        testFilePath1,
+	}
+	testFileData2 := &pb.ContentMetadata{
+		DataType:   0,
+		SourceType: 0,
+		URI:        testFilePath2,
+	}
+
+	filesData = append(filesData, testFileData1, testFileData2)
+
+	args := &pb.AddRequest{
+		FilesData: filesData,
+		MakeCopy:  true,
 	}
 
 	var buf bytes.Buffer
@@ -157,11 +177,18 @@ func TestAdd_Webpage(t *testing.T) {
 	testWebpageURL := "http://echo.jsontest.com/title/lorem/content/ipsum"
 
 	// Set up test arguments
-	args := &pb.AddRequest{
+	var filesData []*pb.ContentMetadata
+
+	webData := &pb.ContentMetadata{
 		DataType:   0,
 		SourceType: 1,
-		MakeCopy:   true,
-		DataUris:   []string{testWebpageURL},
+		URI:        testWebpageURL,
+	}
+	filesData = append(filesData, webData)
+
+	args := &pb.AddRequest{
+		FilesData: filesData,
+		MakeCopy:  true,
 	}
 
 	var buf bytes.Buffer

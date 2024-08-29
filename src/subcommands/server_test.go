@@ -79,12 +79,23 @@ func TestServerCommands(t *testing.T) {
 
 	// Add
 	addCtx, addCancel := context.WithTimeout(context.Background(), time.Second)
-	_, err := client.Add(addCtx, &pb.AddRequest{
+
+	var filesData []*pb.ContentMetadata
+
+	testFileData1 := &pb.ContentMetadata{
 		DataType:   0,
 		SourceType: 0,
-		MakeCopy:   true,
-		DataUris:   []string{filepath.Join(testDir, "test_file1.txt")},
-	})
+		URI:        filepath.Join(testDir, "test_file1.txt"),
+	}
+
+	filesData = append(filesData, testFileData1)
+
+	addArgs := &pb.AddRequest{
+		FilesData: filesData,
+		MakeCopy:  true,
+	}
+
+	_, err := client.Add(addCtx, addArgs)
 	addCancel()
 	if err != nil {
 		t.Fatalf("Failed to add test file: %v", err)
@@ -110,12 +121,16 @@ func TestServerCommands(t *testing.T) {
 	updCtx, updCancel := context.WithTimeout(context.Background(), time.Second)
 	defer updCancel()
 
-	updReq := &pb.UpdateRequest{
-		Name:       filepath.Join(testDir, "test_file1.txt"),
+	testUpdateFileData := &pb.ContentMetadata{
 		DataType:   0,
 		SourceType: 0,
+		URI:        filepath.Join(testDir, "test_file2.txt"),
+	}
+
+	updReq := &pb.UpdateRequest{
+		Name:       filepath.Join(testDir, "test_file1.txt"),
+		FileData:   testUpdateFileData,
 		UpdateCopy: true,
-		DataUri:    filepath.Join(testDir, "test_file2.txt"),
 	}
 
 	_, err = client.Update(updCtx, updReq)

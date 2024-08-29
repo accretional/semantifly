@@ -27,20 +27,16 @@ func SubcommandUpdate(u *pb.UpdateRequest, indexPath string, w io.Writer) error 
 	}
 
 	if u.UpdateCopy {
-		content, err := fetch.FetchFromSource(u.SourceType, u.DataUri)
+		content, err := fetch.FetchFromSource(u.FileData.SourceType, u.FileData.URI)
 
 		if err != nil {
 			return fmt.Errorf("failed to validate the URI %s: %v\n", u, err)
 		}
 
 		ile := &pb.IndexListEntry{
-			Name: u.Name,
-			ContentMetadata: &pb.ContentMetadata{
-				URI:        u.DataUri,
-				DataType:   u.DataType,
-				SourceType: u.SourceType,
-			},
-			Content: string(content),
+			Name:            u.Name,
+			ContentMetadata: u.FileData,
+			Content:         string(content),
 		}
 
 		if err := makeCopy(indexPath, ile); err != nil {
@@ -57,9 +53,7 @@ func updateIndex(indexMap map[string]*pb.IndexListEntry, u *pb.UpdateRequest) er
 		return fmt.Errorf("entry %s not found", u.Name)
 	}
 
-	entry.ContentMetadata.URI = u.DataUri
-	entry.ContentMetadata.DataType = u.DataType
-	entry.ContentMetadata.SourceType = u.SourceType
+	entry.ContentMetadata = u.FileData
 
 	entry.LastRefreshedTime = timestamppb.Now()
 	indexMap[u.Name] = entry

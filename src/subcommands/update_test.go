@@ -27,12 +27,19 @@ func TestUpdate(t *testing.T) {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
-	// Set up test arguments
-	args := &pb.AddRequest{
+	var filesData []*pb.ContentMetadata
+
+	testFileData := &pb.ContentMetadata{
 		DataType:   0,
 		SourceType: 0,
-		MakeCopy:   true,
-		DataUris:   []string{testFilePath},
+		URI:        testFilePath,
+	}
+
+	filesData = append(filesData, testFileData)
+
+	args := &pb.AddRequest{
+		FilesData: filesData,
+		MakeCopy:  true,
 	}
 
 	var buf bytes.Buffer
@@ -56,11 +63,17 @@ func TestUpdate(t *testing.T) {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
+	testUpdateFileData := &pb.ContentMetadata{
+		DataType:   0,
+		SourceType: 0,
+		URI:        updatedFilePath,
+	}
+
 	// Set up test arguments
 	updateArgs := &pb.UpdateRequest{
 		Name:       testFilePath,
+		FileData:   testUpdateFileData,
 		UpdateCopy: true,
-		DataUri:    updatedFilePath,
 	}
 
 	var updateBuf bytes.Buffer

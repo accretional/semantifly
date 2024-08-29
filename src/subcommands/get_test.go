@@ -29,11 +29,18 @@ func TestGet(t *testing.T) {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
-	addArgs := &pb.AddRequest{
+	var filesData []*pb.ContentMetadata
+
+	testFileData := &pb.ContentMetadata{
 		DataType:   0,
 		SourceType: 0,
-		MakeCopy:   true,
-		DataUris:   []string{testFilePath},
+		URI:        testFilePath,
+	}
+	filesData = append(filesData, testFileData)
+
+	addArgs := &pb.AddRequest{
+		FilesData: filesData,
+		MakeCopy:  true,
 	}
 
 	var addBuf bytes.Buffer
@@ -75,11 +82,19 @@ func TestGet_Webpage(t *testing.T) {
 
 	testWebpageURL := "http://echo.jsontest.com/title/lorem/content/ipsum"
 
-	addArgs := &pb.AddRequest{
+	var filesData []*pb.ContentMetadata
+
+	testWebData := &pb.ContentMetadata{
 		DataType:   0,
 		SourceType: 1,
-		MakeCopy:   true,
-		DataUris:   []string{testWebpageURL},
+		URI:        testWebpageURL,
+	}
+
+	filesData = append(filesData, testWebData)
+
+	addArgs := &pb.AddRequest{
+		FilesData: filesData,
+		MakeCopy:  true,
 	}
 
 	var addBuf bytes.Buffer

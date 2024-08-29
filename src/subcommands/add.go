@@ -17,22 +17,16 @@ func SubcommandAdd(a *pb.AddRequest, indexPath string, w io.Writer) error {
 		return fmt.Errorf("Failed to read the index file: %v", err)
 	}
 
-	for _, u := range a.DataUris {
-		if indexMap[u] != nil {
+	for _, u := range a.FilesData {
+		if indexMap[u.URI] != nil {
 			fmt.Fprintf(w, "File %s has already been added. Skipping without refresh.\n", u)
 			continue
 		}
 
 		ile := &pb.IndexListEntry{
-			Name: u,
-
-			ContentMetadata: &pb.ContentMetadata{
-				URI:        u,
-				DataType:   a.DataType,
-				SourceType: a.SourceType,
-			},
-
-			FirstAddedTime: timestamppb.Now(),
+			Name:            u.URI,
+			ContentMetadata: u,
+			FirstAddedTime:  timestamppb.Now(),
 		}
 
 		if a.MakeCopy {

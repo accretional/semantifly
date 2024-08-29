@@ -217,11 +217,21 @@ func executeAdd(args []string) {
 		printCmdErr(fmt.Sprintf("Error in parsing SourceType: %v\n", err))
 	}
 
+	dataUris := cmd.Args()
+
+	var filesData []*pb.ContentMetadata
+	for i := 0; i < len(dataUris); i++ {
+		currentFile := &pb.ContentMetadata{
+			URI:        dataUris[i],
+			DataType:   dataTypeEnum,
+			SourceType: sourceTypeEnum,
+		}
+		filesData = append(filesData, currentFile)
+	}
+
 	addArgs := &pb.AddRequest{
-		DataType:   dataTypeEnum,
-		SourceType: sourceTypeEnum,
-		MakeCopy:   *makeLocalCopy,
-		DataUris:   cmd.Args(),
+		FilesData: filesData,
+		MakeCopy: *makeLocalCopy,
 	}
 
 	err = SubcommandAdd(addArgs, *indexPath, os.Stdout)
@@ -333,11 +343,13 @@ func executeUpdate(args []string) {
 	}
 
 	updateArgs := &pb.UpdateRequest{
-		Name:       cmd.Args()[0],
-		DataType:   dataTypeEnum,
-		SourceType: sourceTypeEnum,
+		Name: cmd.Args()[0],
+		FileData: &pb.ContentMetadata{
+			URI:        cmd.Args()[1],
+			DataType:   dataTypeEnum,
+			SourceType: sourceTypeEnum,
+		},
 		UpdateCopy: *makeLocalCopy,
-		DataUri:    cmd.Args()[1],
 	}
 
 	err = SubcommandUpdate(updateArgs, *indexPath, os.Stdout)
