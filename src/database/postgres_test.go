@@ -143,7 +143,56 @@ func TestPostgres(t *testing.T) {
 	}
 }
 
+func TestProtoIndexCreation(t *testing.T) {
+
+	err := setupPostgres()
+
+	if err != nil {
+		t.Fatalf("setupPostgres failed: %v", err)
+	}
+
+	// Set a mock DATABASE_URL for testing
+	os.Setenv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/testdb")
+	defer os.Unsetenv("DATABASE_URL")
+
+	db, err := createTestingDatabase()
+	if err != nil {
+		t.Fatalf("Failed to create test database: %v", err)
+	}
+	defer db.Close()
+
+	// Test connection
+	ctx := context.Background()
+	conn, err := pgx.Connect(ctx, os.Getenv("DATABASE_URL"))
+
+	assert.NoError(t, err)
+	defer conn.Close(ctx)
+
+	// Test database table initialisation
+	err = initializeDatabaseSchema(ctx, conn)
+	if err != nil {
+		t.Fatalf("Failed to initialise the database schema: %v", err)
+	}
+
+	// Test index creation for wordOccurrence
+	err = createProtoFieldIndex(ctx, conn, "entry->'wordOccurrence'")
+	if err != nil {
+		t.Fatalf("Failed to create a Proto field index: %v", err)
+	}
+
+	// Cleanup
+	if err := removeTestingDatabase(); err != nil {
+		t.Fatalf("Failed to remove test database: %v", err)
+	}
+}
+
 func TestInsertRow(t *testing.T) {
+
+	err := setupPostgres()
+
+	if err != nil {
+		t.Fatalf("setupPostgres failed: %v", err)
+	}
 
 	// Set a mock DATABASE_URL for testing
 	os.Setenv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/testdb")
@@ -203,6 +252,12 @@ func TestInsertRow(t *testing.T) {
 }
 
 func TestQueryRow(t *testing.T) {
+
+	err := setupPostgres()
+
+	if err != nil {
+		t.Fatalf("setupPostgres failed: %v", err)
+	}
 
 	// Set a mock DATABASE_URL for testing
 	os.Setenv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/testdb")

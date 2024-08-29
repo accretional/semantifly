@@ -18,35 +18,29 @@ type PgxIface interface {
 }
 
 func initializeDatabaseSchema(ctx context.Context, conn PgxIface) error {
-	tx, err := conn.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("unable to connect to database: %w", err)
-	}
-	defer tx.Rollback(ctx)
 
-	// Create the main table using protobuf
-	_, err = tx.Exec(ctx, `
+	_, err := conn.Exec(ctx, `
 		CREATE TABLE IF NOT EXISTS index_list (
 			name TEXT PRIMARY KEY,
 			entry JSONB
 		)
 	`)
 	if err != nil {
-		return fmt.Errorf("failed to create table: %w", err)
-	}
-
-	// Create indexes
-	_, err = tx.Exec(ctx, `
-		CREATE INDEX IF NOT EXISTS idx_word_occurrences ON index_list USING GIN ((entry->'wordOccurrences'));
-		CREATE INDEX IF NOT EXISTS idx_stemmed_word_occurrences ON index_list USING GIN ((entry->'stemmedWordOccurrences'));
-	`)
-	if err != nil {
 		return fmt.Errorf("failed to create indexes: %w", err)
 	}
 
-	err = tx.Commit(ctx)
+	return nil
+
+}
+
+func createProtoFieldIndex(ctx context.Context, conn PgxIface, indexName string) error {
+	query := fmt.Sprintf(`
+        CREATE INDEX IF NOT EXISTS idx_word_occurrences ON index_list USING GIN ((%s));
+    `, indexName)
+
+	_, err := conn.Exec(ctx, query)
 	if err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
+		return fmt.Errorf("failed to create indexes: %w", err)
 	}
 
 	return nil
