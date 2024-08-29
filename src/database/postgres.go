@@ -27,7 +27,7 @@ func initializeDatabaseSchema(ctx context.Context, conn PgxIface) error {
 		)
 	`)
 	if err != nil {
-		return fmt.Errorf("failed to create the index table: %w", err)
+		return fmt.Errorf("failed to create the table: %w", err)
 	}
 
 	return nil
@@ -90,7 +90,7 @@ func deleteRow(ctx context.Context, conn PgxIface, name string) error {
 		WHERE name=$1
 	`, name)
 	if err != nil {
-		return fmt.Errorf("failed to delete index: %w", err)
+		return fmt.Errorf("failed to delete row from table: %w", err)
 	}
 
 	return nil
