@@ -52,9 +52,9 @@ else
 fi
 
 # Final check to ensure Postgres is fully ready
-echo "Waiting for Postgres to be fully ready..."
+echo "Performing final checks"
 if ! check_postgres; then
     echo "Failed to connect to Postgres" >&2
     exit 1
 fi
-echo "Postgres is now fully ready to accept connections"
+echo "Postgres is now ready to accept connections"
