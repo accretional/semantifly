@@ -118,7 +118,7 @@ func TestServerCommands(t *testing.T) {
 		t.Fatalf("Failed to return error message when expected to")
 	}
 
-	expectedErrorMsg := "make_copy:true has already been added. Skipping without refresh."
+	expectedErrorMsg := "test_semantifly/test_file1.txt has already been added. Skipping without refresh."
 	if !strings.Contains(err.Error(), expectedErrorMsg) {
 		t.Fatalf("Returned error message %v when expected %v", err.Error(), expectedErrorMsg)
 	}

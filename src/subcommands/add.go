@@ -18,7 +18,7 @@ func SubcommandAdd(a *pb.AddRequest, indexPath string, w io.Writer) error {
 	}
 
 	if indexMap[a.AddedMetadata.URI] != nil {
-		return fmt.Errorf("File %s has already been added. Skipping without refresh.\n", a)
+		return fmt.Errorf("File %s has already been added. Skipping without refresh.\n", a.AddedMetadata.URI)
 	}
 
 	ile := &pb.IndexListEntry{
@@ -30,7 +30,7 @@ func SubcommandAdd(a *pb.AddRequest, indexPath string, w io.Writer) error {
 	if a.MakeCopy {
 		err = makeCopy(indexPath, ile)
 		if err != nil {
-			fmt.Fprintf(w, "Failed to make a copy for %s: %v. Skipping.\n", a, err)
+			fmt.Fprintf(w, "Failed to make a copy for %s: %v. Skipping.\n", a.AddedMetadata.URI, err)
 		}
 	}
 
