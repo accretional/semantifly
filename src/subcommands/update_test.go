@@ -35,7 +35,7 @@ func TestUpdate(t *testing.T) {
 
 	args := &pb.AddRequest{
 		AddedMetadata: testFileData,
-		MakeCopy:  true,
+		MakeCopy:      true,
 	}
 
 	var buf bytes.Buffer
@@ -67,9 +67,9 @@ func TestUpdate(t *testing.T) {
 
 	// Set up test arguments
 	updateArgs := &pb.UpdateRequest{
-		Name:       testFilePath,
-		UpdatedMetadata:   testUpdateFileData,
-		UpdateCopy: true,
+		Name:            testFilePath,
+		UpdatedMetadata: testUpdateFileData,
+		UpdateCopy:      true,
 	}
 
 	var updateBuf bytes.Buffer
@@ -100,6 +100,13 @@ func TestUpdate(t *testing.T) {
 		}
 		if entry.ContentMetadata.SourceType != pb.SourceType_LOCAL_FILE {
 			t.Errorf("Expected SourceType %v, got %v", pb.SourceType_LOCAL_FILE, entry.ContentMetadata.SourceType)
+		}
+		// Check that the new search dictionary has "updated" inside.
+		val, ok := entry.WordOccurrences["updated"]
+		if !ok {
+			t.Errorf("Expected test file to contain 'updated'.")
+		} else if val != 1 {
+			t.Errorf("Expected # of occurrences to be 1, got %v", val)
 		}
 	}
 
