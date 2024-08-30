@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -96,6 +97,32 @@ func TestServerCommands(t *testing.T) {
 		t.Fatalf("Failed to add test file: %v", err)
 	}
 
+	// Add again
+	addCtx2, addCancel2 := context.WithTimeout(context.Background(), time.Second)
+	defer addCancel2()
+
+	testFileData2 := &pb.ContentMetadata{
+		DataType:   0,
+		SourceType: 0,
+		URI:        filepath.Join(testDir, "test_file1.txt"),
+	}
+
+	addArgs2 := &pb.AddRequest{
+		AddedMetadata: testFileData2,
+		MakeCopy:      true,
+	}
+
+	_, err = client.Add(addCtx2, addArgs2)
+
+	if err.Error() == "" {
+		t.Fatalf("Failed to return error message when expected to")
+	}
+
+	expectedErrorMsg := "make_copy:true has already been added. Skipping without refresh."
+	if !strings.Contains(err.Error(), expectedErrorMsg) {
+		t.Fatalf("Returned error message %v when expected %v", err.Error(), expectedErrorMsg)
+	}
+
 	// Get
 	getCtx, getCancel := context.WithTimeout(context.Background(), time.Second)
 	defer getCancel()
@@ -165,7 +192,28 @@ func TestServerCommands(t *testing.T) {
 	result := searchResp.Results[0]
 
 	if (result.Name != expectedResult.Name) || (result.Occurrences != expectedResult.Occurrences) {
-		t.Errorf("Lexical Search returned %v, expected %v", result, expectedResult)
+		t.Fatalf("Lexical Search returned %v, expected %v", result, expectedResult)
+	}
+
+	// Delete unnamed file check error
+	badDelCtx, badDelCancel := context.WithTimeout(context.Background(), time.Second)
+	defer badDelCancel()
+
+	badDelReq := &pb.DeleteRequest{
+		DeleteCopy: true,
+		Names:      []string{filepath.Join(testDir, "bad_file.txt")},
+	}
+
+	expectedDelError := "Entry test_semantifly/bad_file.txt not found in index file"
+
+	badDelResp, err := client.Delete(badDelCtx, badDelReq)
+	if err != nil {
+		t.Fatalf("Delete failed: %v", err)
+	}
+	if badDelResp.ErrorMessage == "" {
+		t.Fatalf("Failed to return error message when error message expected.")
+	} else if !strings.Contains(badDelResp.ErrorMessage, expectedDelError) {
+		t.Fatalf("Expected message %v to be inside error, got %v", expectedDelError, badDelResp.ErrorMessage)
 	}
 
 	// Delete
