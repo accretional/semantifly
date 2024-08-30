@@ -7,6 +7,7 @@ import (
 
 	fetch "accretional.com/semantifly/fetcher"
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
+	search "accretional.com/semantifly/search"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -18,7 +19,7 @@ func SubcommandUpdate(u *pb.UpdateRequest, indexPath string, w io.Writer) error 
 		return fmt.Errorf("failed to read the index file: %v", err)
 	}
 
-	if err := updateIndex(indexMap, u); err != nil {
+	if err := updateIndex(indexMap, u, w); err != nil {
 		return fmt.Errorf("failed to update the index entry %s: %v", u.Name, err)
 	}
 
@@ -30,7 +31,7 @@ func SubcommandUpdate(u *pb.UpdateRequest, indexPath string, w io.Writer) error 
 		content, err := fetch.FetchFromSource(u.UpdatedMetadata.SourceType, u.UpdatedMetadata.URI)
 
 		if err != nil {
-			return fmt.Errorf("failed to validate the URI %s: %v\n", u, err)
+			return fmt.Errorf("failed to validate the URI %s: %v", u, err)
 		}
 
 		ile := &pb.IndexListEntry{
@@ -46,8 +47,7 @@ func SubcommandUpdate(u *pb.UpdateRequest, indexPath string, w io.Writer) error 
 	return nil
 }
 
-func updateIndex(indexMap map[string]*pb.IndexListEntry, u *pb.UpdateRequest) error {
-
+func updateIndex(indexMap map[string]*pb.IndexListEntry, u *pb.UpdateRequest, w io.Writer) error {
 	entry, exists := indexMap[u.Name]
 	if !exists {
 		return fmt.Errorf("entry %s not found", u.Name)
@@ -56,6 +56,12 @@ func updateIndex(indexMap map[string]*pb.IndexListEntry, u *pb.UpdateRequest) er
 	entry.ContentMetadata = u.UpdatedMetadata
 
 	entry.LastRefreshedTime = timestamppb.Now()
+
+	err := search.CreateSearchDictionary(entry)
+	if err != nil {
+		fmt.Fprintf(w, "File %s failed to create search dictionary with err: %s. Skipping.\n", entry, err)
+	}
+
 	indexMap[u.Name] = entry
 
 	return nil
