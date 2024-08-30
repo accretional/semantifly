@@ -2,6 +2,7 @@ package subcommands
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"sort"
@@ -12,12 +13,6 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-type LexicalSearchArgs struct {
-	IndexPath  string
-	SearchTerm string
-	TopN       int
-}
-
 type fileOccurrence struct {
 	FileName   string
 	Occurrence int32
@@ -27,11 +22,11 @@ type occurrenceList []fileOccurrence
 type searchMap map[string]occurrenceList // Search Map maps search terms to the list of their occurrences in files
 
 // LexicalSearch performs a search in the index for the specified term and returns the top N results ranked by the frequency of the term.
-func LexicalSearch(args LexicalSearchArgs) ([]fileOccurrence, error) {
+func SubcommandLexicalSearch(args *pb.LexicalSearchRequest, indexPath string, w io.Writer) ([]fileOccurrence, error) {
 	if args.TopN <= 0 {
 		return nil, fmt.Errorf("topn: %d is an invalid amount", args.TopN)
 	}
-	indexFilePath := path.Join(args.IndexPath, indexFile)
+	indexFilePath := path.Join(indexPath, indexFile)
 	data, err := os.ReadFile(indexFilePath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -108,15 +103,15 @@ func LexicalSearch(args LexicalSearchArgs) ([]fileOccurrence, error) {
 		return combinedResults[i].Occurrence > combinedResults[j].Occurrence
 	})
 
-	if len(combinedResults) > args.TopN {
+	if len(combinedResults) > int(args.TopN) {
 		combinedResults = combinedResults[:args.TopN]
 	}
 
 	return combinedResults, nil
 }
 
-func PrintSearchResults(results []fileOccurrence) {
+func PrintSearchResults(results []fileOccurrence, w io.Writer) {
 	for _, result := range results {
-		fmt.Printf("File: %s\nOccurrences: %d\n\n", result.FileName, result.Occurrence)
+		fmt.Fprintf(w, "File: %s\nOccurrences: %d\n\n", result.FileName, result.Occurrence)
 	}
 }

@@ -1,0 +1,67 @@
+syntax = "proto3";
+package semantifly;
+
+import "index.proto";
+
+option go_package = "accretional.com/semantifly/proto";
+
+service Semantifly {
+  rpc Add(AddRequest) returns (AddResponse) {}
+  rpc Delete(DeleteRequest) returns (DeleteResponse) {}
+  rpc Get(GetRequest) returns (GetResponse) {}
+  rpc Update(UpdateRequest) returns (UpdateResponse) {}
+  rpc LexicalSearch(LexicalSearchRequest) returns (LexicalSearchResponse) {}
+}
+
+message AddRequest {
+  ContentMetadata added_metadata = 1;
+  bool make_copy = 2;
+}
+
+message AddResponse {
+  string error_message = 1;
+}
+
+message DeleteRequest {
+  bool delete_copy = 1;
+  repeated string names = 2;
+}
+
+message DeleteResponse {
+  string error_message = 1;
+}
+
+message GetRequest {
+  string name = 1;
+}
+
+message GetResponse {
+  optional string content = 1;
+  string error_message = 2;
+  ContentMetadata returned_metadata = 3;
+}
+
+message UpdateRequest {
+  string name = 1;
+  ContentMetadata updated_metadata = 2;
+  bool update_copy = 3;
+}
+
+message UpdateResponse {
+  string error_message = 1;
+}
+
+message LexicalSearchRequest {
+  string search_term = 1;
+  int32 top_n = 2;
+}
+
+message LexicalSearchResponse {
+  repeated LexicalSearchResult results = 1;
+  string error_message = 2;
+}
+
+message LexicalSearchResult {
+  string name = 1;
+  int32 occurrences = 2;
+}

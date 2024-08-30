@@ -1,10 +1,13 @@
 package subcommands
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path"
 	"testing"
+
+	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 )
 
 func TestDelete(t *testing.T) {
@@ -29,27 +32,53 @@ func TestDelete(t *testing.T) {
 		t.Fatalf("Failed to create test file 2: %v", err)
 	}
 
-	// Set up test arguments
-	args := AddArgs{
-		IndexPath:  tempDir,
-		DataType:   "text",
-		SourceType: "local_file",
-		MakeCopy:   true,
-		DataURIs:   []string{testFilePath1, testFilePath2},
+	testFileData1 := &pb.ContentMetadata{
+		DataType:   0,
+		SourceType: 0,
+		URI:        testFilePath1,
+	}
+	testFileData2 := &pb.ContentMetadata{
+		DataType:   0,
+		SourceType: 0,
+		URI:        testFilePath2,
 	}
 
-	// Call the Add function
-	Add(args)
+	addArgs := &pb.AddRequest{
+		AddedMetadata: testFileData1,
+		MakeCopy:      true,
+	}
+
+	var addBuf bytes.Buffer
+
+	err = SubcommandAdd(addArgs, tempDir, &addBuf)
+	if err != nil {
+		t.Fatalf("Add function returned an error: %v", err)
+	}
+
+	addArgs2 := &pb.AddRequest{
+		AddedMetadata: testFileData2,
+		MakeCopy:      true,
+	}
+
+	var addBuf2 bytes.Buffer
+
+	err = SubcommandAdd(addArgs2, tempDir, &addBuf2)
+	if err != nil {
+		t.Fatalf("Add function returned an error: %v", err)
+	}
 
 	// Test case
-	testArgs := DeleteArgs{
-		IndexPath:  tempDir,
+	deleteArgs := &pb.DeleteRequest{
 		DeleteCopy: true,
-		DataURIs:   []string{testFilePath1},
+		Names:      []string{testFilePath1},
 	}
 
+	var deleteBuf bytes.Buffer
 	// Run the Delete function
-	Delete(testArgs)
+	err = SubcommandDelete(deleteArgs, tempDir, &deleteBuf)
+	if err != nil {
+		t.Fatalf("Delete function returned an error: %v", err)
+	}
 
 	// Verify the results
 	indexFilePath := path.Join(tempDir, indexFile)

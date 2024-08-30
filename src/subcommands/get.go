@@ -2,48 +2,43 @@ package subcommands
 
 import (
 	"fmt"
+	"io"
 	"path"
 
 	fetch "accretional.com/semantifly/fetcher"
+	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 )
 
-type GetArgs struct {
-	IndexPath string
-	Name      string
-}
-
-func Get(g GetArgs) {
-	indexFilePath := path.Join(g.IndexPath, indexFile)
+func SubcommandGet(g *pb.GetRequest, indexPath string, w io.Writer) (string, *pb.ContentMetadata, error) {
+	indexFilePath := path.Join(indexPath, indexFile)
 
 	indexMap, err := readIndex(indexFilePath, false)
 	if err != nil {
-		fmt.Printf("Failed to read the index file: %v", err)
-		return
+		return "", nil, fmt.Errorf("failed to read the index file: %v", err)
 	}
 
 	targetEntry := indexMap[g.Name]
 
 	if targetEntry == nil {
-		fmt.Printf("entry '%s' not found in index file %s\n", g.Name, indexFilePath)
-		return
+		fmt.Fprintf(w, "entry '%s' not found in index file %s\n", g.Name, indexFilePath)
+		return "", nil, fmt.Errorf("entry '%s' not found in index file %s", g.Name, indexFilePath)
 	}
 
-	if targetEntry.Content != "" {
-		fmt.Println(targetEntry.Content)
-	} else {
-		content, err := fetchFromCopy(g.IndexPath, g.Name)
+	if targetEntry.Content == "" {
+		content, err := fetchFromCopy(indexPath, g.Name)
 		if content == nil {
 			if err != nil {
-				fmt.Printf("Failed to read content from copy: %v. Fetching from the source.\n", err)
+				fmt.Fprintf(w, "failed to read content from copy: %v. Fetching from the source.\n", err)
 			}
 
 			content, err = fetch.FetchFromSource(targetEntry.ContentMetadata.SourceType, targetEntry.ContentMetadata.URI)
 			if err != nil {
-				fmt.Printf("Failed to read content from source: %v.\n", err)
-				return
+				return "", nil, fmt.Errorf("failed to read content from source: %v", err)
 			}
 		}
 
-		fmt.Println(string(content))
+		return string(content), targetEntry.ContentMetadata, nil
 	}
+
+	return targetEntry.Content, targetEntry.ContentMetadata, nil
 }

@@ -2,15 +2,12 @@ package subcommands
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path"
-)
 
-type DeleteArgs struct {
-	IndexPath  string
-	DeleteCopy bool
-	DataURIs   []string
-}
+	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
+)
 
 // Delete removes the specified data URIs from the index file at the given index path.
 // It optionally deletes the associated data files as well based on the DeleteCopy flag.
@@ -24,37 +21,35 @@ type DeleteArgs struct {
 //   - If there is an error searching for a URI in the index, an error message is printed and the URI is skipped.
 //   - If there is an error deleting a URI from the index, an error message is printed and the URI is skipped.
 //   - If there is an error deleting the associated data file, an error message is printed.
-func Delete(d DeleteArgs) {
-	indexFilePath := path.Join(d.IndexPath, indexFile)
+func SubcommandDelete(d *pb.DeleteRequest, indexPath string, w io.Writer) error {
+	indexFilePath := path.Join(indexPath, indexFile)
 
 	indexMap, err := readIndex(indexFilePath, false)
 	if err != nil {
-		fmt.Printf("Failed to read the index file: %v", err)
-		return
+		return fmt.Errorf("failed to read the index file: %v", err)
 	}
 
-	for _, uri := range d.DataURIs {
+	for _, uri := range d.Names {
 
 		if _, present := indexMap[uri]; !present {
-			fmt.Printf("Entry %s not found in index file %s, skipping\n", uri, indexFilePath)
+			fmt.Fprintf(w, "Entry %s not found in index file %s, skipping\n", uri, indexFilePath)
 			continue
 		}
 
 		delete(indexMap, uri)
 
-		fmt.Printf("Index %s deleted successfully.\n", uri)
-
 		if d.DeleteCopy {
-			if err := deleteCopy(d.IndexPath, uri); err != nil {
-				fmt.Printf("Failed to delete copy of file %s with err: %s, skipping", uri, err)
+			if err := deleteCopy(indexPath, uri, w); err != nil {
+				fmt.Fprintf(w, "Failed to delete copy of file %s with err: %s, skipping", uri, err)
 			}
 		}
 	}
 
 	if err := writeIndex(indexFilePath, indexMap); err != nil {
-		fmt.Printf("Failed to write to the index file: %v", err)
-		return
+		return fmt.Errorf("failed to write to the index file: %v", err)
 	}
+
+	return nil
 }
 
 // deleteCopy deletes a copied file with the given name from the specified index path.
@@ -62,12 +57,12 @@ func Delete(d DeleteArgs) {
 // Parameters:
 //   - indexPath (string): The path to the index directory.
 //   - name (string): The name of the copied file to delete.
-func deleteCopy(indexPath, name string) error {
+func deleteCopy(indexPath, name string, w io.Writer) error {
 	copiedFilePath := path.Join(indexPath, addedCopiesSubDir, name)
 
 	if _, err := os.Stat(copiedFilePath); err != nil {
 		if os.IsNotExist(err) {
-			fmt.Printf("No copy of %s found, skipping\n", name)
+			fmt.Fprintf(w, "No copy of %s found, skipping\n", name)
 			return nil
 		}
 

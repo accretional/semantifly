@@ -1,13 +1,16 @@
-package main
+package subcommands
 
 import (
 	"flag"
 	"fmt"
+	"log"
+	"net"
 	"os"
 	"path"
 	"strings"
 
-	"accretional.com/semantifly/subcommands"
+	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
+	"google.golang.org/grpc"
 )
 
 type SubcommandInfo struct {
@@ -35,6 +38,10 @@ var subcommandDict = map[string]SubcommandInfo{
 	"search": {
 		Description: "Search (lexically) for a term in the index",
 		Execute:     executeSearch,
+	},
+	"start-server": {
+		Description: "Start GRPC server",
+		Execute:     executeStartServer,
 	},
 }
 
@@ -157,6 +164,20 @@ func appendToIndexLog(indexLog string) {
 	}
 }
 
+func inferSourceType(uris []string) (string, error) {
+	sourceTypeStr := "local_file"
+
+	for _, u := range uris {
+		if strings.HasPrefix(u, "http://") || strings.HasPrefix(u, "https://") {
+			sourceTypeStr = "webpage"
+		} else if sourceTypeStr == "webpage" {
+			return "", fmt.Errorf("inconsistent URI source types")
+		}
+	}
+
+	return sourceTypeStr, nil
+}
+
 func executeAdd(args []string) {
 	cmd := flag.NewFlagSet("add", flag.ExitOnError)
 	dataType := cmd.String("type", "text", "The type of the input data")
@@ -186,15 +207,32 @@ func executeAdd(args []string) {
 		*sourceType = sourceTypeStr
 	}
 
-	addArgs := subcommands.AddArgs{
-		IndexPath:  *indexPath,
-		DataType:   *dataType,
-		SourceType: *sourceType,
-		MakeCopy:   *makeLocalCopy,
-		DataURIs:   cmd.Args(),
+	dataTypeEnum, err := parseDataType(*dataType)
+	if err != nil {
+		printCmdErr(fmt.Sprintf("Error in parsing DataType: %v\n", err))
 	}
 
-	subcommands.Add(addArgs)
+	sourceTypeEnum, err := parseSourceType(*sourceType)
+	if err != nil {
+		printCmdErr(fmt.Sprintf("Error in parsing SourceType: %v\n", err))
+	}
+
+	dataUri := cmd.Args()[0]
+
+	addArgs := &pb.AddRequest{
+		AddedMetadata: &pb.ContentMetadata{
+			URI:        dataUri,
+			DataType:   dataTypeEnum,
+			SourceType: sourceTypeEnum,
+		},
+		MakeCopy: *makeLocalCopy,
+	}
+
+	err = SubcommandAdd(addArgs, *indexPath, os.Stdout)
+	if err != nil {
+		fmt.Printf("Error occurred during add subcommand: %v", err)
+		return
+	}
 }
 
 func executeDelete(args []string) {
@@ -216,13 +254,16 @@ func executeDelete(args []string) {
 		return
 	}
 
-	deleteArgs := subcommands.DeleteArgs{
-		IndexPath:  *indexPath,
+	deleteArgs := &pb.DeleteRequest{
 		DeleteCopy: *deleteLocalCopy,
-		DataURIs:   cmd.Args(),
+		Names:      cmd.Args(),
 	}
 
-	subcommands.Delete(deleteArgs)
+	err = SubcommandDelete(deleteArgs, *indexPath, os.Stdout)
+	if err != nil {
+		fmt.Printf("Error occurred during delete subcommand: %v", err)
+		return
+	}
 }
 
 func executeGet(args []string) {
@@ -243,19 +284,24 @@ func executeGet(args []string) {
 		return
 	}
 
-	getArgs := subcommands.GetArgs{
-		IndexPath: *indexPath,
-		Name:      cmd.Args()[0],
+	getArgs := &pb.GetRequest{
+		Name: cmd.Args()[0],
 	}
 
-	subcommands.Get(getArgs)
+	resp, _, err := SubcommandGet(getArgs, *indexPath, os.Stdout)
+	if err != nil {
+		fmt.Printf("Error occurred during get subcommand: %v", err)
+		return
+	}
+
+	fmt.Println(resp)
 }
 
 func executeUpdate(args []string) {
 	cmd := flag.NewFlagSet("update", flag.ExitOnError)
-	dataType := cmd.String("type", "", "The type of the input data")
+	dataType := cmd.String("type", "text", "The type of the input data")
 	sourceType := cmd.String("source-type", "", "How to access the content")
-	makeLocalCopy := cmd.String("copy", "false", "Whether to copy and use the file as it is now, or dynamically access it")
+	makeLocalCopy := cmd.Bool("copy", false, "Whether to copy and use the file as it is now, or dynamically access it")
 	indexPath := cmd.String("index-path", "", "Path to the index file")
 
 	flags, nonFlags, err := parseArgs(args, cmd)
@@ -272,16 +318,39 @@ func executeUpdate(args []string) {
 		return
 	}
 
-	updateArgs := subcommands.UpdateArgs{
-		IndexPath:  *indexPath,
-		Name:       cmd.Args()[0],
-		DataType:   *dataType,
-		SourceType: *sourceType,
-		UpdateCopy: *makeLocalCopy,
-		DataURI:    cmd.Args()[1],
+	if *sourceType == "" {
+		sourceTypeStr, err := inferSourceType(cmd.Args())
+		if err != nil {
+			printCmdErr(fmt.Sprintf("Failed to infer source type from URIs: %v\n", err))
+		}
+		*sourceType = sourceTypeStr
 	}
 
-	subcommands.Update(updateArgs)
+	dataTypeEnum, err := parseDataType(*dataType)
+	if err != nil {
+		printCmdErr(fmt.Sprintf("Error in parsing DataType: %v\n", err))
+	}
+
+	sourceTypeEnum, err := parseSourceType(*sourceType)
+	if err != nil {
+		printCmdErr(fmt.Sprintf("Error in parsing SourceType: %v\n", err))
+	}
+
+	updateArgs := &pb.UpdateRequest{
+		Name: cmd.Args()[0],
+		UpdatedMetadata: &pb.ContentMetadata{
+			URI:        cmd.Args()[1],
+			DataType:   dataTypeEnum,
+			SourceType: sourceTypeEnum,
+		},
+		UpdateCopy: *makeLocalCopy,
+	}
+
+	err = SubcommandUpdate(updateArgs, *indexPath, os.Stdout)
+	if err != nil {
+		fmt.Printf("Error occurred during update subcommand: %v", err)
+		return
+	}
 }
 
 func executeSearch(args []string) {
@@ -303,31 +372,43 @@ func executeSearch(args []string) {
 		return
 	}
 
-	searchArgs := subcommands.LexicalSearchArgs{
-		IndexPath:  *indexPath,
+	searchArgs := &pb.LexicalSearchRequest{
 		SearchTerm: cmd.Args()[0],
-		TopN:       *topN,
+		TopN:       int32(*topN),
 	}
 
-	searchResults, err := subcommands.LexicalSearch(searchArgs)
+	results, err := SubcommandLexicalSearch(searchArgs, *indexPath, os.Stdout)
 	if err != nil {
 		printCmdErr(fmt.Sprintf("Error during search: %v", err))
 		return
 	}
 
-	subcommands.PrintSearchResults(searchResults)
+	PrintSearchResults(results, os.Stdout)
 }
 
-func inferSourceType(uris []string) (string, error) {
-	sourceTypeStr := "local_file"
+func executeStartServer(args []string) {
+	cmd := flag.NewFlagSet("start-server", flag.ExitOnError)
+	serverIndexPath := cmd.String("index-path", "index", "Path to the server index")
+	port := cmd.String("port", "50051", "Port for the server")
 
-	for _, u := range uris {
-		if strings.HasPrefix(u, "http://") || strings.HasPrefix(u, "https://") {
-			sourceTypeStr = "webpage"
-		} else if sourceTypeStr == "webpage" {
-			return "", fmt.Errorf("inconsistent URI source types")
-		}
+	flags, nonFlags, err := parseArgs(args, cmd)
+	if err != nil {
+		printCmdErr(fmt.Sprintf("Error: %v", err))
+		return
 	}
 
-	return sourceTypeStr, nil
+	reorderedArgs := append(flags, nonFlags...)
+	cmd.Parse(reorderedArgs)
+
+	portStr := ":" + *port
+	lis, err := net.Listen("tcp", portStr)
+	if err != nil {
+		log.Fatalf("failed to listen: %v", err)
+	}
+	s := grpc.NewServer()
+	pb.RegisterSemantiflyServer(s, SemantiflyNewServer(*serverIndexPath))
+	log.Printf("server listening at %v", lis.Addr())
+	if err := s.Serve(lis); err != nil {
+		log.Fatalf("failed to serve: %v", err)
+	}
 }

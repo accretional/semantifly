@@ -1,6 +1,7 @@
 package subcommands
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path"
@@ -26,17 +27,23 @@ func TestUpdate(t *testing.T) {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
-	// Set up test arguments
-	args := AddArgs{
-		IndexPath:  tempDir,
-		DataType:   "text",
-		SourceType: "local_file",
-		MakeCopy:   true,
-		DataURIs:   []string{testFilePath},
+	testFileData := &pb.ContentMetadata{
+		DataType:   0,
+		SourceType: 0,
+		URI:        testFilePath,
 	}
 
-	// Call the Add function
-	Add(args)
+	args := &pb.AddRequest{
+		AddedMetadata: testFileData,
+		MakeCopy:  true,
+	}
+
+	var buf bytes.Buffer
+
+	err = SubcommandAdd(args, tempDir, &buf)
+	if err != nil {
+		t.Fatalf("Add function returned an error: %v", err)
+	}
 
 	// Check if the index file was created
 	indexFilePath := path.Join(tempDir, indexFile)
@@ -52,16 +59,24 @@ func TestUpdate(t *testing.T) {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
-	// Set up test arguments
-	updateArgs := UpdateArgs{
-		IndexPath:  tempDir,
-		Name:       testFilePath,
-		UpdateCopy: "true",
-		DataURI:    updatedFilePath,
+	testUpdateFileData := &pb.ContentMetadata{
+		DataType:   0,
+		SourceType: 0,
+		URI:        updatedFilePath,
 	}
 
-	// Call the Add function
-	Update(updateArgs)
+	// Set up test arguments
+	updateArgs := &pb.UpdateRequest{
+		Name:       testFilePath,
+		UpdatedMetadata:   testUpdateFileData,
+		UpdateCopy: true,
+	}
+
+	var updateBuf bytes.Buffer
+	err = SubcommandUpdate(updateArgs, tempDir, &updateBuf)
+	if err != nil {
+		t.Fatalf("Update function returned an error: %v", err)
+	}
 
 	// Read the index file
 	indexMap, err := readIndex(indexFilePath, false)

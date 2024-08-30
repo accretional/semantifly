@@ -30,17 +30,25 @@ func TestAdd(t *testing.T) {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
-	// Set up test arguments
-	args := AddArgs{
-		IndexPath:  tempDir,
-		DataType:   "text",
-		SourceType: "local_file",
-		MakeCopy:   true,
-		DataURIs:   []string{testFilePath},
+	testFileData := &pb.ContentMetadata{
+		DataType:   0,
+		SourceType: 0,
+		URI:        testFilePath,
 	}
 
-	// Call the Add function
-	Add(args)
+	args := &pb.AddRequest{
+		AddedMetadata: testFileData,
+		MakeCopy:      true,
+	}
+
+	// Create a buffer to capture output
+	var buf bytes.Buffer
+
+	// Call the Add function with the buffer
+	err = SubcommandAdd(args, tempDir, &buf)
+	if err != nil {
+		t.Fatalf("Add function returned an error: %v", err)
+	}
 
 	// Check if the index file was created
 	indexFilePath := path.Join(tempDir, indexFile)
@@ -101,31 +109,45 @@ func TestAdd_MultipleFilesSamePath(t *testing.T) {
 	testFilePath2 := path.Join(tempDir, "test_file.txt")
 
 	// Set up test arguments
-	args := AddArgs{
-		IndexPath:  tempDir,
-		DataType:   "text",
-		SourceType: "local_file",
-		MakeCopy:   true,
-		DataURIs:   []string{testFilePath1, testFilePath2},
+
+	testFileData1 := &pb.ContentMetadata{
+		DataType:   0,
+		SourceType: 0,
+		URI:        testFilePath1,
 	}
 
-	// Capture stdout
-	oldStdout := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
+	args := &pb.AddRequest{
+		AddedMetadata: testFileData1,
+		MakeCopy:      true,
+	}
 
-	Add(args)
+	var buf1 bytes.Buffer
+	err = SubcommandAdd(args, tempDir, &buf1)
+	if err != nil {
+		t.Fatalf("Add function returned an error: %v", err)
+	}
 
-	w.Close()
-	os.Stdout = oldStdout
+	testFileData2 := &pb.ContentMetadata{
+		DataType:   0,
+		SourceType: 0,
+		URI:        testFilePath2,
+	}
 
-	var buf bytes.Buffer
-	io.Copy(&buf, r)
-	output := buf.String()
+	args = &pb.AddRequest{
+		AddedMetadata: testFileData2,
+		MakeCopy:      true,
+	}
+
+	var buf2 bytes.Buffer
+	err = SubcommandAdd(args, tempDir, &buf2)
+	if err == nil {
+		t.Fatalf("Add function did not return an error when it was suppposed to.")
+	}
+	output := buf2.String()
 
 	// Checking if the second entry was skipped
-	if !strings.Contains(output, "Skipping without refresh") {
-		t.Errorf("Expected output 'Skipping without refresh', but got '%s'", output)
+	if !strings.Contains(err.Error(), "Skipping without refresh") {
+		t.Errorf("Expected error 'Skipping without refresh', but got '%s'", output)
 	}
 
 	// Check if the index file was created
@@ -147,7 +169,6 @@ func TestAdd_MultipleFilesSamePath(t *testing.T) {
 }
 
 func TestAdd_Webpage(t *testing.T) {
-
 	// Create a temporary directory for testing
 	tempDir, err := os.MkdirTemp("", "add_test")
 	if err != nil {
@@ -159,16 +180,23 @@ func TestAdd_Webpage(t *testing.T) {
 	testWebpageURL := "http://echo.jsontest.com/title/lorem/content/ipsum"
 
 	// Set up test arguments
-	args := AddArgs{
-		IndexPath:  tempDir,
-		DataType:   "text",
-		SourceType: "webpage",
-		MakeCopy:   true,
-		DataURIs:   []string{testWebpageURL},
+	webData := &pb.ContentMetadata{
+		DataType:   0,
+		SourceType: 1,
+		URI:        testWebpageURL,
 	}
 
-	// Call the Add function
-	Add(args)
+	args := &pb.AddRequest{
+		AddedMetadata: webData,
+		MakeCopy:      true,
+	}
+
+	var buf bytes.Buffer
+
+	err = SubcommandAdd(args, tempDir, &buf)
+	if err != nil {
+		t.Fatalf("Add function returned an error: %v", err)
+	}
 
 	// Check if the index file was created
 	indexFilePath := path.Join(tempDir, indexFile)
