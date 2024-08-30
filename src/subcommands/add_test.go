@@ -2,17 +2,144 @@ package subcommands
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"path"
+	"path/filepath"
 	"strings"
 	"testing"
 
+	database "accretional.com/semantifly/database"
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
+	"github.com/go-pg/pg/v10"
+	"github.com/jackc/pgx/v5"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 )
+
+func setupPostgres() error {
+	currentDir, err := os.Getwd()
+	if err != nil {
+		return fmt.Errorf("Failed to get current directory: %v", err)
+	}
+
+	if filepath.Base(currentDir) != "semantifly" {
+		err = os.Chdir("../..")
+		if err != nil {
+			return fmt.Errorf("Failed to change directory: %v", err)
+		}
+	}
+
+	cmd := exec.Command("bash", "setup_postgres.sh")
+
+	var stderrBuf bytes.Buffer
+	cmd.Stderr = io.MultiWriter(os.Stderr, &stderrBuf)
+
+	err = cmd.Run()
+	if err != nil {
+		return fmt.Errorf("Failed to setup PostgreSQL server: %v", err)
+	}
+
+	return nil
+}
+
+func createTestingDatabase() (*pg.DB, error) {
+	// Connect to the default "postgres" database
+	db := pg.Connect(&pg.Options{
+		User:     "postgres",
+		Password: "postgres",
+		Addr:     "localhost:5432",
+		Database: "postgres",
+	})
+
+	// Drop the database if it exists, then create it
+	_, err := db.Exec("DROP DATABASE IF EXISTS testdb")
+	if err != nil {
+		db.Close()
+		return nil, fmt.Errorf("failed to drop existing test database: %v", err)
+	}
+
+	_, err = db.Exec("CREATE DATABASE testdb")
+	if err != nil {
+		db.Close()
+		return nil, fmt.Errorf("failed to create test database: %v", err)
+	}
+
+	// Close the connection to the "postgres" database
+	db.Close()
+
+	// Connect to the newly created database
+	testDB := pg.Connect(&pg.Options{
+		User:     "postgres",
+		Password: "postgres",
+		Addr:     "localhost:5432",
+		Database: "testdb",
+	})
+
+	return testDB, nil
+}
+
+func closeTestingDatabase() error {
+	// Connect to the default "postgres" database to drop the test database
+	defaultDB := pg.Connect(&pg.Options{
+		User:     "postgres",
+		Password: "postgres",
+		Addr:     "localhost:5432",
+		Database: "postgres",
+	})
+	defer defaultDB.Close()
+
+	// Terminate all connections to the test database
+	_, err := defaultDB.Exec("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'testdb'")
+	if err != nil {
+		return fmt.Errorf("Failed to terminate connections to test database: %v", err)
+	}
+
+	// Drop the test database
+	_, err = defaultDB.Exec("DROP DATABASE IF EXISTS testdb")
+	if err != nil {
+		return fmt.Errorf("Failed to drop test database: %v", err)
+	}
+
+	return nil
+}
+
+func setupDatabaseForTesting() (context.Context, database.PgxIface, error) {
+	err := setupPostgres()
+
+	if err != nil {
+		return nil, nil, fmt.Errorf("setupPostgres failed: %v", err)
+	}
+
+	// Set a mock DATABASE_URL for testing
+	os.Setenv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/testdb")
+	defer os.Unsetenv("DATABASE_URL")
+
+	db, err := createTestingDatabase()
+	if err != nil {
+		return nil, nil, fmt.Errorf("Failed to create test database: %v", err)
+	}
+	defer db.Close()
+
+	// Test connection
+	ctx := context.Background()
+	conn, err := pgx.Connect(ctx, os.Getenv("DATABASE_URL"))
+	if err != nil {
+		return nil, nil, fmt.Errorf("Failed to establish connection to the database: %v", err)
+	}
+
+	// Test database table initialisation
+	err = database.InitializeDatabaseSchema(ctx, conn)
+	if err != nil {
+		return nil, nil, fmt.Errorf("Failed to initialise the database schema: %v", err)
+	}
+
+	return ctx, conn, nil
+}
 
 func TestAdd(t *testing.T) {
 	fmt.Println("--- Testing Add command ---")
@@ -30,8 +157,18 @@ func TestAdd(t *testing.T) {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
+	// Setup database connection
+	ctx, conn, err := setupDatabaseForTesting()
+	if err != nil {
+		t.Fatalf("failed to connect to PostgreSQL database: %v", err)
+	}
+	defer closeTestingDatabase()
+	defer conn.Close(ctx)
+
 	// Set up test arguments
 	args := AddArgs{
+		Context:    ctx,
+		DBConn:     conn,
 		IndexPath:  tempDir,
 		DataType:   "text",
 		SourceType: "local_file",
@@ -80,6 +217,43 @@ func TestAdd(t *testing.T) {
 	copiesDir := path.Join(tempDir, addedCopiesSubDir)
 	if _, err := os.Stat(path.Join(copiesDir, testFilePath)); os.IsNotExist(err) {
 		t.Errorf("Data file for %s was not copied", testFilePath)
+	}
+
+	// Check if the test index was added to the database
+	var jsonIndex []byte
+
+	rows, err := conn.Query(ctx, `
+		SELECT entry
+        FROM index_list 
+        WHERE name=$1
+	`, testFilePath)
+	if err != nil {
+		t.Fatalf("Failed to get the index from the database: %v", err)
+	}
+
+	if err := rows.Scan(&jsonIndex); err != nil {
+		t.Fatalf("Failed to read the index from the database: %v", err)
+	}
+
+	var ile pb.IndexListEntry
+	if err = protojson.Unmarshal(jsonIndex, &ile); err != nil {
+		t.Fatalf("failed to unmarshal content metadata JSON to protobuf: %v", err)
+	}
+
+	if ile.Name != testFilePath {
+		t.Errorf("Expected Name %s, got %s", testFilePath, ile.Name)
+	}
+	if ile.ContentMetadata.URI != testFilePath {
+		t.Errorf("Expected URI %s, got %s", testFilePath, ile.ContentMetadata.URI)
+	}
+	if ile.ContentMetadata.DataType != pb.DataType_TEXT {
+		t.Errorf("Expected DataType %v, got %v", pb.DataType_TEXT, ile.ContentMetadata.DataType)
+	}
+	if ile.ContentMetadata.SourceType != pb.SourceType_LOCAL_FILE {
+		t.Errorf("Expected SourceType %v, got %v", pb.SourceType_LOCAL_FILE, ile.ContentMetadata.SourceType)
+	}
+	if ile.FirstAddedTime == nil {
+		t.Errorf("FirstAddedTime is nil")
 	}
 }
 
