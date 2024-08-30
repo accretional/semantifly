@@ -74,6 +74,7 @@ func TestServerCommands(t *testing.T) {
 
 	// Add
 	addCtx, addCancel := context.WithTimeout(context.Background(), time.Second)
+	defer addCancel()
 
 	testFileData1 := &pb.ContentMetadata{
 		DataType:   0,
@@ -83,12 +84,15 @@ func TestServerCommands(t *testing.T) {
 
 	addArgs := &pb.AddRequest{
 		AddedMetadata: testFileData1,
-		MakeCopy:  true,
+		MakeCopy:      true,
 	}
 
-	_, err := client.Add(addCtx, addArgs)
-	addCancel()
+	addResp, err := client.Add(addCtx, addArgs)
+
 	if err != nil {
+		t.Fatalf("Failed to add test file: %v", err)
+	}
+	if addResp.ErrorMessage != "" {
 		t.Fatalf("Failed to add test file: %v", err)
 	}
 
@@ -104,8 +108,12 @@ func TestServerCommands(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Get failed: %v", err)
 	}
+
+	expectedContent := "This is a test file for Semantifly"
 	if *getResp.Content == "" {
 		t.Errorf("Get returned empty content")
+	} else if *getResp.Content != expectedContent {
+		t.Errorf("Get returned content %v when expected %v", *getResp.Content, expectedContent)
 	}
 
 	// Update
@@ -119,14 +127,17 @@ func TestServerCommands(t *testing.T) {
 	}
 
 	updReq := &pb.UpdateRequest{
-		Name:       filepath.Join(testDir, "test_file1.txt"),
-		UpdatedMetadata:   testUpdateFileData,
-		UpdateCopy: true,
+		Name:            filepath.Join(testDir, "test_file1.txt"),
+		UpdatedMetadata: testUpdateFileData,
+		UpdateCopy:      true,
 	}
 
-	_, err = client.Update(updCtx, updReq)
+	updResp, err := client.Update(updCtx, updReq)
 	if err != nil {
 		t.Fatalf("Update failed: %v", err)
+	}
+	if updResp.ErrorMessage != "" {
+		t.Fatalf("Failed to add test file: %v", err)
 	}
 
 	// Search
@@ -146,17 +157,31 @@ func TestServerCommands(t *testing.T) {
 		t.Errorf("LexicalSearch returned no results")
 	}
 
+	expectedResult := &pb.LexicalSearchResult{
+		Name:        "test_semantifly/test_file1.txt",
+		Occurrences: 2,
+	}
+
+	result := searchResp.Results[0]
+
+	if (result.Name != expectedResult.Name) || (result.Occurrences != expectedResult.Occurrences) {
+		t.Errorf("Lexical Search returned %v, expected %v", result, expectedResult)
+	}
+
 	// Delete
 	delCtx, delCancel := context.WithTimeout(context.Background(), time.Second)
 	defer delCancel()
 
 	delReq := &pb.DeleteRequest{
 		DeleteCopy: true,
-		Names:   []string{filepath.Join(testDir, "test_file1.txt")},
+		Names:      []string{filepath.Join(testDir, "test_file1.txt")},
 	}
 
-	_, err = client.Delete(delCtx, delReq)
+	delResp, err := client.Delete(delCtx, delReq)
 	if err != nil {
 		t.Fatalf("Delete failed: %v", err)
+	}
+	if delResp.ErrorMessage != "" {
+		t.Fatalf("Failed to add test file: %v", err)
 	}
 }
