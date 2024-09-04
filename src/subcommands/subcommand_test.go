@@ -43,7 +43,7 @@ func TestMain(m *testing.M) {
 		fmt.Printf("Failed to create temp directory: %v\n", err)
 		os.Exit(1)
 	}
-	testIndexPath = filepath.Join(testDir, "test-index")
+	testIndexPath = testDir
 
 	// run tests
 	code := m.Run()
@@ -113,10 +113,10 @@ func TestGetSubcommand(t *testing.T) {
 		t.Fatalf("Failed to create temporary file: %v", err)
 	}
 	defer os.Remove(tempFile)
-	//testIndex := filepath.Join(testIndexPath, "index.list")
-	//os.Remove(testIndex)
+	testIndex := filepath.Join(testIndexPath, "index.list")
+	os.Remove(testIndex)
 
-	if err := runAndCheckStdoutContains("add", "dddd", []string{tempFile, "--index-path", testIndexPath}); err != nil {
+	if err := runAndCheckStdoutContains("add", "", []string{tempFile, "--index-path", testIndexPath}); err != nil {
 		t.Fatalf("Failed to add file to index: %v", err)
 	}
 
@@ -127,7 +127,7 @@ func TestGetSubcommand(t *testing.T) {
 	})
 
 	t.Run("Get after delete", func(t *testing.T) {
-		runAndCheckStdoutContains("delete", "", []string{tempFile})
+		runAndCheckStdoutContains("delete", "", []string{tempFile, "--index-path", testIndexPath})
 		if err := runAndCheckStdoutContains("get", "empty index file", []string{tempFile, "--index-path", testIndexPath}); err != nil {
 			t.Errorf("Failed to execute 'get' after delete: %v", err)
 		}
