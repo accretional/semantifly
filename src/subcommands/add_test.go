@@ -238,8 +238,18 @@ func TestAdd_MultipleFilesSamePath(t *testing.T) {
 
 	testFilePath2 := path.Join(tempDir, "test_file.txt")
 
+	// Setup database connection
+	ctx, conn, err := setupDatabaseForTesting()
+	if err != nil {
+		t.Fatalf("failed to connect to PostgreSQL database: %v", err)
+	}
+	defer closeTestingDatabase()
+	defer conn.Close(ctx)
+
 	// Set up test arguments
 	args := AddArgs{
+		Context:    ctx,
+		DBConn:     conn,
 		IndexPath:  tempDir,
 		DataType:   "text",
 		SourceType: "local_file",
@@ -296,8 +306,18 @@ func TestAdd_Webpage(t *testing.T) {
 	// Create the test files
 	testWebpageURL := "http://echo.jsontest.com/title/lorem/content/ipsum"
 
+	// Setup database connection
+	ctx, conn, err := setupDatabaseForTesting()
+	if err != nil {
+		t.Fatalf("failed to connect to PostgreSQL database: %v", err)
+	}
+	defer closeTestingDatabase()
+	defer conn.Close(ctx)
+
 	// Set up test arguments
 	args := AddArgs{
+		Context:    ctx,
+		DBConn:     conn,
 		IndexPath:  tempDir,
 		DataType:   "text",
 		SourceType: "webpage",
