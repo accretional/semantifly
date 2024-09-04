@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -19,6 +20,13 @@ type PgxIface interface {
 }
 
 func InitializeDatabaseSchema(ctx context.Context, conn PgxIface) error {
+	if ctx == nil {
+		return errors.New("context is nil")
+	}
+
+	if conn == nil {
+		return errors.New("connection interface is nil")
+	}
 
 	_, err := conn.Exec(ctx, `
 		CREATE TABLE IF NOT EXISTS index_list (
@@ -35,6 +43,13 @@ func InitializeDatabaseSchema(ctx context.Context, conn PgxIface) error {
 }
 
 func CreateProtoFieldIndex(ctx context.Context, conn PgxIface, fieldName string) error {
+	if ctx == nil {
+		return errors.New("context is nil")
+	}
+
+	if conn == nil {
+		return errors.New("connection interface is nil")
+	}
 
 	indexName := strings.ReplaceAll(strings.ReplaceAll(fieldName, "->", "_"), "'", "")
 	query := `CREATE INDEX IF NOT EXISTS idx_` + indexName + ` ON index_list USING GIN ((` + fieldName + `));`
@@ -48,6 +63,18 @@ func CreateProtoFieldIndex(ctx context.Context, conn PgxIface, fieldName string)
 }
 
 func InsertRows(ctx context.Context, conn PgxIface, upsertIndex *pb.Index) error {
+	if ctx == nil {
+		return errors.New("context is nil")
+	}
+
+	if conn == nil {
+		return errors.New("connection interface is nil")
+	}
+
+	if upsertIndex == nil {
+		return errors.New("upsertIndex is nil")
+	}
+
 	tx, err := conn.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to connect to database: %w", err)
@@ -85,6 +112,14 @@ func InsertRows(ctx context.Context, conn PgxIface, upsertIndex *pb.Index) error
 }
 
 func DeleteRows(ctx context.Context, conn PgxIface, names []string) error {
+	if ctx == nil {
+		return errors.New("context is nil")
+	}
+
+	if conn == nil {
+		return errors.New("connection interface is nil")
+	}
+
 	_, err := conn.Exec(ctx, `
 		DELETE FROM index_list 
 		WHERE name=ANY($1)
@@ -97,6 +132,13 @@ func DeleteRows(ctx context.Context, conn PgxIface, names []string) error {
 }
 
 func GetContentMetadata(ctx context.Context, conn PgxIface, name string) (*pb.ContentMetadata, error) {
+	if ctx == nil {
+		return nil, errors.New("context is nil")
+	}
+	if conn == nil {
+		return nil, errors.New("connection interface is nil")
+	}
+
 	tx, err := conn.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("unable to connect to database: %w", err)
