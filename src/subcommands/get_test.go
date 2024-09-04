@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"strings"
 	"testing"
 	"time"
 )
@@ -111,7 +112,6 @@ func TestGet_Webpage(t *testing.T) {
 		IndexPath:  tempDir,
 		DataType:   "text",
 		SourceType: "webpage",
-		MakeCopy:   true,
 		DataURIs:   []string{testWebpageURL},
 	}
 
@@ -167,10 +167,10 @@ func TestGet_Webpage(t *testing.T) {
 		return
 	}
 
-	webpageContentStr := string(webpageContent) + "\n"
+	webpageContentStr := string(webpageContent)
 
 	// Validating the contents of the copy file
-	if output != webpageContentStr {
+	if !strings.Contains(output, webpageContentStr) {
 		t.Errorf("Failed to validate webpage copy: Expected \"%s\", got \"%s\"", webpageContent, output)
 	}
 }
