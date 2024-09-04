@@ -55,8 +55,6 @@ func CommandReadRun() {
 		os.Exit(1)
 	}
 
-	defaultIndexPath := setupSemantifly()
-
 	cmdName := os.Args[1]
 	args := os.Args[2:]
 
@@ -64,6 +62,8 @@ func CommandReadRun() {
 		baseHelp()
 		return
 	}
+
+	defaultIndexPath := setupSemantifly(os.ExpandEnv("$HOME/.semantifly"), "default")
 
 	if subcommand, exists := subcommandDict[cmdName]; exists {
 		subcommand.Execute(args, defaultIndexPath)
@@ -84,18 +84,10 @@ func baseHelp() {
 	fmt.Println("\nUse 'semantifly <subcommand> --help' for more information about a specific subcommand.")
 }
 
-func setupSemantifly() string {
-	semantifly_dir := flag.String("semantifly_dir", os.ExpandEnv("$HOME/.semantifly"), "Where to read existing semantifly data, and write new semantifly data.")
-	semantifly_index := flag.String("semantifly_index", "default", "By default, semantifly writes data to the 'default' subdir of the configured semantifly_dir. Setting this to a value other than 'default' allows for multiple indices on the same local machine.")
-
-	flag.Parse()
-
-	createDirectoryIfNotExists(*semantifly_dir)
-	index_path := path.Join(*semantifly_dir, *semantifly_index)
+func setupSemantifly(semantifly_dir string, semantifly_index string) string {
+	createDirectoryIfNotExists(semantifly_dir)
+	index_path := path.Join(semantifly_dir, semantifly_index)
 	createDirectoryIfNotExists(index_path)
-
-	indexLog := path.Join(index_path, "index.log")
-	appendToIndexLog(indexLog)
 
 	return index_path
 }
@@ -153,19 +145,6 @@ func parseArgs(args []string, cmd *flag.FlagSet) ([]string, []string, error) {
 	}
 
 	return flags, nonFlags, nil
-}
-
-func appendToIndexLog(indexLog string) {
-	f, err := os.OpenFile(indexLog, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
-	if err != nil {
-		printCmdErr(fmt.Sprintf("Failed to open index log at %s: %s", indexLog, err))
-		return
-	}
-	defer f.Close()
-
-	if _, err := f.WriteString(strings.Join(os.Args, " ") + "\n"); err != nil {
-		printCmdErr(fmt.Sprintf("Failed to append to index log at %s: %s", indexLog, err))
-	}
 }
 
 func inferSourceType(uris []string) (string, error) {
@@ -294,7 +273,7 @@ func executeGet(args []string, defaultIndexPath string) {
 
 	resp, _, err := SubcommandGet(getArgs, *indexPath, os.Stdout)
 	if err != nil {
-		fmt.Printf("Error occurred during get subcommand: %v", err)
+		fmt.Printf("Error occurred during get subcommand: %v\n", err)
 		return
 	}
 
