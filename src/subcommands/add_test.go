@@ -219,42 +219,6 @@ func TestAdd(t *testing.T) {
 		t.Errorf("Data file for %s was not copied", testFilePath)
 	}
 
-	// Check if the test index was added to the database
-	var jsonIndex []byte
-
-	rows, err := conn.Query(ctx, `
-		SELECT entry
-        FROM index_list 
-        WHERE name=$1
-	`, testFilePath)
-	if err != nil {
-		t.Fatalf("Failed to get the index from the database: %v", err)
-	}
-
-	if err := rows.Scan(&jsonIndex); err != nil {
-		t.Fatalf("Failed to read the index from the database: %v", err)
-	}
-
-	var ile pb.IndexListEntry
-	if err = protojson.Unmarshal(jsonIndex, &ile); err != nil {
-		t.Fatalf("failed to unmarshal content metadata JSON to protobuf: %v", err)
-	}
-
-	if ile.Name != testFilePath {
-		t.Errorf("Expected Name %s, got %s", testFilePath, ile.Name)
-	}
-	if ile.ContentMetadata.URI != testFilePath {
-		t.Errorf("Expected URI %s, got %s", testFilePath, ile.ContentMetadata.URI)
-	}
-	if ile.ContentMetadata.DataType != pb.DataType_TEXT {
-		t.Errorf("Expected DataType %v, got %v", pb.DataType_TEXT, ile.ContentMetadata.DataType)
-	}
-	if ile.ContentMetadata.SourceType != pb.SourceType_LOCAL_FILE {
-		t.Errorf("Expected SourceType %v, got %v", pb.SourceType_LOCAL_FILE, ile.ContentMetadata.SourceType)
-	}
-	if ile.FirstAddedTime == nil {
-		t.Errorf("FirstAddedTime is nil")
-	}
 }
 
 func TestAdd_MultipleFilesSamePath(t *testing.T) {
@@ -415,5 +379,83 @@ func TestAdd_Webpage(t *testing.T) {
 	// Validating the contents of the copy file
 	if ile.Content != string(webpageContent) {
 		t.Errorf("Failed to validate webpage copy: Expected \"%s\", got \"%s\"", webpageContent, ile.Content)
+	}
+}
+
+func TestAdd_Database(t *testing.T) {
+	// Create a temporary directory for testing
+	tempDir, err := os.MkdirTemp("", "add_test")
+	if err != nil {
+		t.Fatalf("Failed to create temp directory: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	// Create the test files
+	testFilePath := path.Join(tempDir, "test_file.txt")
+	err = os.WriteFile(testFilePath, []byte("test content 1"), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	// Setup database connection
+	ctx, conn, err := setupDatabaseForTesting()
+	if err != nil {
+		t.Fatalf("failed to connect to PostgreSQL database: %v", err)
+	}
+	defer closeTestingDatabase()
+	defer conn.Close(ctx)
+
+	// Set up test arguments
+	args := AddArgs{
+		Context:    ctx,
+		DBConn:     conn,
+		IndexPath:  tempDir,
+		DataType:   "text",
+		SourceType: "local_file",
+		MakeCopy:   true,
+		DataURIs:   []string{testFilePath},
+	}
+
+	// Call the Add function
+	Add(args)
+
+	// Check if the test index was added to the database
+	var jsonIndex []byte
+
+	tx, err := conn.Begin(ctx)
+	if err != nil {
+		t.Fatalf("unable to connect to database: %v", err)
+	}
+	defer tx.Rollback(ctx)
+
+	err = tx.QueryRow(ctx, `
+			SELECT entry
+			FROM index_list 
+			WHERE name=$1
+		`, testFilePath).Scan(&jsonIndex)
+
+	if err != nil {
+		t.Fatalf("Failed to read the index from the database: %v", err)
+	}
+
+	var ile pb.IndexListEntry
+	if err = protojson.Unmarshal(jsonIndex, &ile); err != nil {
+		t.Fatalf("failed to unmarshal content metadata JSON to protobuf: %v", err)
+	}
+
+	if ile.Name != testFilePath {
+		t.Errorf("Expected Name %s, got %s", testFilePath, ile.Name)
+	}
+	if ile.ContentMetadata.URI != testFilePath {
+		t.Errorf("Expected URI %s, got %s", testFilePath, ile.ContentMetadata.URI)
+	}
+	if ile.ContentMetadata.DataType != pb.DataType_TEXT {
+		t.Errorf("Expected DataType %v, got %v", pb.DataType_TEXT, ile.ContentMetadata.DataType)
+	}
+	if ile.ContentMetadata.SourceType != pb.SourceType_LOCAL_FILE {
+		t.Errorf("Expected SourceType %v, got %v", pb.SourceType_LOCAL_FILE, ile.ContentMetadata.SourceType)
+	}
+	if ile.FirstAddedTime == nil {
+		t.Errorf("FirstAddedTime is nil")
 	}
 }
