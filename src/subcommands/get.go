@@ -31,9 +31,7 @@ func Get(g GetArgs) {
 		return
 	}
 
-	targetMetadata := targetEntry.ContentMetadata
-
-	targetMetadata, err = db.GetContentMetadata(g.Context, g.DBConn, g.Name)
+	targetMetadata, err := db.GetContentMetadata(g.Context, g.DBConn, g.Name)
 	if err != nil {
 		fmt.Printf("failed to get entry from database: %v\n", err)
 		return

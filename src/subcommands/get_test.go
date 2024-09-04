@@ -28,8 +28,18 @@ func TestGet(t *testing.T) {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
+	// Setup database connection
+	ctx, conn, err := setupDatabaseForTesting()
+	if err != nil {
+		t.Fatalf("failed to connect to PostgreSQL database: %v", err)
+	}
+	defer closeTestingDatabase()
+	defer conn.Close(ctx)
+
 	// Set up test arguments
 	args := AddArgs{
+		Context:    ctx,
+		DBConn:     conn,
 		IndexPath:  tempDir,
 		DataType:   "text",
 		SourceType: "local_file",
@@ -47,6 +57,8 @@ func TestGet(t *testing.T) {
 	}
 
 	getArgs := GetArgs{
+		Context:   ctx,
+		DBConn:    conn,
 		IndexPath: tempDir,
 		Name:      testFilePath,
 	}
@@ -84,8 +96,18 @@ func TestGet_Webpage(t *testing.T) {
 
 	testWebpageURL := "http://echo.jsontest.com/title/lorem/content/ipsum"
 
+	// Setup database connection
+	ctx, conn, err := setupDatabaseForTesting()
+	if err != nil {
+		t.Fatalf("failed to connect to PostgreSQL database: %v", err)
+	}
+	defer closeTestingDatabase()
+	defer conn.Close(ctx)
+
 	// Set up test arguments
 	args := AddArgs{
+		Context:    ctx,
+		DBConn:     conn,
 		IndexPath:  tempDir,
 		DataType:   "text",
 		SourceType: "webpage",
@@ -103,6 +125,8 @@ func TestGet_Webpage(t *testing.T) {
 	}
 
 	getArgs := GetArgs{
+		Context:   ctx,
+		DBConn:    conn,
 		IndexPath: tempDir,
 		Name:      testWebpageURL,
 	}
