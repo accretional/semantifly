@@ -15,7 +15,7 @@ import (
 
 type SubcommandInfo struct {
 	Description string
-	Execute     func([]string)
+	Execute     func([]string, string)
 }
 
 var subcommandDict = map[string]SubcommandInfo{
@@ -55,7 +55,7 @@ func CommandReadRun() {
 		os.Exit(1)
 	}
 
-	setupSemantifly()
+	defaultIndexPath := setupSemantifly()
 
 	cmdName := os.Args[1]
 	args := os.Args[2:]
@@ -66,7 +66,7 @@ func CommandReadRun() {
 	}
 
 	if subcommand, exists := subcommandDict[cmdName]; exists {
-		subcommand.Execute(args)
+		subcommand.Execute(args, defaultIndexPath)
 	} else {
 		printCmdErr("No valid subcommand provided.")
 		os.Exit(1)
@@ -84,9 +84,11 @@ func baseHelp() {
 	fmt.Println("\nUse 'semantifly <subcommand> --help' for more information about a specific subcommand.")
 }
 
-func setupSemantifly() {
+func setupSemantifly() string {
 	semantifly_dir := flag.String("semantifly_dir", os.ExpandEnv("$HOME/.semantifly"), "Where to read existing semantifly data, and write new semantifly data.")
 	semantifly_index := flag.String("semantifly_index", "default", "By default, semantifly writes data to the 'default' subdir of the configured semantifly_dir. Setting this to a value other than 'default' allows for multiple indices on the same local machine.")
+
+	flag.Parse()
 
 	createDirectoryIfNotExists(*semantifly_dir)
 	index_path := path.Join(*semantifly_dir, *semantifly_index)
@@ -94,6 +96,8 @@ func setupSemantifly() {
 
 	indexLog := path.Join(index_path, "index.log")
 	appendToIndexLog(indexLog)
+
+	return index_path
 }
 
 func createDirectoryIfNotExists(dir string) {
@@ -178,12 +182,12 @@ func inferSourceType(uris []string) (string, error) {
 	return sourceTypeStr, nil
 }
 
-func executeAdd(args []string) {
+func executeAdd(args []string, defaultIndexPath string) {
 	cmd := flag.NewFlagSet("add", flag.ExitOnError)
 	dataType := cmd.String("type", "text", "The type of the input data")
 	sourceType := cmd.String("source-type", "", "How to access the content")
 	makeLocalCopy := cmd.Bool("copy", false, "Whether to copy and use the file as it is now, or dynamically access it")
-	indexPath := cmd.String("index-path", "", "Path to the index file")
+	indexPath := cmd.String("index-path", defaultIndexPath, "Path to the index file")
 
 	flags, nonFlags, err := parseArgs(args, cmd)
 	if err != nil {
@@ -235,10 +239,10 @@ func executeAdd(args []string) {
 	}
 }
 
-func executeDelete(args []string) {
+func executeDelete(args []string, defaultIndexPath string) {
 	cmd := flag.NewFlagSet("delete", flag.ExitOnError)
 	deleteLocalCopy := cmd.Bool("copy", false, "Whether to delete the copy made")
-	indexPath := cmd.String("index-path", "", "Path to the index file")
+	indexPath := cmd.String("index-path", defaultIndexPath, "Path to the index file")
 
 	flags, nonFlags, err := parseArgs(args, cmd)
 	if err != nil {
@@ -266,9 +270,9 @@ func executeDelete(args []string) {
 	}
 }
 
-func executeGet(args []string) {
+func executeGet(args []string, defaultIndexPath string) {
 	cmd := flag.NewFlagSet("get", flag.ExitOnError)
-	indexPath := cmd.String("index-path", "", "Path to the index file")
+	indexPath := cmd.String("index-path", defaultIndexPath, "Path to the index file")
 
 	flags, nonFlags, err := parseArgs(args, cmd)
 	if err != nil {
@@ -297,12 +301,12 @@ func executeGet(args []string) {
 	fmt.Println(resp)
 }
 
-func executeUpdate(args []string) {
+func executeUpdate(args []string, defaultIndexPath string) {
 	cmd := flag.NewFlagSet("update", flag.ExitOnError)
 	dataType := cmd.String("type", "text", "The type of the input data")
 	sourceType := cmd.String("source-type", "", "How to access the content")
 	makeLocalCopy := cmd.Bool("copy", false, "Whether to copy and use the file as it is now, or dynamically access it")
-	indexPath := cmd.String("index-path", "", "Path to the index file")
+	indexPath := cmd.String("index-path", defaultIndexPath, "Path to the index file")
 
 	flags, nonFlags, err := parseArgs(args, cmd)
 	if err != nil {
@@ -353,9 +357,9 @@ func executeUpdate(args []string) {
 	}
 }
 
-func executeSearch(args []string) {
+func executeSearch(args []string, defaultIndexPath string) {
 	cmd := flag.NewFlagSet("search", flag.ExitOnError)
-	indexPath := cmd.String("index-path", "", "Path to the index file")
+	indexPath := cmd.String("index-path", defaultIndexPath, "Path to the index file")
 	topN := cmd.Int("n", 1, "Top n search results")
 
 	flags, nonFlags, err := parseArgs(args, cmd)
@@ -386,9 +390,9 @@ func executeSearch(args []string) {
 	PrintSearchResults(results, os.Stdout)
 }
 
-func executeStartServer(args []string) {
+func executeStartServer(args []string, defaultIndexPath string) {
 	cmd := flag.NewFlagSet("start-server", flag.ExitOnError)
-	serverIndexPath := cmd.String("index-path", "index", "Path to the server index")
+	serverIndexPath := cmd.String("index-path", defaultIndexPath, "Path to the server index")
 	port := cmd.String("port", "50051", "Port for the server")
 
 	flags, nonFlags, err := parseArgs(args, cmd)
@@ -408,6 +412,7 @@ func executeStartServer(args []string) {
 	s := grpc.NewServer()
 	pb.RegisterSemantiflyServer(s, SemantiflyNewServer(*serverIndexPath))
 	log.Printf("server listening at %v", lis.Addr())
+	log.Printf("using index path: %v", *serverIndexPath)
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
