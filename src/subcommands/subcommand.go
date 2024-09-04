@@ -13,9 +13,11 @@ import (
 	"google.golang.org/grpc"
 )
 
+var defaultIndexPath = path.Join(os.ExpandEnv("$HOME/.semantifly"), "default")
+
 type SubcommandInfo struct {
 	Description string
-	Execute     func([]string, string)
+	Execute     func([]string)
 }
 
 var subcommandDict = map[string]SubcommandInfo{
@@ -50,6 +52,7 @@ func printCmdErr(e string) {
 }
 
 func CommandReadRun() {
+	fmt.Println(defaultIndexPath)
 	if len(os.Args) < 2 {
 		printCmdErr("expected subcommand like 'add' or 'describe'")
 		os.Exit(1)
@@ -63,10 +66,8 @@ func CommandReadRun() {
 		return
 	}
 
-	defaultIndexPath := setupSemantifly(os.ExpandEnv("$HOME/.semantifly"), "default")
-
 	if subcommand, exists := subcommandDict[cmdName]; exists {
-		subcommand.Execute(args, defaultIndexPath)
+		subcommand.Execute(args)
 	} else {
 		printCmdErr("No valid subcommand provided.")
 		os.Exit(1)
@@ -82,23 +83,6 @@ func baseHelp() {
 	}
 
 	fmt.Println("\nUse 'semantifly <subcommand> --help' for more information about a specific subcommand.")
-}
-
-func setupSemantifly(semantifly_dir string, semantifly_index string) string {
-	createDirectoryIfNotExists(semantifly_dir)
-	index_path := path.Join(semantifly_dir, semantifly_index)
-	createDirectoryIfNotExists(index_path)
-
-	return index_path
-}
-
-func createDirectoryIfNotExists(dir string) {
-	if _, err := os.ReadDir(dir); err != nil {
-		fmt.Printf("No existing directory detected. Creating new directory at %s\n", dir)
-		if err := os.Mkdir(dir, 0777); err != nil {
-			printCmdErr(fmt.Sprintf("Failed to create directory at %s: %s", dir, err))
-		}
-	}
 }
 
 func isBoolFlag(fs *flag.FlagSet, name string) bool {
@@ -161,7 +145,7 @@ func inferSourceType(uris []string) (string, error) {
 	return sourceTypeStr, nil
 }
 
-func executeAdd(args []string, defaultIndexPath string) {
+func executeAdd(args []string) {
 	cmd := flag.NewFlagSet("add", flag.ExitOnError)
 	dataType := cmd.String("type", "text", "The type of the input data")
 	sourceType := cmd.String("source-type", "", "How to access the content")
@@ -218,7 +202,7 @@ func executeAdd(args []string, defaultIndexPath string) {
 	}
 }
 
-func executeDelete(args []string, defaultIndexPath string) {
+func executeDelete(args []string) {
 	cmd := flag.NewFlagSet("delete", flag.ExitOnError)
 	deleteLocalCopy := cmd.Bool("copy", false, "Whether to delete the copy made")
 	indexPath := cmd.String("index-path", defaultIndexPath, "Path to the index file")
@@ -249,7 +233,7 @@ func executeDelete(args []string, defaultIndexPath string) {
 	}
 }
 
-func executeGet(args []string, defaultIndexPath string) {
+func executeGet(args []string) {
 	cmd := flag.NewFlagSet("get", flag.ExitOnError)
 	indexPath := cmd.String("index-path", defaultIndexPath, "Path to the index file")
 
@@ -280,7 +264,7 @@ func executeGet(args []string, defaultIndexPath string) {
 	fmt.Println(resp)
 }
 
-func executeUpdate(args []string, defaultIndexPath string) {
+func executeUpdate(args []string) {
 	cmd := flag.NewFlagSet("update", flag.ExitOnError)
 	dataType := cmd.String("type", "text", "The type of the input data")
 	sourceType := cmd.String("source-type", "", "How to access the content")
@@ -336,7 +320,7 @@ func executeUpdate(args []string, defaultIndexPath string) {
 	}
 }
 
-func executeSearch(args []string, defaultIndexPath string) {
+func executeSearch(args []string) {
 	cmd := flag.NewFlagSet("search", flag.ExitOnError)
 	indexPath := cmd.String("index-path", defaultIndexPath, "Path to the index file")
 	topN := cmd.Int("n", 1, "Top n search results")
@@ -369,7 +353,7 @@ func executeSearch(args []string, defaultIndexPath string) {
 	PrintSearchResults(results, os.Stdout)
 }
 
-func executeStartServer(args []string, defaultIndexPath string) {
+func executeStartServer(args []string) {
 	cmd := flag.NewFlagSet("start-server", flag.ExitOnError)
 	serverIndexPath := cmd.String("index-path", defaultIndexPath, "Path to the server index")
 	port := cmd.String("port", "50051", "Port for the server")
