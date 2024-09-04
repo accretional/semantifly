@@ -32,19 +32,20 @@ func Update(u UpdateArgs) {
 		return
 	}
 
-	if err := updateIndex(indexMap, &u); err != nil {
+	ile, err := updateIndex(indexMap, &u)
+	if err != nil {
 		fmt.Printf("Failed to update the index entry %s: %v", u.Name, err)
 		return
 	}
 
-	ile := &pb.IndexListEntry{
-		Name: u.Name,
-		ContentMetadata: &pb.ContentMetadata{
-			URI:        u.DataURI,
-			DataType:   pb.DataType(pb.DataType_value[u.DataType]),
-			SourceType: pb.SourceType(pb.SourceType_value[u.SourceType]),
-		},
-	}
+	// ile := &pb.IndexListEntry{
+	// 	Name: u.Name,
+	// 	ContentMetadata: &pb.ContentMetadata{
+	// 		URI:        u.DataURI,
+	// 		DataType:   pb.DataType(pb.DataType_value[u.DataType]),
+	// 		SourceType: pb.SourceType(pb.SourceType_value[u.SourceType]),
+	// 	},
+	// }
 
 	err = search.CreateSearchDictionary(ile)
 	if err != nil {
@@ -54,14 +55,7 @@ func Update(u UpdateArgs) {
 
 	if u.UpdateCopy == "true" {
 
-		sourceType, err := parseSourceType(u.SourceType)
-		if err != nil {
-			fmt.Printf("Invalid source type: %v", err)
-			return
-		}
-
-		content, err := fetch.FetchFromSource(sourceType, u.DataURI)
-
+		content, err := fetch.FetchFromSource(ile.ContentMetadata.SourceType, u.DataURI)
 		if err != nil {
 			fmt.Printf("Failed to validate the URI %s: %v\n", u, err)
 			return
@@ -92,18 +86,18 @@ func Update(u UpdateArgs) {
 	fmt.Printf("Index %s updated successfully to URI %s\n", u.Name, u.DataURI)
 }
 
-func updateIndex(indexMap map[string]*pb.IndexListEntry, u *UpdateArgs) error {
+func updateIndex(indexMap map[string]*pb.IndexListEntry, u *UpdateArgs) (*pb.IndexListEntry, error) {
 
 	entry, exists := indexMap[u.Name]
 	if !exists {
-		return fmt.Errorf("entry %s not found", u.Name)
+		return nil, fmt.Errorf("entry %s not found", u.Name)
 	}
 
 	entry.ContentMetadata.URI = u.DataURI
 
 	if u.DataType != "" {
 		if dataType, err := parseDataType(u.DataType); err != nil {
-			return fmt.Errorf("error in parsing DataType: %v", err)
+			return nil, fmt.Errorf("error in parsing DataType: %v", err)
 		} else {
 			entry.ContentMetadata.DataType = dataType
 		}
@@ -111,7 +105,7 @@ func updateIndex(indexMap map[string]*pb.IndexListEntry, u *UpdateArgs) error {
 
 	if u.SourceType != "" {
 		if sourceType, err := parseSourceType(u.SourceType); err != nil {
-			return fmt.Errorf("error in parsing SourceType: %v", err)
+			return nil, fmt.Errorf("error in parsing SourceType: %v", err)
 		} else {
 			entry.ContentMetadata.SourceType = sourceType
 		}
@@ -120,8 +114,5 @@ func updateIndex(indexMap map[string]*pb.IndexListEntry, u *UpdateArgs) error {
 	entry.LastRefreshedTime = timestamppb.Now()
 	indexMap[u.Name] = entry
 
-	u.SourceType = pb.SourceType_name[int32(entry.ContentMetadata.SourceType)]
-	u.DataType = pb.DataType_name[int32(entry.ContentMetadata.DataType)]
-
-	return nil
+	return entry, nil
 }

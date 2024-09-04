@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -26,8 +27,18 @@ func TestUpdate(t *testing.T) {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
+	// Setup database connection
+	ctx, conn, err := setupDatabaseForTesting()
+	if err != nil {
+		t.Fatalf("failed to connect to PostgreSQL database: %v", err)
+	}
+	defer closeTestingDatabase()
+	defer conn.Close(ctx)
+
 	// Set up test arguments
 	args := AddArgs{
+		Context:    ctx,
+		DBConn:     conn,
 		IndexPath:  tempDir,
 		DataType:   "text",
 		SourceType: "local_file",
@@ -54,6 +65,8 @@ func TestUpdate(t *testing.T) {
 
 	// Set up test arguments
 	updateArgs := UpdateArgs{
+		Context:    ctx,
+		DBConn:     conn,
 		IndexPath:  tempDir,
 		Name:       testFilePath,
 		UpdateCopy: "true",
@@ -107,5 +120,114 @@ func TestUpdate(t *testing.T) {
 
 	if ile.Content != updatedContent {
 		t.Errorf("Copy file for %s not updated. Expected content \"%s\", found \"%s\"", testFilePath, updatedContent, ile.Content)
+	}
+}
+
+func TestUpdate_Database(t *testing.T) {
+
+	// Create a temporary directory for testing
+	tempDir, err := os.MkdirTemp("", "add_test")
+	if err != nil {
+		t.Fatalf("Failed to create temp directory: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	// Create the test files
+	testFilePath := path.Join(tempDir, "test_file.txt")
+	err = os.WriteFile(testFilePath, []byte("test content"), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	// Setup database connection
+	ctx, conn, err := setupDatabaseForTesting()
+	if err != nil {
+		t.Fatalf("failed to connect to PostgreSQL database: %v", err)
+	}
+	defer closeTestingDatabase()
+	defer conn.Close(ctx)
+
+	// Set up test arguments
+	args := AddArgs{
+		Context:    ctx,
+		DBConn:     conn,
+		IndexPath:  tempDir,
+		DataType:   "text",
+		SourceType: "local_file",
+		DataURIs:   []string{testFilePath},
+	}
+
+	// Call the Add function
+	Add(args)
+
+	// Check if the entry was added to the database
+	var jsonIndex []byte
+
+	tx, err := conn.Begin(ctx)
+	if err != nil {
+		t.Fatalf("unable to connect to database: %v", err)
+	}
+	defer tx.Rollback(ctx)
+
+	err = tx.QueryRow(ctx, `
+			SELECT entry
+			FROM index_list 
+			WHERE name=$1
+		`, testFilePath).Scan(&jsonIndex)
+
+	if err != nil {
+		t.Fatalf("Failed to read the index from the database: %v", err)
+	}
+
+	// Updating the index entry
+	updatedFilePath := path.Join(tempDir, "test_file_updated.txt")
+	updatedContent := "test content - updated"
+	err = os.WriteFile(updatedFilePath, []byte(updatedContent), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	// Set up test arguments
+	updateArgs := UpdateArgs{
+		Context:   ctx,
+		DBConn:    conn,
+		IndexPath: tempDir,
+		Name:      testFilePath,
+		DataURI:   updatedFilePath,
+	}
+
+	// Call the Add function
+	Update(updateArgs)
+
+	// Check if the entry was updated in the database
+	err = tx.QueryRow(ctx, `
+			SELECT entry
+			FROM index_list 
+			WHERE name=$1
+		`, testFilePath).Scan(&jsonIndex)
+
+	if err != nil {
+		t.Fatalf("Failed to read the index from the database: %v", err)
+	}
+
+	var ile pb.IndexListEntry
+	if err = protojson.Unmarshal(jsonIndex, &ile); err != nil {
+		t.Fatalf("failed to unmarshal content metadata JSON to protobuf: %v", err)
+	}
+
+	if ile.Name != testFilePath {
+		t.Errorf("Expected Name %s, got %s", testFilePath, ile.Name)
+	}
+	if ile.ContentMetadata.URI != updatedFilePath {
+		t.Errorf("Expected URI %s, got %s", testFilePath, ile.ContentMetadata.URI)
+	}
+	if ile.ContentMetadata.DataType != pb.DataType_TEXT {
+		t.Errorf("Expected DataType %v, got %v", pb.DataType_TEXT, ile.ContentMetadata.DataType)
+	}
+	if ile.ContentMetadata.SourceType != pb.SourceType_LOCAL_FILE {
+		t.Errorf("Expected SourceType %v, got %v", pb.SourceType_LOCAL_FILE, ile.ContentMetadata.SourceType)
+	}
+	if ile.FirstAddedTime == nil {
+		t.Errorf("FirstAddedTime is nil")
 	}
 }
