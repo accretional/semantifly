@@ -38,15 +38,6 @@ func Update(u UpdateArgs) {
 		return
 	}
 
-	// ile := &pb.IndexListEntry{
-	// 	Name: u.Name,
-	// 	ContentMetadata: &pb.ContentMetadata{
-	// 		URI:        u.DataURI,
-	// 		DataType:   pb.DataType(pb.DataType_value[u.DataType]),
-	// 		SourceType: pb.SourceType(pb.SourceType_value[u.SourceType]),
-	// 	},
-	// }
-
 	err = search.CreateSearchDictionary(ile)
 	if err != nil {
 		fmt.Printf("Failed to update the search dictionary %s: %v", u, err)
