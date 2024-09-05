@@ -59,7 +59,7 @@ func setupServerAndClient(t *testing.T) (pb.SemantiflyClient, func()) {
 }
 
 func startTestServer() {
-	go executeStartServer([]string{"--index-path", testDir})
+	go executeStartServer([]string{testDir})
 
 	// Allow some time for the server to start
 	time.Sleep(100 * time.Millisecond)
