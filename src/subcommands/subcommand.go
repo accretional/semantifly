@@ -419,6 +419,11 @@ func executeStartServer(args []string) {
 }
 
 func convertToAbsPath(relPath string) string {
+	sourceType, _ := inferSourceType([]string{relPath})
+	if sourceType == "webpage" {
+		return relPath
+	}
+
 	if path.IsAbs(relPath) {
 		return relPath
 	}
