@@ -80,6 +80,7 @@ func TestAddSubcommand(t *testing.T) {
 	}
 	defer os.Remove(tempFile)
 	testIndex := filepath.Join(testIndexPath, "index.list")
+	newTestIndexPath := filepath.Join(testIndexPath, "test-in-test")
 	os.Remove(testIndex)
 
 	t.Run("Help", func(t *testing.T) {
@@ -104,6 +105,18 @@ func TestAddSubcommand(t *testing.T) {
 		if err := runAndCheckStdoutContains("add", "", []string{tempFile, "--index-path", testIndexPath}); err != nil {
 			t.Errorf("Failed to execute 'add' with existing file: %v", err)
 		}
+	})
+
+	t.Run("New directory for index", func(t *testing.T) {
+		if err := runAndCheckStdoutContains("add", "", []string{tempFile, "--index-path", newTestIndexPath}); err != nil {
+			t.Errorf("Failed to execute 'add' with existing file: %v", err)
+		}
+
+		if _, err := os.Stat(newTestIndexPath); os.IsNotExist(err) {
+			t.Errorf("Expected directory %s to be created, but it doesn't exist", newTestIndexPath)
+		}
+
+		os.RemoveAll(newTestIndexPath)
 	})
 }
 
