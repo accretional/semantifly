@@ -37,9 +37,9 @@ func SubcommandGet(ctx context.Context, conn db.PgxIface, g *pb.GetRequest, inde
 
 			targetMetadata, err := db.GetContentMetadata(ctx, conn, g.Name)
 			if err != nil {
-				return "", nil, fmt.Errorf("failed to get entry from database: %v\n", err)
+				return "", nil, fmt.Errorf("failed to get entry from database: %v", err)
 			} else if targetMetadata == nil {
-				return "", nil, fmt.Errorf("entry '%s' not found in database\n", g.Name)
+				return "", nil, fmt.Errorf("entry '%s' not found in database", g.Name)
 
 			}
 

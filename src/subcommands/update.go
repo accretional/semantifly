@@ -44,11 +44,11 @@ func SubcommandUpdate(ctx context.Context, conn db.PgxIface, u *pb.UpdateRequest
 	}
 
 	if err := writeIndex(indexFilePath, indexMap); err != nil {
-		return fmt.Errorf("Failed to write to the index file: %v", err)
+		return fmt.Errorf("failed to write to the index file: %v", err)
 	}
 
 	if err := db.InsertRows(ctx, conn, &pb.Index{Entries: []*pb.IndexListEntry{indexMap[u.Name]}}); err != nil {
-		return fmt.Errorf("Failed to update the database: %v", err)
+		return fmt.Errorf("failed to update the database: %v", err)
 	}
 
 	return nil

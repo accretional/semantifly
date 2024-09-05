@@ -20,7 +20,7 @@ func SubcommandAdd(ctx context.Context, conn db.PgxIface, a *pb.AddRequest, inde
 	}
 
 	if indexMap[a.AddedMetadata.URI] != nil {
-		return fmt.Errorf("file %s has already been added. Skipping without refresh.\n", a.AddedMetadata.URI)
+		return fmt.Errorf("file %s has already been added. Skipping without refresh", a.AddedMetadata.URI)
 	}
 
 	ile := &pb.IndexListEntry{
