@@ -29,6 +29,14 @@ func TestGet(t *testing.T) {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
+	// Setup database connection
+	ctx, conn, err := setupDatabaseForTesting()
+	if err != nil {
+		t.Fatalf("failed to connect to PostgreSQL database: %v", err)
+	}
+	defer closeTestingDatabase()
+	defer conn.Close(ctx)
+
 	testFileData := &pb.ContentMetadata{
 		DataType:   0,
 		SourceType: 0,
@@ -42,7 +50,7 @@ func TestGet(t *testing.T) {
 
 	var addBuf bytes.Buffer
 
-	err = SubcommandAdd(addArgs, tempDir, &addBuf)
+	err = SubcommandAdd(ctx, conn, addArgs, tempDir, &addBuf)
 	if err != nil {
 		t.Fatalf("Add function returned an error: %v", err)
 	}
@@ -59,7 +67,7 @@ func TestGet(t *testing.T) {
 
 	var getBuf bytes.Buffer
 
-	resp, _, err := SubcommandGet(getArgs, tempDir, &getBuf)
+	resp, _, err := SubcommandGet(ctx, conn, getArgs, tempDir, &getBuf)
 	if err != nil {
 		t.Fatalf("Get function returned an error: %v", err)
 	}
@@ -79,6 +87,14 @@ func TestGet_Webpage(t *testing.T) {
 
 	testWebpageURL := "http://echo.jsontest.com/title/lorem/content/ipsum"
 
+	// Setup database connection
+	ctx, conn, err := setupDatabaseForTesting()
+	if err != nil {
+		t.Fatalf("failed to connect to PostgreSQL database: %v", err)
+	}
+	defer closeTestingDatabase()
+	defer conn.Close(ctx)
+
 	testWebData := &pb.ContentMetadata{
 		DataType:   0,
 		SourceType: 1,
@@ -87,12 +103,12 @@ func TestGet_Webpage(t *testing.T) {
 
 	addArgs := &pb.AddRequest{
 		AddedMetadata: testWebData,
-		MakeCopy:  true,
+		MakeCopy:      false,
 	}
 
 	var addBuf bytes.Buffer
 
-	err = SubcommandAdd(addArgs, tempDir, &addBuf)
+	err = SubcommandAdd(ctx, conn, addArgs, tempDir, &addBuf)
 	if err != nil {
 		t.Fatalf("Add function returned an error: %v", err)
 	}
@@ -108,7 +124,7 @@ func TestGet_Webpage(t *testing.T) {
 
 	var getBuf bytes.Buffer
 
-	getResp, _, err := SubcommandGet(getArgs, tempDir, &getBuf)
+	getResp, _, err := SubcommandGet(ctx, conn, getArgs, tempDir, &getBuf)
 	if err != nil {
 		t.Fatalf("Get function returned an error: %v", err)
 	}

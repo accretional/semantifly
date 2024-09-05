@@ -314,7 +314,7 @@ func executeGet(ctx context.Context, conn db.PgxIface, args []string) {
 		Name: cmd.Args()[0],
 	}
 
-	resp, _, err := SubcommandGet(getArgs, *indexPath, os.Stdout)
+	resp, _, err := SubcommandGet(ctx, conn, getArgs, *indexPath, os.Stdout)
 	if err != nil {
 		fmt.Printf("Error occurred during get subcommand: %v", err)
 		return
