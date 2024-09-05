@@ -11,6 +11,10 @@ import (
 )
 
 func SubcommandAdd(a *pb.AddRequest, indexPath string, w io.Writer) error {
+	if err := createDirectoriesIfNotExist(indexPath); err != nil {
+		return fmt.Errorf("Failed to create directories: %v", err)
+	}
+
 	indexFilePath := path.Join(indexPath, indexFile)
 	indexMap, err := readIndex(indexFilePath, true)
 	if err != nil {

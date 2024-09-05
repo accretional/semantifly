@@ -101,7 +101,7 @@ func makeCopy(indexPath string, ile *pb.IndexListEntry) error {
 	}
 
 	ileCopy := &pb.IndexListEntry{
-		Name:         ile.Name,
+		Name: ile.Name,
 
 		ContentMetadata: &pb.ContentMetadata{
 			URI:        ile.ContentMetadata.URI,
@@ -195,4 +195,14 @@ func parseSourceType(str string) (pb.SourceType, error) {
 		return pb.SourceType_LOCAL_FILE, fmt.Errorf("unknown source type: %s", str)
 	}
 	return pb.SourceType(val), nil
+}
+
+func createDirectoriesIfNotExist(dir string) error {
+	if _, err := os.ReadDir(dir); err != nil {
+		fmt.Printf("No existing directory detected. Creating new directory at %s\n", dir)
+		if err := os.MkdirAll(dir, 0777); err != nil {
+			return fmt.Errorf("Failed to create directory at %s: %s", dir, err)
+		}
+	}
+	return nil
 }
