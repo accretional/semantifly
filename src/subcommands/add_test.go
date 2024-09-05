@@ -2,6 +2,7 @@ package subcommands
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,9 +11,56 @@ import (
 	"strings"
 	"testing"
 
+	"accretional.com/semantifly/database"
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
+	"github.com/go-pg/pg/v10"
+	"github.com/jackc/pgx/v5"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 )
+
+func closeTestingDatabase() error {
+	// Connect to the default "postgres" database to drop the test database
+	defaultDB := pg.Connect(&pg.Options{
+		User:     "postgres",
+		Password: "postgres",
+		Addr:     "localhost:5432",
+		Database: "postgres",
+	})
+	defer defaultDB.Close()
+
+	// Terminate all connections to the test database
+	_, err := defaultDB.Exec("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'testdb'")
+	if err != nil {
+		return fmt.Errorf("Failed to terminate connections to test database: %v", err)
+	}
+
+	// Drop the test database
+	_, err = defaultDB.Exec("DROP DATABASE IF EXISTS testdb")
+	if err != nil {
+		return fmt.Errorf("Failed to drop test database: %v", err)
+	}
+
+	return nil
+}
+
+func setupDatabaseForTesting() (context.Context, database.PgxIface, error) {
+
+	// Test connection
+	ctx := context.Background()
+	conn, err := pgx.Connect(ctx, os.Getenv("DATABASE_URL"))
+	if err != nil {
+		return nil, nil, fmt.Errorf("Failed to establish connection to the database: %v", err)
+	}
+
+	// Test database table initialisation
+	err = database.InitializeDatabaseSchema(ctx, conn)
+	if err != nil {
+		return nil, nil, fmt.Errorf("Failed to initialise the database schema: %v", err)
+	}
+
+	return ctx, conn, nil
+}
 
 func TestAdd(t *testing.T) {
 	fmt.Println("--- Testing Add command ---")
@@ -30,6 +78,13 @@ func TestAdd(t *testing.T) {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
+	// Setup testing database tables
+	ctx, conn, err := setupDatabaseForTesting()
+	if err != nil {
+		t.Fatalf("Failed to setup the testing database: %v", err)
+	}
+	defer closeTestingDatabase()
+
 	testFileData := &pb.ContentMetadata{
 		DataType:   0,
 		SourceType: 0,
@@ -45,7 +100,7 @@ func TestAdd(t *testing.T) {
 	var buf bytes.Buffer
 
 	// Call the Add function with the buffer
-	err = SubcommandAdd(args, tempDir, &buf)
+	err = SubcommandAdd(ctx, conn, args, tempDir, &buf)
 	if err != nil {
 		t.Fatalf("Add function returned an error: %v", err)
 	}
@@ -106,6 +161,13 @@ func TestAdd_MultipleFilesSamePath(t *testing.T) {
 		t.Fatalf("Failed to create test file 1: %v", err)
 	}
 
+	// Setup testing database tables
+	ctx, conn, err := setupDatabaseForTesting()
+	if err != nil {
+		t.Fatalf("Failed to setup the testing database: %v", err)
+	}
+	defer closeTestingDatabase()
+
 	testFilePath2 := path.Join(tempDir, "test_file.txt")
 
 	// Set up test arguments
@@ -122,7 +184,7 @@ func TestAdd_MultipleFilesSamePath(t *testing.T) {
 	}
 
 	var buf1 bytes.Buffer
-	err = SubcommandAdd(args, tempDir, &buf1)
+	err = SubcommandAdd(ctx, conn, args, tempDir, &buf1)
 	if err != nil {
 		t.Fatalf("Add function returned an error: %v", err)
 	}
@@ -139,7 +201,7 @@ func TestAdd_MultipleFilesSamePath(t *testing.T) {
 	}
 
 	var buf2 bytes.Buffer
-	err = SubcommandAdd(args, tempDir, &buf2)
+	err = SubcommandAdd(ctx, conn, args, tempDir, &buf2)
 	if err == nil {
 		t.Fatalf("Add function did not return an error when it was suppposed to.")
 	}
@@ -176,7 +238,14 @@ func TestAdd_Webpage(t *testing.T) {
 	}
 	defer os.RemoveAll(tempDir)
 
-	// Create the test files
+	// Setup testing database tables
+	ctx, conn, err := setupDatabaseForTesting()
+	if err != nil {
+		t.Fatalf("Failed to setup the testing database: %v", err)
+	}
+	defer closeTestingDatabase()
+
+	// Create the test url
 	testWebpageURL := "http://echo.jsontest.com/title/lorem/content/ipsum"
 
 	// Set up test arguments
@@ -193,7 +262,7 @@ func TestAdd_Webpage(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	err = SubcommandAdd(args, tempDir, &buf)
+	err = SubcommandAdd(ctx, conn, args, tempDir, &buf)
 	if err != nil {
 		t.Fatalf("Add function returned an error: %v", err)
 	}
@@ -269,5 +338,89 @@ func TestAdd_Webpage(t *testing.T) {
 	// Validating the contents of the copy file
 	if ile.Content != string(webpageContent) {
 		t.Errorf("Failed to validate webpage copy: Expected \"%s\", got \"%s\"", webpageContent, ile.Content)
+	}
+}
+
+func TestAdd_Database(t *testing.T) {
+	// Create a temporary directory for testing
+	tempDir, err := os.MkdirTemp("", "add_test")
+	if err != nil {
+		t.Fatalf("Failed to create temp directory: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	// Create the test files
+	testFilePath := path.Join(tempDir, "test_file.txt")
+	err = os.WriteFile(testFilePath, []byte("test content 1"), 0644)
+	if err != nil {
+		t.Fatalf("Failed to create test file: %v", err)
+	}
+
+	// Setup database connection
+	ctx, conn, err := setupDatabaseForTesting()
+	if err != nil {
+		t.Fatalf("failed to connect to PostgreSQL database: %v", err)
+	}
+	defer closeTestingDatabase()
+	defer conn.Close(ctx)
+
+	testFileData := &pb.ContentMetadata{
+		DataType:   0,
+		SourceType: 0,
+		URI:        testFilePath,
+	}
+
+	args := &pb.AddRequest{
+		AddedMetadata: testFileData,
+		MakeCopy:      true,
+	}
+
+	// Create a buffer to capture output
+	var buf bytes.Buffer
+
+	// Call the Add function with the buffer
+	err = SubcommandAdd(ctx, conn, args, tempDir, &buf)
+	if err != nil {
+		t.Fatalf("Add function returned an error: %v", err)
+	}
+
+	// Check if the test index was added to the database
+	var jsonIndex []byte
+
+	tx, err := conn.Begin(ctx)
+	if err != nil {
+		t.Fatalf("unable to connect to database: %v", err)
+	}
+	defer tx.Rollback(ctx)
+
+	err = tx.QueryRow(ctx, `
+			SELECT entry
+			FROM index_list 
+			WHERE name=$1
+		`, testFilePath).Scan(&jsonIndex)
+
+	if err != nil {
+		t.Fatalf("Failed to read the index from the database: %v", err)
+	}
+
+	var ile pb.IndexListEntry
+	if err = protojson.Unmarshal(jsonIndex, &ile); err != nil {
+		t.Fatalf("failed to unmarshal content metadata JSON to protobuf: %v", err)
+	}
+
+	if ile.Name != testFilePath {
+		t.Errorf("Expected Name %s, got %s", testFilePath, ile.Name)
+	}
+	if ile.ContentMetadata.URI != testFilePath {
+		t.Errorf("Expected URI %s, got %s", testFilePath, ile.ContentMetadata.URI)
+	}
+	if ile.ContentMetadata.DataType != pb.DataType_TEXT {
+		t.Errorf("Expected DataType %v, got %v", pb.DataType_TEXT, ile.ContentMetadata.DataType)
+	}
+	if ile.ContentMetadata.SourceType != pb.SourceType_LOCAL_FILE {
+		t.Errorf("Expected SourceType %v, got %v", pb.SourceType_LOCAL_FILE, ile.ContentMetadata.SourceType)
+	}
+	if ile.FirstAddedTime == nil {
+		t.Errorf("FirstAddedTime is nil")
 	}
 }

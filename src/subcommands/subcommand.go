@@ -1,6 +1,7 @@
 package subcommands
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -9,13 +10,15 @@ import (
 	"path"
 	"strings"
 
+	db "accretional.com/semantifly/database"
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
+	"github.com/jackc/pgx/v5"
 	"google.golang.org/grpc"
 )
 
 type SubcommandInfo struct {
 	Description string
-	Execute     func([]string)
+	Execute     func(context.Context, db.PgxIface, []string)
 }
 
 var subcommandDict = map[string]SubcommandInfo{
@@ -57,6 +60,13 @@ func CommandReadRun() {
 
 	setupSemantifly()
 
+	ctx, conn, err := setupDBConn()
+	if err != nil {
+		fmt.Printf("Failed to establish connection to the database: %v", err)
+		return
+	}
+	defer conn.Close(ctx)
+
 	cmdName := os.Args[1]
 	args := os.Args[2:]
 
@@ -66,7 +76,7 @@ func CommandReadRun() {
 	}
 
 	if subcommand, exists := subcommandDict[cmdName]; exists {
-		subcommand.Execute(args)
+		subcommand.Execute(ctx, conn, args)
 	} else {
 		printCmdErr("No valid subcommand provided.")
 		os.Exit(1)
@@ -94,6 +104,22 @@ func setupSemantifly() {
 
 	indexLog := path.Join(index_path, "index.log")
 	appendToIndexLog(indexLog)
+}
+
+func setupDBConn() (context.Context, db.PgxIface, error) {
+	ctx := context.Background()
+	conn, err := pgx.Connect(ctx, os.Getenv("DATABASE_URL"))
+
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to connect to PostgreSQL database: %v", err)
+	}
+
+	err = db.InitializeDatabaseSchema(ctx, conn)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to initialise the database schema: %v", err)
+	}
+
+	return ctx, conn, nil
 }
 
 func createDirectoryIfNotExists(dir string) {
@@ -178,7 +204,7 @@ func inferSourceType(uris []string) (string, error) {
 	return sourceTypeStr, nil
 }
 
-func executeAdd(args []string) {
+func executeAdd(ctx context.Context, conn db.PgxIface, args []string) {
 	cmd := flag.NewFlagSet("add", flag.ExitOnError)
 	dataType := cmd.String("type", "text", "The type of the input data")
 	sourceType := cmd.String("source-type", "", "How to access the content")
@@ -228,14 +254,14 @@ func executeAdd(args []string) {
 		MakeCopy: *makeLocalCopy,
 	}
 
-	err = SubcommandAdd(addArgs, *indexPath, os.Stdout)
+	err = SubcommandAdd(ctx, conn, addArgs, *indexPath, os.Stdout)
 	if err != nil {
 		fmt.Printf("Error occurred during add subcommand: %v", err)
 		return
 	}
 }
 
-func executeDelete(args []string) {
+func executeDelete(ctx context.Context, conn db.PgxIface, args []string) {
 	cmd := flag.NewFlagSet("delete", flag.ExitOnError)
 	deleteLocalCopy := cmd.Bool("copy", false, "Whether to delete the copy made")
 	indexPath := cmd.String("index-path", "", "Path to the index file")
@@ -266,7 +292,7 @@ func executeDelete(args []string) {
 	}
 }
 
-func executeGet(args []string) {
+func executeGet(ctx context.Context, conn db.PgxIface, args []string) {
 	cmd := flag.NewFlagSet("get", flag.ExitOnError)
 	indexPath := cmd.String("index-path", "", "Path to the index file")
 
@@ -297,7 +323,7 @@ func executeGet(args []string) {
 	fmt.Println(resp)
 }
 
-func executeUpdate(args []string) {
+func executeUpdate(ctx context.Context, conn db.PgxIface, args []string) {
 	cmd := flag.NewFlagSet("update", flag.ExitOnError)
 	dataType := cmd.String("type", "text", "The type of the input data")
 	sourceType := cmd.String("source-type", "", "How to access the content")
@@ -353,7 +379,7 @@ func executeUpdate(args []string) {
 	}
 }
 
-func executeSearch(args []string) {
+func executeSearch(ctx context.Context, conn db.PgxIface, args []string) {
 	cmd := flag.NewFlagSet("search", flag.ExitOnError)
 	indexPath := cmd.String("index-path", "", "Path to the index file")
 	topN := cmd.Int("n", 1, "Top n search results")
@@ -386,7 +412,7 @@ func executeSearch(args []string) {
 	PrintSearchResults(results, os.Stdout)
 }
 
-func executeStartServer(args []string) {
+func executeStartServer(ctx context.Context, conn db.PgxIface, args []string) {
 	cmd := flag.NewFlagSet("start-server", flag.ExitOnError)
 	serverIndexPath := cmd.String("index-path", "index", "Path to the server index")
 	port := cmd.String("port", "50051", "Port for the server")

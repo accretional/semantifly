@@ -9,7 +9,70 @@ import (
 	"os/exec"
 	"strings"
 	"testing"
+
+	"github.com/go-pg/pg/v10"
 )
+
+func createTestingDatabase() (*pg.DB, error) {
+	// Connect to the default "postgres" database
+	db := pg.Connect(&pg.Options{
+		User:     "postgres",
+		Password: "postgres",
+		Addr:     "localhost:5432",
+		Database: "postgres",
+	})
+
+	// Drop the database if it exists, then create it
+	_, err := db.Exec("DROP DATABASE IF EXISTS testdb")
+	if err != nil {
+		db.Close()
+		return nil, fmt.Errorf("failed to drop existing test database: %v", err)
+	}
+
+	_, err = db.Exec("CREATE DATABASE testdb")
+	if err != nil {
+		db.Close()
+		return nil, fmt.Errorf("failed to create test database: %v", err)
+	}
+
+	// Close the connection to the "postgres" database
+	db.Close()
+
+	// Connect to the newly created database
+	testDB := pg.Connect(&pg.Options{
+		User:     "postgres",
+		Password: "postgres",
+		Addr:     "localhost:5432",
+		Database: "testdb",
+	})
+
+	return testDB, nil
+}
+
+func removeTestingDatabase() error {
+	// Connect to the default "postgres" database to drop the test database
+	defaultDB := pg.Connect(&pg.Options{
+		User:     "postgres",
+		Password: "postgres",
+		Addr:     "localhost:5432",
+		Database: "postgres",
+	})
+	defer defaultDB.Close()
+
+	// Terminate all connections to the test database
+	_, err := defaultDB.Exec("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'testdb'")
+	if err != nil {
+		return fmt.Errorf("Failed to terminate connections to test database: %v", err)
+	}
+
+	// Drop the test database
+	_, err = defaultDB.Exec("DROP DATABASE IF EXISTS testdb")
+	if err != nil {
+		return fmt.Errorf("Failed to drop test database: %v", err)
+	}
+
+	return nil
+}
 
 // Main is run before every test to set up the testing folder & semantifly
 func TestMain(m *testing.M) {
@@ -32,16 +95,41 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
+	cmd = exec.Command("bash", "setup_postgres.sh")
+
+	var stderrBuf bytes.Buffer
+	cmd.Stderr = io.MultiWriter(os.Stderr, &stderrBuf)
+
+	err = cmd.Run()
+	if err != nil {
+		fmt.Printf("Failed to setup PostgreSQL server: %v", err)
+		os.Exit(1)
+	}
+
 	oldPath := os.Getenv("PATH")
 	os.Setenv("PATH", oldPath+":"+semantifly_dir)
+	defer os.Setenv("PATH", oldPath)
+
+	os.Setenv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/testdb")
+	defer os.Unsetenv("DATABASE_URL")
+
+	db, err := createTestingDatabase()
+	if err != nil {
+		fmt.Printf("Failed to create test database: %v", err)
+		os.Exit(1)
+	}
+	defer db.Close()
 
 	// run tests
 	code := m.Run()
 
 	// clean up
-	os.Setenv("PATH", oldPath)
-	os.Remove("index.list")
+	if err := removeTestingDatabase(); err != nil {
+		fmt.Printf("Failed to remove test database: %v", err)
+		os.Exit(1)
+	}
 
+	os.Remove("index.list")
 	os.Exit(code)
 }
 

@@ -2,6 +2,7 @@ package subcommands
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -59,7 +60,15 @@ func setupServerAndClient(t *testing.T) (pb.SemantiflyClient, func()) {
 }
 
 func startTestServer() {
-	go executeStartServer([]string{"--index-path", testDir})
+
+	ctx, conn, err := setupDBConn()
+	if err != nil {
+		fmt.Printf("Failed to establish connection to the database: %v", err)
+		return
+	}
+	defer conn.Close(ctx)
+
+	go executeStartServer(ctx, conn, []string{"--index-path", testDir})
 
 	// Allow some time for the server to start
 	time.Sleep(100 * time.Millisecond)
