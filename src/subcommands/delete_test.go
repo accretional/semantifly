@@ -32,6 +32,14 @@ func TestDelete(t *testing.T) {
 		t.Fatalf("Failed to create test file 2: %v", err)
 	}
 
+	// Setup testing database
+	ctx, conn, err := setupDatabaseForTesting()
+	if err != nil {
+		t.Fatalf("failed to connect to PostgreSQL database: %v", err)
+	}
+	defer closeTestingDatabase()
+	defer conn.Close(ctx)
+
 	testFileData1 := &pb.ContentMetadata{
 		DataType:   0,
 		SourceType: 0,
@@ -50,7 +58,7 @@ func TestDelete(t *testing.T) {
 
 	var addBuf bytes.Buffer
 
-	err = SubcommandAdd(addArgs, tempDir, &addBuf)
+	err = SubcommandAdd(ctx, conn, addArgs, tempDir, &addBuf)
 	if err != nil {
 		t.Fatalf("Add function returned an error: %v", err)
 	}
@@ -62,7 +70,7 @@ func TestDelete(t *testing.T) {
 
 	var addBuf2 bytes.Buffer
 
-	err = SubcommandAdd(addArgs2, tempDir, &addBuf2)
+	err = SubcommandAdd(ctx, conn, addArgs2, tempDir, &addBuf2)
 	if err != nil {
 		t.Fatalf("Add function returned an error: %v", err)
 	}
@@ -75,7 +83,7 @@ func TestDelete(t *testing.T) {
 
 	var deleteBuf bytes.Buffer
 	// Run the Delete function
-	err = SubcommandDelete(deleteArgs, tempDir, &deleteBuf)
+	err = SubcommandDelete(ctx, conn, deleteArgs, tempDir, &deleteBuf)
 	if err != nil {
 		t.Fatalf("Delete function returned an error: %v", err)
 	}

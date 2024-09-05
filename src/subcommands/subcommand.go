@@ -285,7 +285,7 @@ func executeDelete(ctx context.Context, conn db.PgxIface, args []string) {
 		Names:      cmd.Args(),
 	}
 
-	err = SubcommandDelete(deleteArgs, *indexPath, os.Stdout)
+	err = SubcommandDelete(ctx, conn, deleteArgs, *indexPath, os.Stdout)
 	if err != nil {
 		fmt.Printf("Error occurred during delete subcommand: %v", err)
 		return

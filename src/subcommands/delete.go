@@ -1,27 +1,18 @@
 package subcommands
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
 	"path"
 
+	db "accretional.com/semantifly/database"
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 )
 
-// Delete removes the specified data URIs from the index file at the given index path.
-// It optionally deletes the associated data files as well based on the DeleteCopy flag.
-//
-// Parameters:
-//   - d.IndexPath: The path to the directory containing the index file.
-//   - d.DataURIs: A slice of data URIs to be deleted from the index.
-//   - d.DeleteCopy: A boolean flag indicating whether to delete the associated data files.
-//
-// Errors:
-//   - If there is an error searching for a URI in the index, an error message is printed and the URI is skipped.
-//   - If there is an error deleting a URI from the index, an error message is printed and the URI is skipped.
-//   - If there is an error deleting the associated data file, an error message is printed.
-func SubcommandDelete(d *pb.DeleteRequest, indexPath string, w io.Writer) error {
+
+func SubcommandDelete(ctx context.Context, conn db.PgxIface, d *pb.DeleteRequest, indexPath string, w io.Writer) error {
 	indexFilePath := path.Join(indexPath, indexFile)
 
 	indexMap, err := readIndex(indexFilePath, false)
@@ -47,6 +38,10 @@ func SubcommandDelete(d *pb.DeleteRequest, indexPath string, w io.Writer) error 
 
 	if err := writeIndex(indexFilePath, indexMap); err != nil {
 		return fmt.Errorf("failed to write to the index file: %v", err)
+	}
+
+	if err := db.DeleteRows(ctx, conn, d.Names); err != nil {
+		return fmt.Errorf("failed to delete from the database: %v", err)
 	}
 
 	return nil
