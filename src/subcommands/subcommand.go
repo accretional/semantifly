@@ -221,7 +221,7 @@ func executeAdd(args []string) {
 
 	addArgs := &pb.AddRequest{
 		AddedMetadata: &pb.ContentMetadata{
-			URI:        dataUri,
+			URI:        convertToAbsPath(dataUri),
 			DataType:   dataTypeEnum,
 			SourceType: sourceTypeEnum,
 		},
@@ -234,7 +234,6 @@ func executeAdd(args []string) {
 		return
 	}
 }
-
 func executeDelete(args []string) {
 	cmd := flag.NewFlagSet("delete", flag.ExitOnError)
 	deleteLocalCopy := cmd.Bool("copy", false, "Whether to delete the copy made")
@@ -254,9 +253,15 @@ func executeDelete(args []string) {
 		return
 	}
 
+	// Convert all args to absolute paths
+	absArgs := make([]string, len(cmd.Args()))
+	for i, arg := range cmd.Args() {
+		absArgs[i] = convertToAbsPath(arg)
+	}
+
 	deleteArgs := &pb.DeleteRequest{
 		DeleteCopy: *deleteLocalCopy,
-		Names:      cmd.Args(),
+		Names:      absArgs,
 	}
 
 	err = SubcommandDelete(deleteArgs, *indexPath, os.Stdout)
@@ -285,7 +290,7 @@ func executeGet(args []string) {
 	}
 
 	getArgs := &pb.GetRequest{
-		Name: cmd.Args()[0],
+		Name: convertToAbsPath(cmd.Args()[0]),
 	}
 
 	resp, _, err := SubcommandGet(getArgs, *indexPath, os.Stdout)
@@ -337,9 +342,9 @@ func executeUpdate(args []string) {
 	}
 
 	updateArgs := &pb.UpdateRequest{
-		Name: cmd.Args()[0],
+		Name: convertToAbsPath(cmd.Args()[0]),
 		UpdatedMetadata: &pb.ContentMetadata{
-			URI:        cmd.Args()[1],
+			URI:        convertToAbsPath(cmd.Args()[1]),
 			DataType:   dataTypeEnum,
 			SourceType: sourceTypeEnum,
 		},
@@ -411,4 +416,19 @@ func executeStartServer(args []string) {
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
+}
+
+func convertToAbsPath(relPath string) string {
+	if path.IsAbs(relPath) {
+		return relPath
+	}
+
+	pwd, err := os.Getwd()
+	if err != nil {
+		log.Printf("Error getting current working directory: %v", err)
+		return relPath
+	}
+
+	absPath := path.Join(pwd, relPath)
+	return path.Clean(absPath)
 }
