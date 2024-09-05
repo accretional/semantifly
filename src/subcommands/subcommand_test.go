@@ -107,7 +107,7 @@ func TestAddSubcommand(t *testing.T) {
 		}
 	})
 
-	t.Run("New directory for index", func(t *testing.T) {
+	t.Run("Creates new directory for index", func(t *testing.T) {
 		if err := runAndCheckStdoutContains("add", "", []string{tempFile, "--index-path", newTestIndexPath}); err != nil {
 			t.Errorf("Failed to execute 'add' with existing file: %v", err)
 		}
