@@ -52,7 +52,6 @@ func printCmdErr(e string) {
 }
 
 func CommandReadRun() {
-	fmt.Println(defaultIndexPath)
 	if len(os.Args) < 2 {
 		printCmdErr("expected subcommand like 'add' or 'describe'")
 		os.Exit(1)
