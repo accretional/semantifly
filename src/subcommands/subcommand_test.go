@@ -114,6 +114,7 @@ func TestGetSubcommand(t *testing.T) {
 	}
 	defer os.Remove(tempFile)
 	testIndex := filepath.Join(testIndexPath, "index.list")
+	badIndexPath := "bad/path"
 	os.Remove(testIndex)
 
 	if err := runAndCheckStdoutContains("add", "", []string{tempFile, "--index-path", testIndexPath}); err != nil {
@@ -130,6 +131,13 @@ func TestGetSubcommand(t *testing.T) {
 		runAndCheckStdoutContains("delete", "", []string{tempFile, "--index-path", testIndexPath})
 		if err := runAndCheckStdoutContains("get", "empty index file", []string{tempFile, "--index-path", testIndexPath}); err != nil {
 			t.Errorf("Failed to execute 'get' after delete: %v", err)
+		}
+	})
+
+	t.Run("Get bad index file", func(t *testing.T) {
+		runAndCheckStdoutContains("delete", "", []string{tempFile, "--index-path", testIndexPath})
+		if err := runAndCheckStdoutContains("get", "no such file or directory", []string{tempFile, "--index-path", badIndexPath}); err != nil {
+			t.Errorf("Failed to execute 'get' on bad index path: %v", err)
 		}
 	})
 }
@@ -170,9 +178,16 @@ func TestDeleteSubcommand(t *testing.T) {
 	}
 	defer os.Remove(tempFile)
 	testIndex := filepath.Join(testIndexPath, "index.list")
+	badIndexPath := "bad/path"
 	os.Remove(testIndex)
 
 	runAndCheckStdoutContains("add", "", []string{tempFile, "--index-path", testIndexPath})
+
+	t.Run("Delete bad index file", func(t *testing.T) {
+		if err := runAndCheckStdoutContains("delete", "no such file or directory", []string{tempFile, "--index-path", badIndexPath}); err != nil {
+			t.Errorf("Failed to execute 'delete' on bad index path: %v", err)
+		}
+	})
 
 	t.Run("Delete existing file", func(t *testing.T) {
 		if err := runAndCheckStdoutContains("delete", "", []string{tempFile, "--index-path", testIndexPath}); err != nil {
