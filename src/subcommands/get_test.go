@@ -34,7 +34,6 @@ func TestGet(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to connect to PostgreSQL database: %v", err)
 	}
-	defer closeTestingDatabase()
 	defer conn.Close(ctx)
 
 	testFileData := &pb.ContentMetadata{
@@ -92,7 +91,6 @@ func TestGet_Webpage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to connect to PostgreSQL database: %v", err)
 	}
-	defer closeTestingDatabase()
 	defer conn.Close(ctx)
 
 	testWebData := &pb.ContentMetadata{

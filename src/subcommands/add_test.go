@@ -13,36 +13,10 @@ import (
 
 	"accretional.com/semantifly/database"
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
-	"github.com/go-pg/pg/v10"
 	"github.com/jackc/pgx/v5"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 )
-
-func closeTestingDatabase() error {
-	// Connect to the default "postgres" database to drop the test database
-	defaultDB := pg.Connect(&pg.Options{
-		User:     "postgres",
-		Password: "postgres",
-		Addr:     "localhost:5432",
-		Database: "postgres",
-	})
-	defer defaultDB.Close()
-
-	// Terminate all connections to the test database
-	_, err := defaultDB.Exec("SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = 'testdb'")
-	if err != nil {
-		return fmt.Errorf("Failed to terminate connections to test database: %v", err)
-	}
-
-	// Drop the test database
-	_, err = defaultDB.Exec("DROP DATABASE IF EXISTS testdb")
-	if err != nil {
-		return fmt.Errorf("Failed to drop test database: %v", err)
-	}
-
-	return nil
-}
 
 func setupDatabaseForTesting() (context.Context, database.PgxIface, error) {
 
@@ -83,7 +57,7 @@ func TestAdd(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to setup the testing database: %v", err)
 	}
-	defer closeTestingDatabase()
+	defer conn.Close(ctx)
 
 	testFileData := &pb.ContentMetadata{
 		DataType:   0,
@@ -166,7 +140,7 @@ func TestAdd_MultipleFilesSamePath(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to setup the testing database: %v", err)
 	}
-	defer closeTestingDatabase()
+	defer conn.Close(ctx)
 
 	testFilePath2 := path.Join(tempDir, "test_file.txt")
 
@@ -243,7 +217,7 @@ func TestAdd_Webpage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to setup the testing database: %v", err)
 	}
-	defer closeTestingDatabase()
+	defer conn.Close(ctx)
 
 	// Create the test url
 	testWebpageURL := "http://echo.jsontest.com/title/lorem/content/ipsum"
@@ -361,7 +335,6 @@ func TestAdd_Database(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to connect to PostgreSQL database: %v", err)
 	}
-	defer closeTestingDatabase()
 	defer conn.Close(ctx)
 
 	testFileData := &pb.ContentMetadata{

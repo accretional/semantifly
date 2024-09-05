@@ -37,7 +37,6 @@ func TestDelete(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to connect to PostgreSQL database: %v", err)
 	}
-	defer closeTestingDatabase()
 	defer conn.Close(ctx)
 
 	testFileData1 := &pb.ContentMetadata{

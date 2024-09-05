@@ -25,10 +25,6 @@ func SubcommandUpdate(ctx context.Context, conn db.PgxIface, u *pb.UpdateRequest
 		return fmt.Errorf("failed to update the index entry %s: %v", u.Name, err)
 	}
 
-	if err := writeIndex(indexFilePath, indexMap); err != nil {
-		return fmt.Errorf("failed to write to the index file: %v", err)
-	}
-
 	if u.UpdateCopy {
 		content, err := fetch.FetchFromSource(u.UpdatedMetadata.SourceType, u.UpdatedMetadata.URI)
 
@@ -46,6 +42,15 @@ func SubcommandUpdate(ctx context.Context, conn db.PgxIface, u *pb.UpdateRequest
 			return fmt.Errorf("failed to update the copy of the source file: %v", err)
 		}
 	}
+
+	if err := writeIndex(indexFilePath, indexMap); err != nil {
+		return fmt.Errorf("Failed to write to the index file: %v", err)
+	}
+
+	if err := db.InsertRows(ctx, conn, &pb.Index{Entries: []*pb.IndexListEntry{indexMap[u.Name]}}); err != nil {
+		return fmt.Errorf("Failed to update the database: %v", err)
+	}
+
 	return nil
 }
 
