@@ -372,7 +372,7 @@ func executeUpdate(ctx context.Context, conn db.PgxIface, args []string) {
 		UpdateCopy: *makeLocalCopy,
 	}
 
-	err = SubcommandUpdate(updateArgs, *indexPath, os.Stdout)
+	err = SubcommandUpdate(ctx, conn, updateArgs, *indexPath, os.Stdout)
 	if err != nil {
 		fmt.Printf("Error occurred during update subcommand: %v", err)
 		return

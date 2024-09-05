@@ -21,8 +21,14 @@ func SemantiflyNewServer(serverIndexPath string) *Server {
 }
 
 func (s *Server) Add(ctx context.Context, req *pb.AddRequest) (*pb.AddResponse, error) {
+	ctx, conn, err := setupDBConn()
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer conn.Close(ctx)
+
 	var buf bytes.Buffer
-	err := SubcommandAdd(req, s.serverIndexPath, &buf)
+	err = SubcommandAdd(ctx, conn, req, s.serverIndexPath, &buf)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -30,8 +36,14 @@ func (s *Server) Add(ctx context.Context, req *pb.AddRequest) (*pb.AddResponse, 
 }
 
 func (s *Server) Delete(ctx context.Context, req *pb.DeleteRequest) (*pb.DeleteResponse, error) {
+	ctx, conn, err := setupDBConn()
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer conn.Close(ctx)
+
 	var buf bytes.Buffer
-	err := SubcommandDelete(req, s.serverIndexPath, &buf)
+	err = SubcommandDelete(ctx, conn, req, s.serverIndexPath, &buf)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -39,8 +51,14 @@ func (s *Server) Delete(ctx context.Context, req *pb.DeleteRequest) (*pb.DeleteR
 }
 
 func (s *Server) Get(ctx context.Context, req *pb.GetRequest) (*pb.GetResponse, error) {
+	ctx, conn, err := setupDBConn()
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer conn.Close(ctx)
+
 	var buf bytes.Buffer
-	content, contentMetadata, err := SubcommandGet(req, s.serverIndexPath, &buf)
+	content, contentMetadata, err := SubcommandGet(ctx, conn, req, s.serverIndexPath, &buf)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -48,9 +66,14 @@ func (s *Server) Get(ctx context.Context, req *pb.GetRequest) (*pb.GetResponse, 
 }
 
 func (s *Server) Update(ctx context.Context, req *pb.UpdateRequest) (*pb.UpdateResponse, error) {
-	var buf bytes.Buffer
+	ctx, conn, err := setupDBConn()
+	if err != nil {
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	defer conn.Close(ctx)
 
-	err := SubcommandUpdate(req, s.serverIndexPath, &buf)
+	var buf bytes.Buffer
+	err = SubcommandUpdate(ctx, conn, req, s.serverIndexPath, &buf)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

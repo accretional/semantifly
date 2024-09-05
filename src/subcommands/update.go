@@ -1,17 +1,19 @@
 package subcommands
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"path"
 
+	db "accretional.com/semantifly/database"
 	fetch "accretional.com/semantifly/fetcher"
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 	search "accretional.com/semantifly/search"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func SubcommandUpdate(u *pb.UpdateRequest, indexPath string, w io.Writer) error {
+func SubcommandUpdate(ctx context.Context, conn db.PgxIface, u *pb.UpdateRequest, indexPath string, w io.Writer) error {
 	indexFilePath := path.Join(indexPath, indexFile)
 
 	indexMap, err := readIndex(indexFilePath, false)
