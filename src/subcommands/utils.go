@@ -101,7 +101,7 @@ func makeCopy(indexPath string, ile *pb.IndexListEntry) error {
 	}
 
 	ileCopy := &pb.IndexListEntry{
-		Name:         ile.Name,
+		Name: ile.Name,
 
 		ContentMetadata: &pb.ContentMetadata{
 			URI:        ile.ContentMetadata.URI,

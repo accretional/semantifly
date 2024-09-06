@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -73,6 +74,7 @@ func removeTestingDatabase() error {
 
 	return nil
 }
+var testIndexPath string
 
 // Main is run before every test to set up the testing folder & semantifly
 func TestMain(m *testing.M) {
@@ -120,6 +122,13 @@ func TestMain(m *testing.M) {
 	}
 	defer db.Close()
 
+	testDir, err := os.MkdirTemp("", "semantifly-test")
+	if err != nil {
+		fmt.Printf("Failed to create temp directory: %v\n", err)
+		os.Exit(1)
+	}
+	testIndexPath = testDir
+
 	// run tests
 	code := m.Run()
 
@@ -129,7 +138,8 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	os.Remove("index.list")
+	testIndex := filepath.Join(testIndexPath, "index.list")
+	os.Remove(testIndex)
 	os.Exit(code)
 }
 
@@ -155,7 +165,9 @@ func TestAddSubcommand(t *testing.T) {
 		t.Fatalf("Failed to create temporary file: %v", err)
 	}
 	defer os.Remove(tempFile)
-	defer os.Remove("index.list")
+	testIndex := filepath.Join(testIndexPath, "index.list")
+	newTestIndexPath := filepath.Join(testIndexPath, "test-in-test")
+	os.Remove(testIndex)
 
 	t.Run("Help", func(t *testing.T) {
 		if err := runAndCheckStderrContains("add", "Usage of add:", []string{"--help"}); err != nil {
@@ -164,7 +176,7 @@ func TestAddSubcommand(t *testing.T) {
 	})
 
 	t.Run("Non-existing file", func(t *testing.T) {
-		if err := runAndCheckStdoutContains("add", "file does not exist", []string{"nofile"}); err != nil {
+		if err := runAndCheckStdoutContains("add", "file does not exist", []string{"nofile", "--index-path", testIndexPath}); err != nil {
 			t.Errorf("Failed to execute 'add' with non-existing file: %v", err)
 		}
 	})
@@ -176,9 +188,21 @@ func TestAddSubcommand(t *testing.T) {
 	})
 
 	t.Run("Existing file", func(t *testing.T) {
-		if err := runAndCheckStdoutContains("add", "", []string{tempFile}); err != nil {
+		if err := runAndCheckStdoutContains("add", "", []string{tempFile, "--index-path", testIndexPath}); err != nil {
 			t.Errorf("Failed to execute 'add' with existing file: %v", err)
 		}
+	})
+
+	t.Run("Creates new directory for index", func(t *testing.T) {
+		if err := runAndCheckStdoutContains("add", "", []string{tempFile, "--index-path", newTestIndexPath}); err != nil {
+			t.Errorf("Failed to execute 'add' with existing file: %v", err)
+		}
+
+		if _, err := os.Stat(newTestIndexPath); os.IsNotExist(err) {
+			t.Errorf("Expected directory %s to be created, but it doesn't exist", newTestIndexPath)
+		}
+
+		os.RemoveAll(newTestIndexPath)
 	})
 }
 
@@ -188,22 +212,31 @@ func TestGetSubcommand(t *testing.T) {
 		t.Fatalf("Failed to create temporary file: %v", err)
 	}
 	defer os.Remove(tempFile)
-	defer os.Remove("index.list")
+	testIndex := filepath.Join(testIndexPath, "index.list")
+	badIndexPath := "bad/path"
+	os.Remove(testIndex)
 
-	if err := runAndCheckStdoutContains("add", "", []string{tempFile}); err != nil {
+	if err := runAndCheckStdoutContains("add", "", []string{tempFile, "--index-path", testIndexPath}); err != nil {
 		t.Fatalf("Failed to add file to index: %v", err)
 	}
 
 	t.Run("Get existing file", func(t *testing.T) {
-		if err := runAndCheckStdoutContains("get", "This is a test file", []string{tempFile}); err != nil {
+		if err := runAndCheckStdoutContains("get", "This is a test file", []string{tempFile, "--index-path", testIndexPath}); err != nil {
 			t.Errorf("Failed to execute 'get' for existing file: %v", err)
 		}
 	})
 
 	t.Run("Get after delete", func(t *testing.T) {
-		runAndCheckStdoutContains("delete", "", []string{tempFile})
-		if err := runAndCheckStdoutContains("get", "empty index file", []string{tempFile}); err != nil {
+		runAndCheckStdoutContains("delete", "", []string{tempFile, "--index-path", testIndexPath})
+		if err := runAndCheckStdoutContains("get", "empty index file", []string{tempFile, "--index-path", testIndexPath}); err != nil {
 			t.Errorf("Failed to execute 'get' after delete: %v", err)
+		}
+	})
+
+	t.Run("Get bad index file", func(t *testing.T) {
+		runAndCheckStdoutContains("delete", "", []string{tempFile, "--index-path", testIndexPath})
+		if err := runAndCheckStdoutContains("get", "no such file or directory", []string{tempFile, "--index-path", badIndexPath}); err != nil {
+			t.Errorf("Failed to execute 'get' on bad index path: %v", err)
 		}
 	})
 }
@@ -214,7 +247,8 @@ func TestUpdateSubcommand(t *testing.T) {
 		t.Fatalf("Failed to create temporary file: %v", err)
 	}
 	defer os.Remove(tempFile)
-	defer os.Remove("index.list")
+	testIndex := filepath.Join(testIndexPath, "index.list")
+	os.Remove(testIndex)
 
 	updatedTempFile, err := createTempFile("This is an updated test file for semantifly subcommands.")
 	if err != nil {
@@ -222,7 +256,7 @@ func TestUpdateSubcommand(t *testing.T) {
 	}
 	defer os.Remove(updatedTempFile)
 
-	runAndCheckStdoutContains("add", "", []string{tempFile})
+	runAndCheckStdoutContains("add", "", []string{tempFile, "--index-path", testIndexPath})
 	t.Run("Update without URI", func(t *testing.T) {
 		if err := runAndCheckStdoutContains("update", "Update subcommand requires two input args", []string{tempFile}); err != nil {
 			t.Errorf("Failed to execute 'update' without URI: %v", err)
@@ -230,7 +264,7 @@ func TestUpdateSubcommand(t *testing.T) {
 	})
 
 	t.Run("Update with new file", func(t *testing.T) {
-		if err := runAndCheckStdoutContains("update", "", []string{tempFile, updatedTempFile}); err != nil {
+		if err := runAndCheckStdoutContains("update", "", []string{tempFile, updatedTempFile, "--index-path", testIndexPath}); err != nil {
 			t.Errorf("Failed to execute 'update' with new file: %v", err)
 		}
 	})
@@ -242,18 +276,26 @@ func TestDeleteSubcommand(t *testing.T) {
 		t.Fatalf("Failed to create temporary file: %v", err)
 	}
 	defer os.Remove(tempFile)
-	defer os.Remove("index.list")
+	testIndex := filepath.Join(testIndexPath, "index.list")
+	badIndexPath := "bad/path"
+	os.Remove(testIndex)
 
-	runAndCheckStdoutContains("add", "", []string{tempFile})
+	runAndCheckStdoutContains("add", "", []string{tempFile, "--index-path", testIndexPath})
+
+	t.Run("Delete bad index file", func(t *testing.T) {
+		if err := runAndCheckStdoutContains("delete", "no such file or directory", []string{tempFile, "--index-path", badIndexPath}); err != nil {
+			t.Errorf("Failed to execute 'delete' on bad index path: %v", err)
+		}
+	})
 
 	t.Run("Delete existing file", func(t *testing.T) {
-		if err := runAndCheckStdoutContains("delete", "", []string{tempFile}); err != nil {
+		if err := runAndCheckStdoutContains("delete", "", []string{tempFile, "--index-path", testIndexPath}); err != nil {
 			t.Errorf("Failed to execute 'delete' for existing file: %v", err)
 		}
 	})
 
 	t.Run("Delete from empty index", func(t *testing.T) {
-		if err := runAndCheckStdoutContains("delete", "empty index file", []string{tempFile}); err != nil {
+		if err := runAndCheckStdoutContains("delete", "empty index file", []string{tempFile, "--index-path", testIndexPath}); err != nil {
 			t.Errorf("Failed to execute 'delete' on empty index: %v", err)
 		}
 	})
@@ -263,35 +305,37 @@ func TestWebpageOperations(t *testing.T) {
 	testWebpageURI := "http://echo.jsontest.com/title/lorem/content/ipsum"
 	updatedWebpageURI := "http://echo.jsontest.com/title/foo/content/bar"
 
+	testIndex := filepath.Join(testIndexPath, "index.list")
+	os.Remove(testIndex)
 	t.Run("Add webpage", func(t *testing.T) {
-		if err := runAndCheckStdoutContains("add", "", []string{testWebpageURI}); err != nil {
+		if err := runAndCheckStdoutContains("add", "", []string{testWebpageURI, "--index-path", testIndexPath}); err != nil {
 			t.Errorf("Failed to execute 'add' for webpage: %v", err)
 		}
 	})
 
 	t.Run("Get webpage", func(t *testing.T) {
 		webpageContent := getWebpageContent(t, testWebpageURI)
-		if err := runAndCheckStdoutContains("get", string(webpageContent), []string{testWebpageURI}); err != nil {
+		if err := runAndCheckStdoutContains("get", string(webpageContent), []string{testWebpageURI, "--index-path", testIndexPath}); err != nil {
 			t.Errorf("Failed to execute 'get' for webpage: %v", err)
 		}
 	})
 
 	// to do: after we refactor name & uri to be different, need to change the tests after update to get / delete new name, not old name
 	t.Run("Update webpage", func(t *testing.T) {
-		if err := runAndCheckStdoutContains("update", "", []string{testWebpageURI, updatedWebpageURI}); err != nil {
+		if err := runAndCheckStdoutContains("update", "", []string{testWebpageURI, updatedWebpageURI, "--index-path", testIndexPath}); err != nil {
 			t.Errorf("Failed to execute 'update' for webpage: %v", err)
 		}
 	})
 
 	t.Run("Get webpage", func(t *testing.T) {
 		webpageContent := getWebpageContent(t, updatedWebpageURI)
-		if err := runAndCheckStdoutContains("get", string(webpageContent), []string{testWebpageURI}); err != nil {
+		if err := runAndCheckStdoutContains("get", string(webpageContent), []string{testWebpageURI, "--index-path", testIndexPath}); err != nil {
 			t.Errorf("Failed to execute 'get' for webpage: %v", err)
 		}
 	})
 
 	t.Run("Delete webpage", func(t *testing.T) {
-		if err := runAndCheckStdoutContains("delete", "", []string{testWebpageURI}); err != nil {
+		if err := runAndCheckStdoutContains("delete", "", []string{testWebpageURI, "--index-path", testIndexPath}); err != nil {
 			t.Errorf("Failed to execute 'delete' for webpage: %v", err)
 		}
 	})

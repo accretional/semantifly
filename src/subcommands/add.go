@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"path"
 
 	db "accretional.com/semantifly/database"
@@ -13,6 +14,10 @@ import (
 )
 
 func SubcommandAdd(ctx context.Context, conn *db.PgxIface, a *pb.AddRequest, indexPath string, w io.Writer) error {
+	if err := createDirectoriesIfNotExist(indexPath); err != nil {
+		return fmt.Errorf("failed to create directories: %v", err)
+	}
+
 	indexFilePath := path.Join(indexPath, indexFile)
 	indexMap, err := readIndex(indexFilePath, true)
 	if err != nil {
@@ -51,5 +56,15 @@ func SubcommandAdd(ctx context.Context, conn *db.PgxIface, a *pb.AddRequest, ind
 		return fmt.Errorf("failed to write to the database: %v", err)
 	}
 
+	return nil
+}
+
+func createDirectoriesIfNotExist(dir string) error {
+	if _, err := os.ReadDir(dir); err != nil {
+		fmt.Printf("No existing directory detected. Creating new directory at %s\n", dir)
+		if err := os.MkdirAll(dir, 0777); err != nil {
+			return fmt.Errorf("failed to create directory at %s: %s", dir, err)
+		}
+	}
 	return nil
 }

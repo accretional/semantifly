@@ -16,6 +16,8 @@ import (
 	"google.golang.org/grpc"
 )
 
+var defaultIndexPath = path.Join(os.ExpandEnv("$HOME/.semantifly"), "default")
+
 type SubcommandInfo struct {
 	Description string
 	Execute     func(context.Context, *db.PgxIface, []string)
@@ -58,8 +60,6 @@ func CommandReadRun() {
 		os.Exit(1)
 	}
 
-	setupSemantifly()
-
 	ctx, conn, err := setupDBConn()
 	if err != nil {
 		fmt.Printf("Failed to establish connection to the database: %v", err)
@@ -95,18 +95,6 @@ func baseHelp() {
 	fmt.Println("\nUse 'semantifly <subcommand> --help' for more information about a specific subcommand.")
 }
 
-func setupSemantifly() {
-	semantifly_dir := flag.String("semantifly_dir", os.ExpandEnv("$HOME/.semantifly"), "Where to read existing semantifly data, and write new semantifly data.")
-	semantifly_index := flag.String("semantifly_index", "default", "By default, semantifly writes data to the 'default' subdir of the configured semantifly_dir. Setting this to a value other than 'default' allows for multiple indices on the same local machine.")
-
-	createDirectoryIfNotExists(*semantifly_dir)
-	index_path := path.Join(*semantifly_dir, *semantifly_index)
-	createDirectoryIfNotExists(index_path)
-
-	indexLog := path.Join(index_path, "index.log")
-	appendToIndexLog(indexLog)
-}
-
 func setupDBConn() (context.Context, db.PgxIface, error) {
 	ctx := context.Background()
 	conn, err := pgx.Connect(ctx, os.Getenv("DATABASE_URL"))
@@ -122,15 +110,6 @@ func setupDBConn() (context.Context, db.PgxIface, error) {
 	}
 
 	return ctx, conn, nil
-}
-
-func createDirectoryIfNotExists(dir string) {
-	if _, err := os.ReadDir(dir); err != nil {
-		fmt.Printf("No existing directory detected. Creating new directory at %s\n", dir)
-		if err := os.Mkdir(dir, 0777); err != nil {
-			printCmdErr(fmt.Sprintf("Failed to create directory at %s: %s", dir, err))
-		}
-	}
 }
 
 func isBoolFlag(fs *flag.FlagSet, name string) bool {
@@ -179,19 +158,6 @@ func parseArgs(args []string, cmd *flag.FlagSet) ([]string, []string, error) {
 	return flags, nonFlags, nil
 }
 
-func appendToIndexLog(indexLog string) {
-	f, err := os.OpenFile(indexLog, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0644)
-	if err != nil {
-		printCmdErr(fmt.Sprintf("Failed to open index log at %s: %s", indexLog, err))
-		return
-	}
-	defer f.Close()
-
-	if _, err := f.WriteString(strings.Join(os.Args, " ") + "\n"); err != nil {
-		printCmdErr(fmt.Sprintf("Failed to append to index log at %s: %s", indexLog, err))
-	}
-}
-
 func inferSourceType(uris []string) (string, error) {
 	sourceTypeStr := "local_file"
 
@@ -211,7 +177,7 @@ func executeAdd(ctx context.Context, conn *db.PgxIface, args []string) {
 	dataType := cmd.String("type", "text", "The type of the input data")
 	sourceType := cmd.String("source-type", "", "How to access the content")
 	makeLocalCopy := cmd.Bool("copy", false, "Whether to copy and use the file as it is now, or dynamically access it")
-	indexPath := cmd.String("index-path", "", "Path to the index file")
+	indexPath := cmd.String("index-path", defaultIndexPath, "Path to the index file")
 
 	flags, nonFlags, err := parseArgs(args, cmd)
 	if err != nil {
@@ -266,7 +232,7 @@ func executeAdd(ctx context.Context, conn *db.PgxIface, args []string) {
 func executeDelete(ctx context.Context, conn *db.PgxIface, args []string) {
 	cmd := flag.NewFlagSet("delete", flag.ExitOnError)
 	deleteLocalCopy := cmd.Bool("copy", false, "Whether to delete the copy made")
-	indexPath := cmd.String("index-path", "", "Path to the index file")
+	indexPath := cmd.String("index-path", defaultIndexPath, "Path to the index file")
 
 	flags, nonFlags, err := parseArgs(args, cmd)
 	if err != nil {
@@ -296,7 +262,7 @@ func executeDelete(ctx context.Context, conn *db.PgxIface, args []string) {
 
 func executeGet(ctx context.Context, conn *db.PgxIface, args []string) {
 	cmd := flag.NewFlagSet("get", flag.ExitOnError)
-	indexPath := cmd.String("index-path", "", "Path to the index file")
+	indexPath := cmd.String("index-path", defaultIndexPath, "Path to the index file")
 
 	flags, nonFlags, err := parseArgs(args, cmd)
 	if err != nil {
@@ -318,7 +284,7 @@ func executeGet(ctx context.Context, conn *db.PgxIface, args []string) {
 
 	resp, _, err := SubcommandGet(ctx, conn, getArgs, *indexPath, os.Stdout)
 	if err != nil {
-		fmt.Printf("Error occurred during get subcommand: %v", err)
+		fmt.Printf("Error occurred during get subcommand: %v\n", err)
 		return
 	}
 
@@ -330,7 +296,7 @@ func executeUpdate(ctx context.Context, conn *db.PgxIface, args []string) {
 	dataType := cmd.String("type", "text", "The type of the input data")
 	sourceType := cmd.String("source-type", "", "How to access the content")
 	makeLocalCopy := cmd.Bool("copy", false, "Whether to copy and use the file as it is now, or dynamically access it")
-	indexPath := cmd.String("index-path", "", "Path to the index file")
+	indexPath := cmd.String("index-path", defaultIndexPath, "Path to the index file")
 
 	flags, nonFlags, err := parseArgs(args, cmd)
 	if err != nil {
@@ -383,7 +349,7 @@ func executeUpdate(ctx context.Context, conn *db.PgxIface, args []string) {
 
 func executeSearch(ctx context.Context, conn *db.PgxIface, args []string) {
 	cmd := flag.NewFlagSet("search", flag.ExitOnError)
-	indexPath := cmd.String("index-path", "", "Path to the index file")
+	indexPath := cmd.String("index-path", defaultIndexPath, "Path to the index file")
 	topN := cmd.Int("n", 1, "Top n search results")
 
 	flags, nonFlags, err := parseArgs(args, cmd)
@@ -416,7 +382,7 @@ func executeSearch(ctx context.Context, conn *db.PgxIface, args []string) {
 
 func executeStartServer(ctx context.Context, conn *db.PgxIface, args []string) {
 	cmd := flag.NewFlagSet("start-server", flag.ExitOnError)
-	serverIndexPath := cmd.String("index-path", "index", "Path to the server index")
+	serverIndexPath := cmd.String("index-path", defaultIndexPath, "Path to the server index")
 	port := cmd.String("port", "50051", "Port for the server")
 
 	flags, nonFlags, err := parseArgs(args, cmd)
@@ -436,6 +402,7 @@ func executeStartServer(ctx context.Context, conn *db.PgxIface, args []string) {
 	s := grpc.NewServer()
 	pb.RegisterSemantiflyServer(s, SemantiflyNewServer(ctx, conn, *serverIndexPath))
 	log.Printf("server listening at %v", lis.Addr())
+	log.Printf("using index path: %v", *serverIndexPath)
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
