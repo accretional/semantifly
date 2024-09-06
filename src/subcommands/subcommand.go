@@ -219,9 +219,13 @@ func executeAdd(args []string) {
 
 	dataUri := cmd.Args()[0]
 
+	if *sourceType == "local_file" {
+		dataUri = convertToAbsPath(dataUri)
+	}
+
 	addArgs := &pb.AddRequest{
 		AddedMetadata: &pb.ContentMetadata{
-			URI:        convertToAbsPath(dataUri),
+			URI:        dataUri,
 			DataType:   dataTypeEnum,
 			SourceType: sourceTypeEnum,
 		},
@@ -256,7 +260,10 @@ func executeDelete(args []string) {
 	// Convert all args to absolute paths
 	absArgs := make([]string, len(cmd.Args()))
 	for i, arg := range cmd.Args() {
-		absArgs[i] = convertToAbsPath(arg)
+		sourceType, _ := inferSourceType([]string{arg})
+		if sourceType == "local_file" {
+			absArgs[i] = convertToAbsPath(arg)
+		}
 	}
 
 	deleteArgs := &pb.DeleteRequest{
@@ -289,8 +296,15 @@ func executeGet(args []string) {
 		return
 	}
 
+	dataUri := cmd.Args()[0]
+
+	sourceType, _ := inferSourceType([]string{dataUri})
+	if sourceType == "local_file" {
+		dataUri = convertToAbsPath(dataUri)
+	}
+
 	getArgs := &pb.GetRequest{
-		Name: convertToAbsPath(cmd.Args()[0]),
+		Name: dataUri,
 	}
 
 	resp, _, err := SubcommandGet(getArgs, *indexPath, os.Stdout)
@@ -341,10 +355,18 @@ func executeUpdate(args []string) {
 		printCmdErr(fmt.Sprintf("Error in parsing SourceType: %v\n", err))
 	}
 
+	originalDataUri := cmd.Args()[0]
+	updatedDataUri := cmd.Args()[1]
+
+	if *sourceType == "local_file" {
+		originalDataUri = convertToAbsPath(originalDataUri)
+		updatedDataUri = convertToAbsPath(updatedDataUri)
+	}
+
 	updateArgs := &pb.UpdateRequest{
-		Name: convertToAbsPath(cmd.Args()[0]),
+		Name: originalDataUri,
 		UpdatedMetadata: &pb.ContentMetadata{
-			URI:        convertToAbsPath(cmd.Args()[1]),
+			URI:        updatedDataUri,
 			DataType:   dataTypeEnum,
 			SourceType: sourceTypeEnum,
 		},
@@ -419,11 +441,6 @@ func executeStartServer(args []string) {
 }
 
 func convertToAbsPath(relPath string) string {
-	sourceType, _ := inferSourceType([]string{relPath})
-	if sourceType == "webpage" {
-		return relPath
-	}
-
 	if path.IsAbs(relPath) {
 		return relPath
 	}
