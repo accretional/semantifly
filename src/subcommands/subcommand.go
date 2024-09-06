@@ -213,6 +213,10 @@ func executeAdd(ctx context.Context, conn *db.PgxIface, args []string) {
 
 	dataUri := cmd.Args()[0]
 
+	if *sourceType == "local_file" {
+		dataUri = convertToAbsPath(dataUri)
+	}
+
 	addArgs := &pb.AddRequest{
 		AddedMetadata: &pb.ContentMetadata{
 			URI:        dataUri,
@@ -248,9 +252,18 @@ func executeDelete(ctx context.Context, conn *db.PgxIface, args []string) {
 		return
 	}
 
+	// Convert all args to absolute paths
+	absArgs := make([]string, len(cmd.Args()))
+	for i, arg := range cmd.Args() {
+		sourceType, _ := inferSourceType([]string{arg})
+		if sourceType == "local_file" {
+			absArgs[i] = convertToAbsPath(arg)
+		}
+	}
+
 	deleteArgs := &pb.DeleteRequest{
 		DeleteCopy: *deleteLocalCopy,
-		Names:      cmd.Args(),
+		Names:      absArgs,
 	}
 
 	err = SubcommandDelete(ctx, conn, deleteArgs, *indexPath, os.Stdout)
@@ -279,13 +292,19 @@ func executeGet(ctx context.Context, conn *db.PgxIface, args []string) {
 		return
 	}
 
+  dataUri := cmd.Args()[0]
+
+	sourceType, _ := inferSourceType([]string{dataUri})
+	if sourceType == "local_file" {
+		dataUri = convertToAbsPath(dataUri)
+	}
 	indexSourceEnum, err := parseIndexSource(*indexSource)
 	if err != nil {
 		printCmdErr(fmt.Sprintf("Error in parsing indexSource: %v\n", err))
 	}
 
 	getArgs := &pb.GetRequest{
-		Name:        cmd.Args()[0],
+		Name:        dataUri,
 		IndexSource: indexSourceEnum,
 	}
 
@@ -337,10 +356,18 @@ func executeUpdate(ctx context.Context, conn *db.PgxIface, args []string) {
 		printCmdErr(fmt.Sprintf("Error in parsing SourceType: %v\n", err))
 	}
 
+	originalDataUri := cmd.Args()[0]
+	updatedDataUri := cmd.Args()[1]
+
+	if *sourceType == "local_file" {
+		originalDataUri = convertToAbsPath(originalDataUri)
+		updatedDataUri = convertToAbsPath(updatedDataUri)
+	}
+
 	updateArgs := &pb.UpdateRequest{
-		Name: cmd.Args()[0],
+		Name: originalDataUri,
 		UpdatedMetadata: &pb.ContentMetadata{
-			URI:        cmd.Args()[1],
+			URI:        updatedDataUri,
 			DataType:   dataTypeEnum,
 			SourceType: sourceTypeEnum,
 		},
@@ -413,4 +440,19 @@ func executeStartServer(ctx context.Context, conn *db.PgxIface, args []string) {
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
+}
+
+func convertToAbsPath(relPath string) string {
+	if path.IsAbs(relPath) {
+		return relPath
+	}
+
+	pwd, err := os.Getwd()
+	if err != nil {
+		log.Printf("Error getting current working directory: %v", err)
+		return relPath
+	}
+
+	absPath := path.Join(pwd, relPath)
+	return path.Clean(absPath)
 }
