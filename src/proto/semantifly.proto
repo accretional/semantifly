@@ -33,6 +33,7 @@ message DeleteResponse {
 
 message GetRequest {
   string name = 1;
+  IndexSource index_source = 2;
 }
 
 message GetResponse {
@@ -64,4 +65,9 @@ message LexicalSearchResponse {
 message LexicalSearchResult {
   string name = 1;
   int32 occurrences = 2;
+}
+
+enum IndexSource {
+  INDEX_FILE = 0;
+  DATABASE = 1;
 }

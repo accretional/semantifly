@@ -196,3 +196,11 @@ func parseSourceType(str string) (pb.SourceType, error) {
 	}
 	return pb.SourceType(val), nil
 }
+
+func parseIndexSource(str string) (pb.IndexSource, error) {
+	val, ok := pb.IndexSource_value[strings.ToUpper(str)]
+	if !ok {
+		return pb.IndexSource_INDEX_FILE, fmt.Errorf("unknown index source type: %s", str)
+	}
+	return pb.IndexSource(val), nil
+}

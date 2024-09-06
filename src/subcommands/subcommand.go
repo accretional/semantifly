@@ -263,6 +263,7 @@ func executeDelete(ctx context.Context, conn *db.PgxIface, args []string) {
 func executeGet(ctx context.Context, conn *db.PgxIface, args []string) {
 	cmd := flag.NewFlagSet("get", flag.ExitOnError)
 	indexPath := cmd.String("index-path", defaultIndexPath, "Path to the index file")
+	indexSource := cmd.String("index-source", "index_file", "Type of index list source: file or database")
 
 	flags, nonFlags, err := parseArgs(args, cmd)
 	if err != nil {
@@ -278,8 +279,14 @@ func executeGet(ctx context.Context, conn *db.PgxIface, args []string) {
 		return
 	}
 
+	indexSourceEnum, err := parseIndexSource(*indexSource)
+	if err != nil {
+		printCmdErr(fmt.Sprintf("Error in parsing indexSource: %v\n", err))
+	}
+
 	getArgs := &pb.GetRequest{
-		Name: cmd.Args()[0],
+		Name:        cmd.Args()[0],
+		IndexSource: indexSourceEnum,
 	}
 
 	resp, _, err := SubcommandGet(ctx, conn, getArgs, *indexPath, os.Stdout)

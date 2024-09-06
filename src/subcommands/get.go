@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"os"
 	"path"
 
 	db "accretional.com/semantifly/database"
@@ -11,46 +12,59 @@ import (
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 )
 
-// TODO:  	Remove the dependency of index file in the get subcommand
-//			The database call does the same functionality
+// TODO:
+//
+//	Get rid of index file. The database call does the same functionality
 func SubcommandGet(ctx context.Context, conn *db.PgxIface, g *pb.GetRequest, indexPath string, w io.Writer) (string, *pb.ContentMetadata, error) {
-	indexFilePath := path.Join(indexPath, indexFile)
 
-	indexMap, err := readIndex(indexFilePath, false)
-	if err != nil {
-		return "", nil, fmt.Errorf("failed to read the index file: %v", err)
-	}
+	var targetMetadata pb.ContentMetadata
 
-	targetEntry := indexMap[g.Name]
+	switch g.IndexSource {
+	case pb.IndexSource_INDEX_FILE:
+		indexFilePath := path.Join(indexPath, indexFile)
 
-	if targetEntry == nil {
-		fmt.Fprintf(w, "entry '%s' not found in index file %s\n", g.Name, indexFilePath)
-		return "", nil, fmt.Errorf("entry '%s' not found in index file %s", g.Name, indexFilePath)
-	}
-
-	if targetEntry.Content == "" {
-		content, err := fetchFromCopy(indexPath, g.Name)
-		if content == nil {
-			if err != nil {
-				fmt.Fprintf(w, "failed to read content from copy: %v. Fetching from the source.\n", err)
-			}
-
-			targetMetadata, err := db.GetContentMetadata(ctx, conn, g.Name)
-			if err != nil {
-				return "", nil, fmt.Errorf("failed to get entry from database: %v", err)
-			} else if targetMetadata == nil {
-				return "", nil, fmt.Errorf("entry '%s' not found in database", g.Name)
-
-			}
-
-			content, err = fetch.FetchFromSource(targetMetadata.SourceType, targetMetadata.URI)
-			if err != nil {
-				return "", nil, fmt.Errorf("failed to read content from source: %v", err)
-			}
+		indexMap, err := readIndex(indexFilePath, false)
+		if err != nil {
+			return "", nil, fmt.Errorf("failed to read the index file: %v", err)
 		}
 
-		return string(content), targetEntry.ContentMetadata, nil
+		targetEntry := indexMap[g.Name]
+
+		if targetEntry == nil {
+			fmt.Fprintf(w, "entry '%s' not found in index file %s\n", g.Name, indexFilePath)
+			return "", nil, fmt.Errorf("entry '%s' not found in index file %s", g.Name, indexFilePath)
+		}
+
+		if targetEntry.Content != "" {
+			return targetEntry.Content, targetEntry.ContentMetadata, nil
+		}
+
+		targetMetadata = *targetEntry.GetContentMetadata()
+
+	case pb.IndexSource_DATABASE:
+
+		dbMetadata, err := db.GetContentMetadata(ctx, conn, g.Name)
+		if err != nil {
+			return "", nil, fmt.Errorf("failed to get entry from database: %v", err)
+		} else if dbMetadata == nil {
+			return "", nil, fmt.Errorf("entry '%s' not found in database", g.Name)
+
+		}
+
+		targetMetadata = *dbMetadata
 	}
 
-	return targetEntry.Content, targetEntry.ContentMetadata, nil
+	content, err := fetchFromCopy(indexPath, g.Name)
+	if content != nil {
+		return string(content), &targetMetadata, nil
+	} else if err != nil && !os.IsNotExist(err) {
+		fmt.Fprintf(w, "failed to read content from copy: %v. Fetching from the source.\n", err)
+	}
+
+	content, err = fetch.FetchFromSource(targetMetadata.SourceType, targetMetadata.URI)
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to read content from source: %v", err)
+	}
+
+	return string(content), &targetMetadata, nil
 }
