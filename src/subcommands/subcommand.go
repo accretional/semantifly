@@ -434,7 +434,7 @@ func executeStartServer(ctx context.Context, conn *db.PgxIface, args []string) {
 		log.Fatalf("failed to listen: %v", err)
 	}
 	s := grpc.NewServer()
-	pb.RegisterSemantiflyServer(s, SemantiflyNewServer(*serverIndexPath))
+	pb.RegisterSemantiflyServer(s, SemantiflyNewServer(ctx, conn, *serverIndexPath))
 	log.Printf("server listening at %v", lis.Addr())
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)

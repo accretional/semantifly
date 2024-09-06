@@ -67,7 +67,6 @@ func startTestServer() {
 		fmt.Printf("Failed to establish connection to the database: %v", err)
 		return
 	}
-	defer conn.Close(ctx)
 
 	var dbConn database.PgxIface = conn
 

@@ -3,7 +3,6 @@ package subcommands
 import (
 	"bytes"
 	"context"
-	"log"
 
 	db "accretional.com/semantifly/database"
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
@@ -15,29 +14,22 @@ type Server struct {
 	pb.UnimplementedSemantiflyServer
 	serverIndexPath string
 	dbContext       context.Context
-	conn            *db.PgxIface
+	dbConn          *db.PgxIface
 }
 
-func SemantiflyNewServer(serverIndexPath string) *Server {
-
-	ctx, conn, err := setupDBConn()
-	if err != nil {
-		log.Fatalf("Failed to setup database connection: %v", err)
-	}
-
-	var dbConn db.PgxIface = conn
+func SemantiflyNewServer(ctx context.Context, conn *db.PgxIface, serverIndexPath string) *Server {
 
 	return &Server{
 		serverIndexPath: serverIndexPath,
 		dbContext:       ctx,
-		conn:            &dbConn,
+		dbConn:          conn,
 	}
 }
 
 func (s *Server) Add(ctx context.Context, req *pb.AddRequest) (*pb.AddResponse, error) {
 
 	var buf bytes.Buffer
-	err := SubcommandAdd(s.dbContext, s.conn, req, s.serverIndexPath, &buf)
+	err := SubcommandAdd(s.dbContext, s.dbConn, req, s.serverIndexPath, &buf)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -47,7 +39,7 @@ func (s *Server) Add(ctx context.Context, req *pb.AddRequest) (*pb.AddResponse, 
 func (s *Server) Delete(ctx context.Context, req *pb.DeleteRequest) (*pb.DeleteResponse, error) {
 
 	var buf bytes.Buffer
-	err := SubcommandDelete(s.dbContext, s.conn, req, s.serverIndexPath, &buf)
+	err := SubcommandDelete(s.dbContext, s.dbConn, req, s.serverIndexPath, &buf)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -57,7 +49,7 @@ func (s *Server) Delete(ctx context.Context, req *pb.DeleteRequest) (*pb.DeleteR
 func (s *Server) Get(ctx context.Context, req *pb.GetRequest) (*pb.GetResponse, error) {
 
 	var buf bytes.Buffer
-	content, contentMetadata, err := SubcommandGet(s.dbContext, s.conn, req, s.serverIndexPath, &buf)
+	content, contentMetadata, err := SubcommandGet(s.dbContext, s.dbConn, req, s.serverIndexPath, &buf)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -67,7 +59,7 @@ func (s *Server) Get(ctx context.Context, req *pb.GetRequest) (*pb.GetResponse, 
 func (s *Server) Update(ctx context.Context, req *pb.UpdateRequest) (*pb.UpdateResponse, error) {
 
 	var buf bytes.Buffer
-	err := SubcommandUpdate(s.dbContext, s.conn, req, s.serverIndexPath, &buf)
+	err := SubcommandUpdate(s.dbContext, s.dbConn, req, s.serverIndexPath, &buf)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
