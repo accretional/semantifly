@@ -185,6 +185,10 @@ func executeAdd(args []string) {
 
 	dataUri := cmd.Args()[0]
 
+	if *sourceType == "local_file" {
+		dataUri = convertToAbsPath(dataUri)
+	}
+
 	addArgs := &pb.AddRequest{
 		AddedMetadata: &pb.ContentMetadata{
 			URI:        dataUri,
@@ -200,7 +204,6 @@ func executeAdd(args []string) {
 		return
 	}
 }
-
 func executeDelete(args []string) {
 	cmd := flag.NewFlagSet("delete", flag.ExitOnError)
 	deleteLocalCopy := cmd.Bool("copy", false, "Whether to delete the copy made")
@@ -220,9 +223,18 @@ func executeDelete(args []string) {
 		return
 	}
 
+	// Convert all args to absolute paths
+	absArgs := make([]string, len(cmd.Args()))
+	for i, arg := range cmd.Args() {
+		sourceType, _ := inferSourceType([]string{arg})
+		if sourceType == "local_file" {
+			absArgs[i] = convertToAbsPath(arg)
+		}
+	}
+
 	deleteArgs := &pb.DeleteRequest{
 		DeleteCopy: *deleteLocalCopy,
-		Names:      cmd.Args(),
+		Names:      absArgs,
 	}
 
 	err = SubcommandDelete(deleteArgs, *indexPath, os.Stdout)
@@ -250,8 +262,15 @@ func executeGet(args []string) {
 		return
 	}
 
+	dataUri := cmd.Args()[0]
+
+	sourceType, _ := inferSourceType([]string{dataUri})
+	if sourceType == "local_file" {
+		dataUri = convertToAbsPath(dataUri)
+	}
+
 	getArgs := &pb.GetRequest{
-		Name: cmd.Args()[0],
+		Name: dataUri,
 	}
 
 	resp, _, err := SubcommandGet(getArgs, *indexPath, os.Stdout)
@@ -302,10 +321,18 @@ func executeUpdate(args []string) {
 		printCmdErr(fmt.Sprintf("Error in parsing SourceType: %v\n", err))
 	}
 
+	originalDataUri := cmd.Args()[0]
+	updatedDataUri := cmd.Args()[1]
+
+	if *sourceType == "local_file" {
+		originalDataUri = convertToAbsPath(originalDataUri)
+		updatedDataUri = convertToAbsPath(updatedDataUri)
+	}
+
 	updateArgs := &pb.UpdateRequest{
-		Name: cmd.Args()[0],
+		Name: originalDataUri,
 		UpdatedMetadata: &pb.ContentMetadata{
-			URI:        cmd.Args()[1],
+			URI:        updatedDataUri,
 			DataType:   dataTypeEnum,
 			SourceType: sourceTypeEnum,
 		},
@@ -378,4 +405,19 @@ func executeStartServer(args []string) {
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
+}
+
+func convertToAbsPath(relPath string) string {
+	if path.IsAbs(relPath) {
+		return relPath
+	}
+
+	pwd, err := os.Getwd()
+	if err != nil {
+		log.Printf("Error getting current working directory: %v", err)
+		return relPath
+	}
+
+	absPath := path.Join(pwd, relPath)
+	return path.Clean(absPath)
 }
