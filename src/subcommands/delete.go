@@ -12,7 +12,7 @@ import (
 )
 
 
-func SubcommandDelete(ctx context.Context, conn db.PgxIface, d *pb.DeleteRequest, indexPath string, w io.Writer) error {
+func SubcommandDelete(ctx context.Context, conn *db.PgxIface, d *pb.DeleteRequest, indexPath string, w io.Writer) error {
 	indexFilePath := path.Join(indexPath, indexFile)
 
 	indexMap, err := readIndex(indexFilePath, false)

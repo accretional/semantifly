@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"accretional.com/semantifly/database"
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -68,7 +69,9 @@ func startTestServer() {
 	}
 	defer conn.Close(ctx)
 
-	go executeStartServer(ctx, conn, []string{"--index-path", testDir})
+	var dbConn database.PgxIface = conn
+
+	go executeStartServer(ctx, &dbConn, []string{"--index-path", testDir})
 
 	// Allow some time for the server to start
 	time.Sleep(100 * time.Millisecond)
@@ -127,7 +130,7 @@ func TestServerCommands(t *testing.T) {
 		t.Fatalf("Failed to return error message when expected to")
 	}
 
-	expectedErrorMsg := "test_semantifly/test_file1.txt has already been added. Skipping without refresh."
+	expectedErrorMsg := "test_semantifly/test_file1.txt has already been added. Skipping without refresh"
 	if !strings.Contains(err.Error(), expectedErrorMsg) {
 		t.Fatalf("Returned error message %v when expected %v", err.Error(), expectedErrorMsg)
 	}

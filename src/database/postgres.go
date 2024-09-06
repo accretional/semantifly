@@ -19,7 +19,7 @@ type PgxIface interface {
 	Exec(ctx context.Context, sql string, arguments ...interface{}) (pgconn.CommandTag, error)
 }
 
-func InitializeDatabaseSchema(ctx context.Context, conn PgxIface) error {
+func InitializeDatabaseSchema(ctx context.Context, conn *PgxIface) error {
 	if ctx == nil {
 		return errors.New("context is nil")
 	}
@@ -28,7 +28,7 @@ func InitializeDatabaseSchema(ctx context.Context, conn PgxIface) error {
 		return errors.New("connection interface is nil")
 	}
 
-	_, err := conn.Exec(ctx, `
+	_, err := (*conn).Exec(ctx, `
 		CREATE TABLE IF NOT EXISTS index_list (
 			name TEXT PRIMARY KEY,
 			entry JSONB
@@ -42,7 +42,7 @@ func InitializeDatabaseSchema(ctx context.Context, conn PgxIface) error {
 
 }
 
-func CreateProtoFieldIndex(ctx context.Context, conn PgxIface, fieldName string) error {
+func CreateProtoFieldIndex(ctx context.Context, conn *PgxIface, fieldName string) error {
 	if ctx == nil {
 		return errors.New("context is nil")
 	}
@@ -54,7 +54,7 @@ func CreateProtoFieldIndex(ctx context.Context, conn PgxIface, fieldName string)
 	indexName := strings.ReplaceAll(strings.ReplaceAll(fieldName, "->", "_"), "'", "")
 	query := `CREATE INDEX IF NOT EXISTS idx_` + indexName + ` ON index_list USING GIN ((` + fieldName + `));`
 
-	_, err := conn.Exec(ctx, query)
+	_, err := (*conn).Exec(ctx, query)
 	if err != nil {
 		return fmt.Errorf("failed to create indexes: %w", err)
 	}
@@ -62,7 +62,7 @@ func CreateProtoFieldIndex(ctx context.Context, conn PgxIface, fieldName string)
 	return nil
 }
 
-func InsertRows(ctx context.Context, conn PgxIface, upsertIndex *pb.Index) error {
+func InsertRows(ctx context.Context, conn *PgxIface, upsertIndex *pb.Index) error {
 	if ctx == nil {
 		return errors.New("context is nil")
 	}
@@ -75,7 +75,7 @@ func InsertRows(ctx context.Context, conn PgxIface, upsertIndex *pb.Index) error
 		return errors.New("upsertIndex is nil")
 	}
 
-	tx, err := conn.Begin(ctx)
+	tx, err := (*conn).Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("unable to connect to database: %w", err)
 	}
@@ -111,7 +111,7 @@ func InsertRows(ctx context.Context, conn PgxIface, upsertIndex *pb.Index) error
 	return nil
 }
 
-func DeleteRows(ctx context.Context, conn PgxIface, names []string) error {
+func DeleteRows(ctx context.Context, conn *PgxIface, names []string) error {
 	if ctx == nil {
 		return errors.New("context is nil")
 	}
@@ -120,7 +120,7 @@ func DeleteRows(ctx context.Context, conn PgxIface, names []string) error {
 		return errors.New("connection interface is nil")
 	}
 
-	_, err := conn.Exec(ctx, `
+	_, err := (*conn).Exec(ctx, `
 		DELETE FROM index_list 
 		WHERE name=ANY($1)
 	`, names)
@@ -131,7 +131,7 @@ func DeleteRows(ctx context.Context, conn PgxIface, names []string) error {
 	return nil
 }
 
-func GetContentMetadata(ctx context.Context, conn PgxIface, name string) (*pb.ContentMetadata, error) {
+func GetContentMetadata(ctx context.Context, conn *PgxIface, name string) (*pb.ContentMetadata, error) {
 	if ctx == nil {
 		return nil, errors.New("context is nil")
 	}
@@ -139,7 +139,7 @@ func GetContentMetadata(ctx context.Context, conn PgxIface, name string) (*pb.Co
 		return nil, errors.New("connection interface is nil")
 	}
 
-	tx, err := conn.Begin(ctx)
+	tx, err := (*conn).Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("unable to connect to database: %w", err)
 	}

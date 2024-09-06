@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 
+	db "accretional.com/semantifly/database"
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -27,8 +28,10 @@ func (s *Server) Add(ctx context.Context, req *pb.AddRequest) (*pb.AddResponse, 
 	}
 	defer conn.Close(ctx)
 
+	var dbConn db.PgxIface = conn
+
 	var buf bytes.Buffer
-	err = SubcommandAdd(db_ctx, conn, req, s.serverIndexPath, &buf)
+	err = SubcommandAdd(db_ctx, &dbConn, req, s.serverIndexPath, &buf)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -42,8 +45,10 @@ func (s *Server) Delete(ctx context.Context, req *pb.DeleteRequest) (*pb.DeleteR
 	}
 	defer conn.Close(ctx)
 
+	var dbConn db.PgxIface = conn
+
 	var buf bytes.Buffer
-	err = SubcommandDelete(db_ctx, conn, req, s.serverIndexPath, &buf)
+	err = SubcommandDelete(db_ctx, &dbConn, req, s.serverIndexPath, &buf)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -57,8 +62,10 @@ func (s *Server) Get(ctx context.Context, req *pb.GetRequest) (*pb.GetResponse, 
 	}
 	defer conn.Close(ctx)
 
+	var dbConn db.PgxIface = conn
+
 	var buf bytes.Buffer
-	content, contentMetadata, err := SubcommandGet(db_ctx, conn, req, s.serverIndexPath, &buf)
+	content, contentMetadata, err := SubcommandGet(db_ctx, &dbConn, req, s.serverIndexPath, &buf)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -72,8 +79,10 @@ func (s *Server) Update(ctx context.Context, req *pb.UpdateRequest) (*pb.UpdateR
 	}
 	defer conn.Close(ctx)
 
+	var dbConn db.PgxIface = conn
+
 	var buf bytes.Buffer
-	err = SubcommandUpdate(db_ctx, conn, req, s.serverIndexPath, &buf)
+	err = SubcommandUpdate(db_ctx, &dbConn, req, s.serverIndexPath, &buf)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

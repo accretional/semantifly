@@ -18,7 +18,7 @@ import (
 
 type SubcommandInfo struct {
 	Description string
-	Execute     func(context.Context, db.PgxIface, []string)
+	Execute     func(context.Context, *db.PgxIface, []string)
 }
 
 var subcommandDict = map[string]SubcommandInfo{
@@ -65,7 +65,8 @@ func CommandReadRun() {
 		fmt.Printf("Failed to establish connection to the database: %v", err)
 		return
 	}
-	defer conn.Close(ctx)
+
+	var dbConn db.PgxIface = conn
 
 	cmdName := os.Args[1]
 	args := os.Args[2:]
@@ -76,7 +77,7 @@ func CommandReadRun() {
 	}
 
 	if subcommand, exists := subcommandDict[cmdName]; exists {
-		subcommand.Execute(ctx, conn, args)
+		subcommand.Execute(ctx, &dbConn, args)
 	} else {
 		printCmdErr("No valid subcommand provided.")
 		os.Exit(1)
@@ -109,12 +110,13 @@ func setupSemantifly() {
 func setupDBConn() (context.Context, db.PgxIface, error) {
 	ctx := context.Background()
 	conn, err := pgx.Connect(ctx, os.Getenv("DATABASE_URL"))
-
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to connect to PostgreSQL database: %v", err)
 	}
 
-	err = db.InitializeDatabaseSchema(ctx, conn)
+	var dbConn db.PgxIface = conn
+
+	err = db.InitializeDatabaseSchema(ctx, &dbConn)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to initialise the database schema: %v", err)
 	}
@@ -204,7 +206,7 @@ func inferSourceType(uris []string) (string, error) {
 	return sourceTypeStr, nil
 }
 
-func executeAdd(ctx context.Context, conn db.PgxIface, args []string) {
+func executeAdd(ctx context.Context, conn *db.PgxIface, args []string) {
 	cmd := flag.NewFlagSet("add", flag.ExitOnError)
 	dataType := cmd.String("type", "text", "The type of the input data")
 	sourceType := cmd.String("source-type", "", "How to access the content")
@@ -261,7 +263,7 @@ func executeAdd(ctx context.Context, conn db.PgxIface, args []string) {
 	}
 }
 
-func executeDelete(ctx context.Context, conn db.PgxIface, args []string) {
+func executeDelete(ctx context.Context, conn *db.PgxIface, args []string) {
 	cmd := flag.NewFlagSet("delete", flag.ExitOnError)
 	deleteLocalCopy := cmd.Bool("copy", false, "Whether to delete the copy made")
 	indexPath := cmd.String("index-path", "", "Path to the index file")
@@ -292,7 +294,7 @@ func executeDelete(ctx context.Context, conn db.PgxIface, args []string) {
 	}
 }
 
-func executeGet(ctx context.Context, conn db.PgxIface, args []string) {
+func executeGet(ctx context.Context, conn *db.PgxIface, args []string) {
 	cmd := flag.NewFlagSet("get", flag.ExitOnError)
 	indexPath := cmd.String("index-path", "", "Path to the index file")
 
@@ -323,7 +325,7 @@ func executeGet(ctx context.Context, conn db.PgxIface, args []string) {
 	fmt.Println(resp)
 }
 
-func executeUpdate(ctx context.Context, conn db.PgxIface, args []string) {
+func executeUpdate(ctx context.Context, conn *db.PgxIface, args []string) {
 	cmd := flag.NewFlagSet("update", flag.ExitOnError)
 	dataType := cmd.String("type", "text", "The type of the input data")
 	sourceType := cmd.String("source-type", "", "How to access the content")
@@ -379,7 +381,7 @@ func executeUpdate(ctx context.Context, conn db.PgxIface, args []string) {
 	}
 }
 
-func executeSearch(ctx context.Context, conn db.PgxIface, args []string) {
+func executeSearch(ctx context.Context, conn *db.PgxIface, args []string) {
 	cmd := flag.NewFlagSet("search", flag.ExitOnError)
 	indexPath := cmd.String("index-path", "", "Path to the index file")
 	topN := cmd.Int("n", 1, "Top n search results")
@@ -412,7 +414,7 @@ func executeSearch(ctx context.Context, conn db.PgxIface, args []string) {
 	PrintSearchResults(results, os.Stdout)
 }
 
-func executeStartServer(ctx context.Context, conn db.PgxIface, args []string) {
+func executeStartServer(ctx context.Context, conn *db.PgxIface, args []string) {
 	cmd := flag.NewFlagSet("start-server", flag.ExitOnError)
 	serverIndexPath := cmd.String("index-path", "index", "Path to the server index")
 	port := cmd.String("port", "50051", "Port for the server")

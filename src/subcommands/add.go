@@ -12,7 +12,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func SubcommandAdd(ctx context.Context, conn db.PgxIface, a *pb.AddRequest, indexPath string, w io.Writer) error {
+func SubcommandAdd(ctx context.Context, conn *db.PgxIface, a *pb.AddRequest, indexPath string, w io.Writer) error {
 	indexFilePath := path.Join(indexPath, indexFile)
 	indexMap, err := readIndex(indexFilePath, true)
 	if err != nil {

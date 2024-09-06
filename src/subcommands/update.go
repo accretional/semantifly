@@ -13,7 +13,7 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func SubcommandUpdate(ctx context.Context, conn db.PgxIface, u *pb.UpdateRequest, indexPath string, w io.Writer) error {
+func SubcommandUpdate(ctx context.Context, conn *db.PgxIface, u *pb.UpdateRequest, indexPath string, w io.Writer) error {
 	indexFilePath := path.Join(indexPath, indexFile)
 
 	indexMap, err := readIndex(indexFilePath, false)

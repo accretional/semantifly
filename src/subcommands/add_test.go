@@ -27,8 +27,10 @@ func setupDatabaseForTesting() (context.Context, database.PgxIface, error) {
 		return nil, nil, fmt.Errorf("Failed to establish connection to the database: %v", err)
 	}
 
+	var dbConn database.PgxIface = conn
+
 	// Test database table initialisation
-	err = database.InitializeDatabaseSchema(ctx, conn)
+	err = database.InitializeDatabaseSchema(ctx, &dbConn)
 	if err != nil {
 		return nil, nil, fmt.Errorf("Failed to initialise the database schema: %v", err)
 	}
@@ -59,6 +61,8 @@ func TestAdd(t *testing.T) {
 	}
 	defer conn.Close(ctx)
 
+	var dbConn database.PgxIface = conn
+
 	testFileData := &pb.ContentMetadata{
 		DataType:   0,
 		SourceType: 0,
@@ -74,7 +78,7 @@ func TestAdd(t *testing.T) {
 	var buf bytes.Buffer
 
 	// Call the Add function with the buffer
-	err = SubcommandAdd(ctx, conn, args, tempDir, &buf)
+	err = SubcommandAdd(ctx, &dbConn, args, tempDir, &buf)
 	if err != nil {
 		t.Fatalf("Add function returned an error: %v", err)
 	}
@@ -142,10 +146,11 @@ func TestAdd_MultipleFilesSamePath(t *testing.T) {
 	}
 	defer conn.Close(ctx)
 
+	var dbConn database.PgxIface = conn
+
 	testFilePath2 := path.Join(tempDir, "test_file.txt")
 
 	// Set up test arguments
-
 	testFileData1 := &pb.ContentMetadata{
 		DataType:   0,
 		SourceType: 0,
@@ -158,7 +163,7 @@ func TestAdd_MultipleFilesSamePath(t *testing.T) {
 	}
 
 	var buf1 bytes.Buffer
-	err = SubcommandAdd(ctx, conn, args, tempDir, &buf1)
+	err = SubcommandAdd(ctx, &dbConn, args, tempDir, &buf1)
 	if err != nil {
 		t.Fatalf("Add function returned an error: %v", err)
 	}
@@ -175,7 +180,7 @@ func TestAdd_MultipleFilesSamePath(t *testing.T) {
 	}
 
 	var buf2 bytes.Buffer
-	err = SubcommandAdd(ctx, conn, args, tempDir, &buf2)
+	err = SubcommandAdd(ctx, &dbConn, args, tempDir, &buf2)
 	if err == nil {
 		t.Fatalf("Add function did not return an error when it was suppposed to.")
 	}
@@ -219,6 +224,8 @@ func TestAdd_Webpage(t *testing.T) {
 	}
 	defer conn.Close(ctx)
 
+	var dbConn database.PgxIface = conn
+
 	// Create the test url
 	testWebpageURL := "http://echo.jsontest.com/title/lorem/content/ipsum"
 
@@ -236,7 +243,7 @@ func TestAdd_Webpage(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	err = SubcommandAdd(ctx, conn, args, tempDir, &buf)
+	err = SubcommandAdd(ctx, &dbConn, args, tempDir, &buf)
 	if err != nil {
 		t.Fatalf("Add function returned an error: %v", err)
 	}
@@ -337,6 +344,8 @@ func TestAdd_Database(t *testing.T) {
 	}
 	defer conn.Close(ctx)
 
+	var dbConn database.PgxIface = conn
+
 	testFileData := &pb.ContentMetadata{
 		DataType:   0,
 		SourceType: 0,
@@ -352,7 +361,7 @@ func TestAdd_Database(t *testing.T) {
 	var buf bytes.Buffer
 
 	// Call the Add function with the buffer
-	err = SubcommandAdd(ctx, conn, args, tempDir, &buf)
+	err = SubcommandAdd(ctx, &dbConn, args, tempDir, &buf)
 	if err != nil {
 		t.Fatalf("Add function returned an error: %v", err)
 	}

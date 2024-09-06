@@ -7,6 +7,7 @@ import (
 	"path"
 	"testing"
 
+	"accretional.com/semantifly/database"
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
@@ -35,6 +36,8 @@ func TestUpdate(t *testing.T) {
 	}
 	defer conn.Close(ctx)
 
+	var dbConn database.PgxIface = conn
+
 	testFileData := &pb.ContentMetadata{
 		DataType:   0,
 		SourceType: 0,
@@ -48,7 +51,7 @@ func TestUpdate(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	err = SubcommandAdd(ctx, conn, args, tempDir, &buf)
+	err = SubcommandAdd(ctx, &dbConn, args, tempDir, &buf)
 	if err != nil {
 		t.Fatalf("Add function returned an error: %v", err)
 	}
@@ -81,7 +84,7 @@ func TestUpdate(t *testing.T) {
 	}
 
 	var updateBuf bytes.Buffer
-	err = SubcommandUpdate(ctx, conn, updateArgs, tempDir, &updateBuf)
+	err = SubcommandUpdate(ctx, &dbConn, updateArgs, tempDir, &updateBuf)
 	if err != nil {
 		t.Fatalf("Update function returned an error: %v", err)
 	}
@@ -163,6 +166,8 @@ func TestUpdate_Database(t *testing.T) {
 	}
 	defer conn.Close(ctx)
 
+	var dbConn database.PgxIface = conn
+
 	testFileData := &pb.ContentMetadata{
 		DataType:   0,
 		SourceType: 0,
@@ -176,7 +181,7 @@ func TestUpdate_Database(t *testing.T) {
 
 	var buf bytes.Buffer
 
-	err = SubcommandAdd(ctx, conn, args, tempDir, &buf)
+	err = SubcommandAdd(ctx, &dbConn, args, tempDir, &buf)
 	if err != nil {
 		t.Fatalf("Add function returned an error: %v", err)
 	}
@@ -222,7 +227,7 @@ func TestUpdate_Database(t *testing.T) {
 	}
 
 	var updateBuf bytes.Buffer
-	err = SubcommandUpdate(ctx, conn, updateArgs, tempDir, &updateBuf)
+	err = SubcommandUpdate(ctx, &dbConn, updateArgs, tempDir, &updateBuf)
 	if err != nil {
 		t.Fatalf("Update function returned an error: %v", err)
 	}

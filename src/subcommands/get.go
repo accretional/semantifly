@@ -13,7 +13,7 @@ import (
 
 // TODO:  	Remove the dependency of index file in the get subcommand
 //			The database call does the same functionality
-func SubcommandGet(ctx context.Context, conn db.PgxIface, g *pb.GetRequest, indexPath string, w io.Writer) (string, *pb.ContentMetadata, error) {
+func SubcommandGet(ctx context.Context, conn *db.PgxIface, g *pb.GetRequest, indexPath string, w io.Writer) (string, *pb.ContentMetadata, error) {
 	indexFilePath := path.Join(indexPath, indexFile)
 
 	indexMap, err := readIndex(indexFilePath, false)

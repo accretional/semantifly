@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"accretional.com/semantifly/database"
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 )
 
@@ -36,6 +37,8 @@ func TestGet(t *testing.T) {
 	}
 	defer conn.Close(ctx)
 
+	var dbConn database.PgxIface = conn
+
 	testFileData := &pb.ContentMetadata{
 		DataType:   0,
 		SourceType: 0,
@@ -49,7 +52,7 @@ func TestGet(t *testing.T) {
 
 	var addBuf bytes.Buffer
 
-	err = SubcommandAdd(ctx, conn, addArgs, tempDir, &addBuf)
+	err = SubcommandAdd(ctx, &dbConn, addArgs, tempDir, &addBuf)
 	if err != nil {
 		t.Fatalf("Add function returned an error: %v", err)
 	}
@@ -66,7 +69,7 @@ func TestGet(t *testing.T) {
 
 	var getBuf bytes.Buffer
 
-	resp, _, err := SubcommandGet(ctx, conn, getArgs, tempDir, &getBuf)
+	resp, _, err := SubcommandGet(ctx, &dbConn, getArgs, tempDir, &getBuf)
 	if err != nil {
 		t.Fatalf("Get function returned an error: %v", err)
 	}
@@ -93,12 +96,16 @@ func TestGet_Webpage(t *testing.T) {
 	}
 	defer conn.Close(ctx)
 
+	var dbConn database.PgxIface = conn
+
 	testWebData := &pb.ContentMetadata{
 		DataType:   0,
 		SourceType: 1,
 		URI:        testWebpageURL,
 	}
 
+	// By keeping the MakeCopy flag off, we are essentially testing the database
+	// query of Get subcommand as well
 	addArgs := &pb.AddRequest{
 		AddedMetadata: testWebData,
 		MakeCopy:      false,
@@ -106,7 +113,7 @@ func TestGet_Webpage(t *testing.T) {
 
 	var addBuf bytes.Buffer
 
-	err = SubcommandAdd(ctx, conn, addArgs, tempDir, &addBuf)
+	err = SubcommandAdd(ctx, &dbConn, addArgs, tempDir, &addBuf)
 	if err != nil {
 		t.Fatalf("Add function returned an error: %v", err)
 	}
@@ -122,7 +129,7 @@ func TestGet_Webpage(t *testing.T) {
 
 	var getBuf bytes.Buffer
 
-	getResp, _, err := SubcommandGet(ctx, conn, getArgs, tempDir, &getBuf)
+	getResp, _, err := SubcommandGet(ctx, &dbConn, getArgs, tempDir, &getBuf)
 	if err != nil {
 		t.Fatalf("Get function returned an error: %v", err)
 	}

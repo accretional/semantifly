@@ -7,6 +7,7 @@ import (
 	"path"
 	"testing"
 
+	"accretional.com/semantifly/database"
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 )
 
@@ -39,6 +40,8 @@ func TestDelete(t *testing.T) {
 	}
 	defer conn.Close(ctx)
 
+	var dbConn database.PgxIface = conn
+
 	testFileData1 := &pb.ContentMetadata{
 		DataType:   0,
 		SourceType: 0,
@@ -57,7 +60,7 @@ func TestDelete(t *testing.T) {
 
 	var addBuf bytes.Buffer
 
-	err = SubcommandAdd(ctx, conn, addArgs, tempDir, &addBuf)
+	err = SubcommandAdd(ctx, &dbConn, addArgs, tempDir, &addBuf)
 	if err != nil {
 		t.Fatalf("Add function returned an error: %v", err)
 	}
@@ -69,7 +72,7 @@ func TestDelete(t *testing.T) {
 
 	var addBuf2 bytes.Buffer
 
-	err = SubcommandAdd(ctx, conn, addArgs2, tempDir, &addBuf2)
+	err = SubcommandAdd(ctx, &dbConn, addArgs2, tempDir, &addBuf2)
 	if err != nil {
 		t.Fatalf("Add function returned an error: %v", err)
 	}
@@ -82,7 +85,7 @@ func TestDelete(t *testing.T) {
 
 	var deleteBuf bytes.Buffer
 	// Run the Delete function
-	err = SubcommandDelete(ctx, conn, deleteArgs, tempDir, &deleteBuf)
+	err = SubcommandDelete(ctx, &dbConn, deleteArgs, tempDir, &deleteBuf)
 	if err != nil {
 		t.Fatalf("Delete function returned an error: %v", err)
 	}
