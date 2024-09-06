@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"accretional.com/semantifly/database"
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 )
 
@@ -29,6 +30,15 @@ func TestGet(t *testing.T) {
 		t.Fatalf("Failed to create test file: %v", err)
 	}
 
+	// Setup database connection
+	ctx, conn, err := setupDatabaseForTesting()
+	if err != nil {
+		t.Fatalf("failed to connect to PostgreSQL database: %v", err)
+	}
+	defer conn.Close(ctx)
+
+	var dbConn database.PgxIface = conn
+
 	testFileData := &pb.ContentMetadata{
 		DataType:   0,
 		SourceType: 0,
@@ -42,7 +52,7 @@ func TestGet(t *testing.T) {
 
 	var addBuf bytes.Buffer
 
-	err = SubcommandAdd(addArgs, tempDir, &addBuf)
+	err = SubcommandAdd(ctx, &dbConn, addArgs, tempDir, &addBuf)
 	if err != nil {
 		t.Fatalf("Add function returned an error: %v", err)
 	}
@@ -59,7 +69,7 @@ func TestGet(t *testing.T) {
 
 	var getBuf bytes.Buffer
 
-	resp, _, err := SubcommandGet(getArgs, tempDir, &getBuf)
+	resp, _, err := SubcommandGet(ctx, &dbConn, getArgs, tempDir, &getBuf)
 	if err != nil {
 		t.Fatalf("Get function returned an error: %v", err)
 	}
@@ -79,20 +89,31 @@ func TestGet_Webpage(t *testing.T) {
 
 	testWebpageURL := "http://echo.jsontest.com/title/lorem/content/ipsum"
 
+	// Setup database connection
+	ctx, conn, err := setupDatabaseForTesting()
+	if err != nil {
+		t.Fatalf("failed to connect to PostgreSQL database: %v", err)
+	}
+	defer conn.Close(ctx)
+
+	var dbConn database.PgxIface = conn
+
 	testWebData := &pb.ContentMetadata{
 		DataType:   0,
 		SourceType: 1,
 		URI:        testWebpageURL,
 	}
 
+	// By keeping the MakeCopy flag off, we are essentially testing the database
+	// query of Get subcommand as well
 	addArgs := &pb.AddRequest{
 		AddedMetadata: testWebData,
-		MakeCopy:  true,
+		MakeCopy:      false,
 	}
 
 	var addBuf bytes.Buffer
 
-	err = SubcommandAdd(addArgs, tempDir, &addBuf)
+	err = SubcommandAdd(ctx, &dbConn, addArgs, tempDir, &addBuf)
 	if err != nil {
 		t.Fatalf("Add function returned an error: %v", err)
 	}
@@ -108,7 +129,91 @@ func TestGet_Webpage(t *testing.T) {
 
 	var getBuf bytes.Buffer
 
-	getResp, _, err := SubcommandGet(getArgs, tempDir, &getBuf)
+	getResp, _, err := SubcommandGet(ctx, &dbConn, getArgs, tempDir, &getBuf)
+	if err != nil {
+		t.Fatalf("Get function returned an error: %v", err)
+	}
+
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+
+	resp, err := client.Get(testWebpageURL)
+	if err != nil {
+		t.Errorf("failed to fetch web page: %v", err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("web page returned non-OK status: %s", resp.Status)
+		return
+	}
+
+	webpageContent, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Errorf("failed to read web page content: %v", err)
+		return
+	}
+
+	webpageContentStr := string(webpageContent)
+
+	if getResp != webpageContentStr {
+		t.Errorf("Failed to validate webpage copy: Expected \"%s\", got \"%s\"", webpageContent, getResp)
+	}
+}
+
+func TestGet_Database(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "add_test")
+	if err != nil {
+		t.Fatalf("Failed to create temp directory: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	testWebpageURL := "http://echo.jsontest.com/title/lorem/content/ipsum"
+
+	// Setup database connection
+	ctx, conn, err := setupDatabaseForTesting()
+	if err != nil {
+		t.Fatalf("failed to connect to PostgreSQL database: %v", err)
+	}
+	defer conn.Close(ctx)
+
+	var dbConn database.PgxIface = conn
+
+	testWebData := &pb.ContentMetadata{
+		DataType:   pb.DataType_TEXT,
+		SourceType: pb.SourceType_WEBPAGE,
+		URI:        testWebpageURL,
+	}
+
+	// By keeping the MakeCopy flag off, we are essentially testing the database
+	// query of Get subcommand as well
+	addArgs := &pb.AddRequest{
+		AddedMetadata: testWebData,
+		MakeCopy:      false,
+	}
+
+	var addBuf bytes.Buffer
+
+	err = SubcommandAdd(ctx, &dbConn, addArgs, tempDir, &addBuf)
+	if err != nil {
+		t.Fatalf("Add function returned an error: %v", err)
+	}
+
+	indexFilePath := path.Join(tempDir, indexFile)
+	if _, err := os.Stat(indexFilePath); os.IsNotExist(err) {
+		t.Errorf("Index file was not created")
+	}
+
+	getArgs := &pb.GetRequest{
+		Name:        testWebpageURL,
+		IndexSource: pb.IndexSource_DATABASE,
+	}
+
+	var getBuf bytes.Buffer
+
+	getResp, _, err := SubcommandGet(ctx, &dbConn, getArgs, tempDir, &getBuf)
 	if err != nil {
 		t.Fatalf("Get function returned an error: %v", err)
 	}

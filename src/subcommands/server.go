@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 
+	db "accretional.com/semantifly/database"
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -12,17 +13,23 @@ import (
 type Server struct {
 	pb.UnimplementedSemantiflyServer
 	serverIndexPath string
+	dbContext       context.Context
+	dbConn          *db.PgxIface
 }
 
-func SemantiflyNewServer(serverIndexPath string) *Server {
+func SemantiflyNewServer(ctx context.Context, conn *db.PgxIface, serverIndexPath string) *Server {
+
 	return &Server{
 		serverIndexPath: serverIndexPath,
+		dbContext:       ctx,
+		dbConn:          conn,
 	}
 }
 
 func (s *Server) Add(ctx context.Context, req *pb.AddRequest) (*pb.AddResponse, error) {
+
 	var buf bytes.Buffer
-	err := SubcommandAdd(req, s.serverIndexPath, &buf)
+	err := SubcommandAdd(s.dbContext, s.dbConn, req, s.serverIndexPath, &buf)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -30,8 +37,9 @@ func (s *Server) Add(ctx context.Context, req *pb.AddRequest) (*pb.AddResponse, 
 }
 
 func (s *Server) Delete(ctx context.Context, req *pb.DeleteRequest) (*pb.DeleteResponse, error) {
+
 	var buf bytes.Buffer
-	err := SubcommandDelete(req, s.serverIndexPath, &buf)
+	err := SubcommandDelete(s.dbContext, s.dbConn, req, s.serverIndexPath, &buf)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -39,8 +47,9 @@ func (s *Server) Delete(ctx context.Context, req *pb.DeleteRequest) (*pb.DeleteR
 }
 
 func (s *Server) Get(ctx context.Context, req *pb.GetRequest) (*pb.GetResponse, error) {
+
 	var buf bytes.Buffer
-	content, contentMetadata, err := SubcommandGet(req, s.serverIndexPath, &buf)
+	content, contentMetadata, err := SubcommandGet(s.dbContext, s.dbConn, req, s.serverIndexPath, &buf)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -48,9 +57,9 @@ func (s *Server) Get(ctx context.Context, req *pb.GetRequest) (*pb.GetResponse, 
 }
 
 func (s *Server) Update(ctx context.Context, req *pb.UpdateRequest) (*pb.UpdateResponse, error) {
-	var buf bytes.Buffer
 
-	err := SubcommandUpdate(req, s.serverIndexPath, &buf)
+	var buf bytes.Buffer
+	err := SubcommandUpdate(s.dbContext, s.dbConn, req, s.serverIndexPath, &buf)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

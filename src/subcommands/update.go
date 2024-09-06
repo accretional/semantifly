@@ -1,17 +1,19 @@
 package subcommands
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"path"
 
+	db "accretional.com/semantifly/database"
 	fetch "accretional.com/semantifly/fetcher"
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
 	search "accretional.com/semantifly/search"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func SubcommandUpdate(u *pb.UpdateRequest, indexPath string, w io.Writer) error {
+func SubcommandUpdate(ctx context.Context, conn *db.PgxIface, u *pb.UpdateRequest, indexPath string, w io.Writer) error {
 	indexFilePath := path.Join(indexPath, indexFile)
 
 	indexMap, err := readIndex(indexFilePath, false)
@@ -21,10 +23,6 @@ func SubcommandUpdate(u *pb.UpdateRequest, indexPath string, w io.Writer) error 
 
 	if err := updateIndex(indexMap, u, w); err != nil {
 		return fmt.Errorf("failed to update the index entry %s: %v", u.Name, err)
-	}
-
-	if err := writeIndex(indexFilePath, indexMap); err != nil {
-		return fmt.Errorf("failed to write to the index file: %v", err)
 	}
 
 	if u.UpdateCopy {
@@ -44,6 +42,15 @@ func SubcommandUpdate(u *pb.UpdateRequest, indexPath string, w io.Writer) error 
 			return fmt.Errorf("failed to update the copy of the source file: %v", err)
 		}
 	}
+
+	if err := writeIndex(indexFilePath, indexMap); err != nil {
+		return fmt.Errorf("failed to write to the index file: %v", err)
+	}
+
+	if err := db.InsertRows(ctx, conn, &pb.Index{Entries: []*pb.IndexListEntry{indexMap[u.Name]}}); err != nil {
+		return fmt.Errorf("failed to update the database: %v", err)
+	}
+
 	return nil
 }
 

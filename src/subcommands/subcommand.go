@@ -1,6 +1,7 @@
 package subcommands
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -9,7 +10,9 @@ import (
 	"path"
 	"strings"
 
+	db "accretional.com/semantifly/database"
 	pb "accretional.com/semantifly/proto/accretional.com/semantifly/proto"
+	"github.com/jackc/pgx/v5"
 	"google.golang.org/grpc"
 )
 
@@ -17,7 +20,7 @@ var defaultIndexPath = path.Join(os.ExpandEnv("$HOME/.semantifly"), "default")
 
 type SubcommandInfo struct {
 	Description string
-	Execute     func([]string)
+	Execute     func(context.Context, *db.PgxIface, []string)
 }
 
 var subcommandDict = map[string]SubcommandInfo{
@@ -57,6 +60,14 @@ func CommandReadRun() {
 		os.Exit(1)
 	}
 
+	ctx, conn, err := setupDBConn()
+	if err != nil {
+		fmt.Printf("Failed to establish connection to the database: %v", err)
+		return
+	}
+
+	var dbConn db.PgxIface = conn
+
 	cmdName := os.Args[1]
 	args := os.Args[2:]
 
@@ -66,7 +77,7 @@ func CommandReadRun() {
 	}
 
 	if subcommand, exists := subcommandDict[cmdName]; exists {
-		subcommand.Execute(args)
+		subcommand.Execute(ctx, &dbConn, args)
 	} else {
 		printCmdErr("No valid subcommand provided.")
 		os.Exit(1)
@@ -82,6 +93,23 @@ func baseHelp() {
 	}
 
 	fmt.Println("\nUse 'semantifly <subcommand> --help' for more information about a specific subcommand.")
+}
+
+func setupDBConn() (context.Context, db.PgxIface, error) {
+	ctx := context.Background()
+	conn, err := pgx.Connect(ctx, os.Getenv("DATABASE_URL"))
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to connect to PostgreSQL database: %v", err)
+	}
+
+	var dbConn db.PgxIface = conn
+
+	err = db.InitializeDatabaseSchema(ctx, &dbConn)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to initialise the database schema: %v", err)
+	}
+
+	return ctx, conn, nil
 }
 
 func isBoolFlag(fs *flag.FlagSet, name string) bool {
@@ -144,7 +172,7 @@ func inferSourceType(uris []string) (string, error) {
 	return sourceTypeStr, nil
 }
 
-func executeAdd(args []string) {
+func executeAdd(ctx context.Context, conn *db.PgxIface, args []string) {
 	cmd := flag.NewFlagSet("add", flag.ExitOnError)
 	dataType := cmd.String("type", "text", "The type of the input data")
 	sourceType := cmd.String("source-type", "", "How to access the content")
@@ -198,13 +226,14 @@ func executeAdd(args []string) {
 		MakeCopy: *makeLocalCopy,
 	}
 
-	err = SubcommandAdd(addArgs, *indexPath, os.Stdout)
+	err = SubcommandAdd(ctx, conn, addArgs, *indexPath, os.Stdout)
 	if err != nil {
 		fmt.Printf("Error occurred during add subcommand: %v", err)
 		return
 	}
 }
-func executeDelete(args []string) {
+
+func executeDelete(ctx context.Context, conn *db.PgxIface, args []string) {
 	cmd := flag.NewFlagSet("delete", flag.ExitOnError)
 	deleteLocalCopy := cmd.Bool("copy", false, "Whether to delete the copy made")
 	indexPath := cmd.String("index-path", defaultIndexPath, "Path to the index file")
@@ -237,16 +266,17 @@ func executeDelete(args []string) {
 		Names:      absArgs,
 	}
 
-	err = SubcommandDelete(deleteArgs, *indexPath, os.Stdout)
+	err = SubcommandDelete(ctx, conn, deleteArgs, *indexPath, os.Stdout)
 	if err != nil {
 		fmt.Printf("Error occurred during delete subcommand: %v", err)
 		return
 	}
 }
 
-func executeGet(args []string) {
+func executeGet(ctx context.Context, conn *db.PgxIface, args []string) {
 	cmd := flag.NewFlagSet("get", flag.ExitOnError)
 	indexPath := cmd.String("index-path", defaultIndexPath, "Path to the index file")
+	indexSource := cmd.String("index-source", "index_file", "Type of index list source: file or database")
 
 	flags, nonFlags, err := parseArgs(args, cmd)
 	if err != nil {
@@ -262,18 +292,23 @@ func executeGet(args []string) {
 		return
 	}
 
-	dataUri := cmd.Args()[0]
+  dataUri := cmd.Args()[0]
 
 	sourceType, _ := inferSourceType([]string{dataUri})
 	if sourceType == "local_file" {
 		dataUri = convertToAbsPath(dataUri)
 	}
-
-	getArgs := &pb.GetRequest{
-		Name: dataUri,
+	indexSourceEnum, err := parseIndexSource(*indexSource)
+	if err != nil {
+		printCmdErr(fmt.Sprintf("Error in parsing indexSource: %v\n", err))
 	}
 
-	resp, _, err := SubcommandGet(getArgs, *indexPath, os.Stdout)
+	getArgs := &pb.GetRequest{
+		Name:        dataUri,
+		IndexSource: indexSourceEnum,
+	}
+
+	resp, _, err := SubcommandGet(ctx, conn, getArgs, *indexPath, os.Stdout)
 	if err != nil {
 		fmt.Printf("Error occurred during get subcommand: %v\n", err)
 		return
@@ -282,7 +317,7 @@ func executeGet(args []string) {
 	fmt.Println(resp)
 }
 
-func executeUpdate(args []string) {
+func executeUpdate(ctx context.Context, conn *db.PgxIface, args []string) {
 	cmd := flag.NewFlagSet("update", flag.ExitOnError)
 	dataType := cmd.String("type", "text", "The type of the input data")
 	sourceType := cmd.String("source-type", "", "How to access the content")
@@ -339,14 +374,14 @@ func executeUpdate(args []string) {
 		UpdateCopy: *makeLocalCopy,
 	}
 
-	err = SubcommandUpdate(updateArgs, *indexPath, os.Stdout)
+	err = SubcommandUpdate(ctx, conn, updateArgs, *indexPath, os.Stdout)
 	if err != nil {
 		fmt.Printf("Error occurred during update subcommand: %v", err)
 		return
 	}
 }
 
-func executeSearch(args []string) {
+func executeSearch(ctx context.Context, conn *db.PgxIface, args []string) {
 	cmd := flag.NewFlagSet("search", flag.ExitOnError)
 	indexPath := cmd.String("index-path", defaultIndexPath, "Path to the index file")
 	topN := cmd.Int("n", 1, "Top n search results")
@@ -379,7 +414,7 @@ func executeSearch(args []string) {
 	PrintSearchResults(results, os.Stdout)
 }
 
-func executeStartServer(args []string) {
+func executeStartServer(ctx context.Context, conn *db.PgxIface, args []string) {
 	cmd := flag.NewFlagSet("start-server", flag.ExitOnError)
 	serverIndexPath := cmd.String("index-path", defaultIndexPath, "Path to the server index")
 	port := cmd.String("port", "50051", "Port for the server")
@@ -399,7 +434,7 @@ func executeStartServer(args []string) {
 		log.Fatalf("failed to listen: %v", err)
 	}
 	s := grpc.NewServer()
-	pb.RegisterSemantiflyServer(s, SemantiflyNewServer(*serverIndexPath))
+	pb.RegisterSemantiflyServer(s, SemantiflyNewServer(ctx, conn, *serverIndexPath))
 	log.Printf("server listening at %v", lis.Addr())
 	log.Printf("using index path: %v", *serverIndexPath)
 	if err := s.Serve(lis); err != nil {

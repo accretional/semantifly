@@ -107,12 +107,12 @@ func removeTestingDatabase() error {
 	return nil
 }
 
-func TestPostgres(t *testing.T) {
-
+func TestMain(m *testing.M) {
 	err := setupPostgres()
 
 	if err != nil {
-		t.Fatalf("setupPostgres failed: %v", err)
+		fmt.Printf("setupPostgres failed: %v", err)
+		os.Exit(1)
 	}
 
 	// Set a mock DATABASE_URL for testing
@@ -121,89 +121,61 @@ func TestPostgres(t *testing.T) {
 
 	db, err := createTestingDatabase()
 	if err != nil {
-		t.Fatalf("Failed to create test database: %v", err)
+		fmt.Printf("Failed to create test database: %v", err)
+		os.Exit(1)
 	}
 	defer db.Close()
 
-	// Test connection
+	m.Run()
+
+	// Cleanup
+	if err := removeTestingDatabase(); err != nil {
+		fmt.Printf("Failed to remove test database: %v", err)
+		os.Exit(1)
+	}
+}
+
+func TestPostgres(t *testing.T) {
+	// Setup Test connection
 	ctx := context.Background()
 	conn, err := pgx.Connect(ctx, os.Getenv("DATABASE_URL"))
 
 	assert.NoError(t, err)
 	defer conn.Close(ctx)
 
+	var dbConn PgxIface = conn
+
 	// Test database table initialisation
-	err = initializeDatabaseSchema(ctx, conn)
+	err = InitializeDatabaseSchema(ctx, &dbConn)
 	if err != nil {
 		t.Fatalf("Failed to initialise the database schema: %v", err)
-	}
-
-	// Cleanup
-	if err := removeTestingDatabase(); err != nil {
-		t.Fatalf("Failed to remove test database: %v", err)
 	}
 }
 
 func TestProtoIndexCreation(t *testing.T) {
 
-	err := setupPostgres()
-
-	if err != nil {
-		t.Fatalf("setupPostgres failed: %v", err)
-	}
-
-	// Set a mock DATABASE_URL for testing
-	os.Setenv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/testdb")
-	defer os.Unsetenv("DATABASE_URL")
-
-	db, err := createTestingDatabase()
-	if err != nil {
-		t.Fatalf("Failed to create test database: %v", err)
-	}
-	defer db.Close()
-
-	// Test connection
 	ctx := context.Background()
 	conn, err := pgx.Connect(ctx, os.Getenv("DATABASE_URL"))
 
 	assert.NoError(t, err)
 	defer conn.Close(ctx)
 
+	var dbConn PgxIface = conn
+
 	// Test database table initialisation
-	err = initializeDatabaseSchema(ctx, conn)
+	err = InitializeDatabaseSchema(ctx, &dbConn)
 	if err != nil {
 		t.Fatalf("Failed to initialise the database schema: %v", err)
 	}
 
 	// Test index creation for wordOccurrence
-	err = createProtoFieldIndex(ctx, conn, "entry->'wordOccurrence'")
+	err = CreateProtoFieldIndex(ctx, &dbConn, "entry->'wordOccurrence'")
 	if err != nil {
 		t.Fatalf("Failed to create a Proto field index: %v", err)
-	}
-
-	// Cleanup
-	if err := removeTestingDatabase(); err != nil {
-		t.Fatalf("Failed to remove test database: %v", err)
 	}
 }
 
 func TestInsertRow(t *testing.T) {
-
-	err := setupPostgres()
-
-	if err != nil {
-		t.Fatalf("setupPostgres failed: %v", err)
-	}
-
-	// Set a mock DATABASE_URL for testing
-	os.Setenv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/testdb")
-	defer os.Unsetenv("DATABASE_URL")
-
-	db, err := createTestingDatabase()
-	if err != nil {
-		t.Fatalf("Failed to create test database: %v", err)
-	}
-	defer db.Close()
 
 	// Test connection
 	ctx := context.Background()
@@ -212,8 +184,10 @@ func TestInsertRow(t *testing.T) {
 		t.Fatalf("Failed to establish connection to the database: %v", err)
 	}
 
+	var dbConn PgxIface = conn
+
 	// Test database table initialisation
-	err = initializeDatabaseSchema(ctx, conn)
+	err = InitializeDatabaseSchema(ctx, &dbConn)
 	if err != nil {
 		t.Fatalf("Failed to initialise the database schema: %v", err)
 	}
@@ -235,7 +209,7 @@ func TestInsertRow(t *testing.T) {
 		},
 	}
 
-	err = insertRows(ctx, conn, index)
+	err = InsertRows(ctx, &dbConn, index)
 	if err != nil {
 		t.Fatalf("failed to insert rows: %v", err)
 	}
@@ -245,30 +219,9 @@ func TestInsertRow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to delete test entry: %v", err)
 	}
-
-	// Cleanup
-	if err := removeTestingDatabase(); err != nil {
-		t.Fatalf("Failed to remove test database: %v", err)
-	}
 }
 
 func TestQueryRow(t *testing.T) {
-
-	err := setupPostgres()
-
-	if err != nil {
-		t.Fatalf("setupPostgres failed: %v", err)
-	}
-
-	// Set a mock DATABASE_URL for testing
-	os.Setenv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/testdb")
-	defer os.Unsetenv("DATABASE_URL")
-
-	db, err := createTestingDatabase()
-	if err != nil {
-		t.Fatalf("Failed to create test database: %v", err)
-	}
-	defer db.Close()
 
 	// Test connection
 	ctx := context.Background()
@@ -277,8 +230,10 @@ func TestQueryRow(t *testing.T) {
 		t.Fatalf("Failed to establish connection to the database: %v", err)
 	}
 
+	var dbConn PgxIface = conn
+
 	// Test database table initialisation
-	err = initializeDatabaseSchema(ctx, conn)
+	err = InitializeDatabaseSchema(ctx, &dbConn)
 	if err != nil {
 		t.Fatalf("Failed to initialise the database schema: %v", err)
 	}
@@ -302,12 +257,12 @@ func TestQueryRow(t *testing.T) {
 		},
 	}
 
-	err = insertRows(ctx, conn, index)
+	err = InsertRows(ctx, &dbConn, index)
 	if err != nil {
 		t.Fatalf("failed to insert rows: %v", err)
 	}
 
-	fetchedMetadata, err := getContentMetadata(ctx, conn, "Test Entry")
+	fetchedMetadata, err := GetContentMetadata(ctx, &dbConn, "Test Entry")
 	if err != nil {
 		t.Fatalf("failed to query row: %v", err)
 	}
@@ -326,31 +281,9 @@ func TestQueryRow(t *testing.T) {
 		t.Fatalf("failed to delete test entry: %v", err)
 	}
 
-	// Cleanup
-	if err := removeTestingDatabase(); err != nil {
-		t.Fatalf("Failed to remove test database: %v", err)
-	}
-
 }
 
-func TestDeleteRow(t *testing.T) {
-
-	err := setupPostgres()
-
-	if err != nil {
-		t.Fatalf("setupPostgres failed: %v", err)
-	}
-
-	// Set a mock DATABASE_URL for testing
-	os.Setenv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/testdb")
-	defer os.Unsetenv("DATABASE_URL")
-
-	db, err := createTestingDatabase()
-	if err != nil {
-		t.Fatalf("Failed to create test database: %v", err)
-	}
-	defer db.Close()
-
+func TestDeleteRows(t *testing.T) {
 	// Test connection
 	ctx := context.Background()
 	conn, err := pgx.Connect(ctx, os.Getenv("DATABASE_URL"))
@@ -358,8 +291,10 @@ func TestDeleteRow(t *testing.T) {
 		t.Fatalf("Failed to establish connection to the database: %v", err)
 	}
 
+	var dbConn PgxIface = conn
+
 	// Test database table initialisation
-	err = initializeDatabaseSchema(ctx, conn)
+	err = InitializeDatabaseSchema(ctx, &dbConn)
 	if err != nil {
 		t.Fatalf("Failed to initialise the database schema: %v", err)
 	}
@@ -382,33 +317,28 @@ func TestDeleteRow(t *testing.T) {
 	}
 
 	// Inserting an index
-	err = insertRows(ctx, conn, index)
+	err = InsertRows(ctx, &dbConn, index)
 	if err != nil {
 		t.Fatalf("Failed to insert row: %v", err)
 	}
 
 	// Fetching the row after inserting it
-	_, err = getContentMetadata(ctx, conn, "Test Entry")
+	_, err = GetContentMetadata(ctx, &dbConn, "Test Entry")
 	if err != nil {
 		t.Fatalf("Failed to query row after insertion: %v", err)
 	}
 
 	// Test delete row
-	err = deleteRow(ctx, conn, "Test Entry")
+	err = DeleteRows(ctx, &dbConn, []string{"Test Entry"})
 	if err != nil {
 		t.Fatalf("Failed to delete entry: %v", err)
 	}
 
 	// Fetching the row after deleting it
-	_, err = getContentMetadata(ctx, conn, "Test Entry")
+	_, err = GetContentMetadata(ctx, &dbConn, "Test Entry")
 	if err == nil {
 		t.Fatalf("Index entry not deleted.")
 	} else if !strings.Contains(err.Error(), "no entry found") {
 		t.Fatalf("Failed to query row: %v", err)
-	}
-
-	// Cleanup
-	if err := removeTestingDatabase(); err != nil {
-		t.Fatalf("Failed to remove test database: %v", err)
 	}
 }
