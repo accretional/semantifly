@@ -37,13 +37,13 @@ func SubcommandAdd(ctx context.Context, conn *db.PgxIface, a *pb.AddRequest, ind
 	if a.MakeCopy {
 		err = makeCopy(indexPath, ile)
 		if err != nil {
-			fmt.Fprintf(w, "Failed to make a copy for %s: %v. Skipping.\n", a.AddedMetadata.URI, err)
+			return fmt.Errorf("Failed to make a copy for %s: %v. Skipping.\n", a.AddedMetadata.URI, err)
 		}
 	}
 
 	err = search.CreateSearchDictionary(ile)
 	if err != nil {
-		fmt.Fprintf(w, "File %s failed to create search dictionary with err: %s. Skipping.\n", a, err)
+		return fmt.Errorf("File %s failed to create search dictionary with err: %s. Skipping.\n", a, err)
 	}
 
 	indexMap[ile.Name] = ile
